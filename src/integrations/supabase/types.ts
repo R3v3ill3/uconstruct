@@ -414,13 +414,19 @@ export type Database = {
           email: string | null
           first_name: string
           gender: string | null
+          home_address_line_1: string | null
+          home_address_line_2: string | null
+          home_address_postcode: string | null
+          home_address_state: string | null
+          home_address_suburb: string | null
+          home_phone: string | null
           id: string
           inductions: string[] | null
           informal_network_tags: string[] | null
+          mobile_phone: string | null
           nickname: string | null
           other_industry_bodies: string[] | null
           other_name: string | null
-          phone: string | null
           qualifications: string[] | null
           redundancy_fund: string | null
           superannuation_fund: string | null
@@ -429,6 +435,7 @@ export type Database = {
             | Database["public"]["Enums"]["union_membership_status"]
             | null
           updated_at: string | null
+          work_phone: string | null
         }
         Insert: {
           created_at?: string | null
@@ -436,13 +443,19 @@ export type Database = {
           email?: string | null
           first_name: string
           gender?: string | null
+          home_address_line_1?: string | null
+          home_address_line_2?: string | null
+          home_address_postcode?: string | null
+          home_address_state?: string | null
+          home_address_suburb?: string | null
+          home_phone?: string | null
           id?: string
           inductions?: string[] | null
           informal_network_tags?: string[] | null
+          mobile_phone?: string | null
           nickname?: string | null
           other_industry_bodies?: string[] | null
           other_name?: string | null
-          phone?: string | null
           qualifications?: string[] | null
           redundancy_fund?: string | null
           superannuation_fund?: string | null
@@ -451,6 +464,7 @@ export type Database = {
             | Database["public"]["Enums"]["union_membership_status"]
             | null
           updated_at?: string | null
+          work_phone?: string | null
         }
         Update: {
           created_at?: string | null
@@ -458,13 +472,19 @@ export type Database = {
           email?: string | null
           first_name?: string
           gender?: string | null
+          home_address_line_1?: string | null
+          home_address_line_2?: string | null
+          home_address_postcode?: string | null
+          home_address_state?: string | null
+          home_address_suburb?: string | null
+          home_phone?: string | null
           id?: string
           inductions?: string[] | null
           informal_network_tags?: string[] | null
+          mobile_phone?: string | null
           nickname?: string | null
           other_industry_bodies?: string[] | null
           other_name?: string | null
-          phone?: string | null
           qualifications?: string[] | null
           redundancy_fund?: string | null
           superannuation_fund?: string | null
@@ -473,6 +493,7 @@ export type Database = {
             | Database["public"]["Enums"]["union_membership_status"]
             | null
           updated_at?: string | null
+          work_phone?: string | null
         }
         Relationships: []
       }

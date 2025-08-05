@@ -27,7 +27,15 @@ const DATABASE_TABLES = {
       other_name: { type: "text", required: false, description: "Middle name or other names" },
       nickname: { type: "text", required: false, description: "Preferred name or nickname" },
       email: { type: "text", required: false, description: "Email address" },
-      phone: { type: "text", required: false, description: "Phone number" },
+      home_phone: { type: "text", required: false, description: "Home phone number" },
+      work_phone: { type: "text", required: false, description: "Work phone number" },
+      mobile_phone: { type: "text", required: false, description: "Mobile phone number" },
+      home_address_line_1: { type: "text", required: false, description: "Home address line 1" },
+      home_address_line_2: { type: "text", required: false, description: "Home address line 2" },
+      home_address_suburb: { type: "text", required: false, description: "Home address suburb" },
+      home_address_postcode: { type: "text", required: false, description: "Home address postcode" },
+      home_address_state: { type: "text", required: false, description: "Home address state" },
+      
       date_of_birth: { type: "date", required: false, description: "Date of birth" },
       gender: { type: "text", required: false, description: "Gender" },
       union_membership_status: { type: "enum", required: false, description: "Union membership status", 
@@ -138,7 +146,33 @@ const ColumnMapper = ({ parsedCSV, onMappingComplete, onBack }: ColumnMapperProp
           } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('email')) {
             if (dbColumn === 'email') confidence = 95;
           } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('phone')) {
-            if (dbColumn === 'phone') confidence = 95;
+            // Enhanced phone field matching
+            const headerLower = csvHeader.toLowerCase();
+            if (dbColumn === 'home_phone' && (headerLower.includes('home') || headerLower === 'phone')) {
+              confidence = headerLower.includes('home') ? 95 : 70;
+            } else if (dbColumn === 'work_phone' && headerLower.includes('work')) {
+              confidence = 95;
+            } else if (dbColumn === 'mobile_phone' && (headerLower.includes('mobile') || headerLower.includes('cell'))) {
+              confidence = 95;
+            } else if (headerLower === 'phone' && dbColumn === 'mobile_phone') {
+              confidence = 65; // Default to mobile for generic phone
+            }
+          } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('address')) {
+            // Enhanced address field matching
+            const headerLower = csvHeader.toLowerCase();
+            if (dbColumn === 'home_address_line_1' && (headerLower.includes('address') && headerLower.includes('1'))) {
+              confidence = 95;
+            } else if (dbColumn === 'home_address_line_2' && (headerLower.includes('address') && headerLower.includes('2'))) {
+              confidence = 95;
+            } else if (dbColumn === 'home_address_suburb' && (headerLower.includes('suburb') || headerLower.includes('city'))) {
+              confidence = 95;
+            } else if (dbColumn === 'home_address_postcode' && (headerLower.includes('postcode') || headerLower.includes('postal') || headerLower.includes('zip'))) {
+              confidence = 95;
+            } else if (dbColumn === 'home_address_state' && headerLower.includes('state')) {
+              confidence = 95;
+            } else if (headerLower === 'address' && dbColumn === 'home_address_line_1') {
+              confidence = 70; // Default to line 1 for generic address
+            }
           }
 
           if (confidence > 0 && (!bestMatch || confidence > bestMatch.confidence)) {
