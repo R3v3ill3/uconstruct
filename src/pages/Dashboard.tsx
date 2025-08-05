@@ -7,7 +7,7 @@ const Dashboard = () => {
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Union organizing platform overview
+          Union organising platform overview
         </p>
       </div>
 
@@ -92,7 +92,7 @@ const Dashboard = () => {
           <CardHeader>
             <CardTitle>Recent Activities</CardTitle>
             <CardDescription>
-              Latest organizing activities and events
+              Latest organising activities and events
             </CardDescription>
           </CardHeader>
           <CardContent>

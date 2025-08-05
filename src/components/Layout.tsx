@@ -62,7 +62,7 @@ const Layout = ({ children }: LayoutProps) => {
             </SheetTrigger>
             <SheetContent side="left" className="w-64">
               <div className="flex flex-col gap-4">
-                <h2 className="text-lg font-semibold">Union Organizer</h2>
+                <h2 className="text-lg font-semibold">Union Organiser</h2>
                 <NavItems mobile />
               </div>
             </SheetContent>
@@ -70,7 +70,7 @@ const Layout = ({ children }: LayoutProps) => {
 
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Union Organizer</h1>
+            <h1 className="text-xl font-bold">Union Organiser</h1>
           </div>
 
           {/* Desktop navigation */}
