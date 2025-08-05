@@ -1,0 +1,417 @@
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, Target, Plus, Eye, Brain, AlertTriangle } from "lucide-react";
+import { ParsedCSV, ColumnMapping } from "@/pages/Upload";
+
+interface ColumnMapperProps {
+  parsedCSV: ParsedCSV;
+  onMappingComplete: (table: string, mappings: ColumnMapping[]) => void;
+  onBack: () => void;
+}
+
+// Database schema for mapping
+const DATABASE_TABLES = {
+  workers: {
+    label: "Workers",
+    columns: {
+      name: { type: "text", required: true, description: "Worker full name" },
+      email: { type: "text", required: false, description: "Email address" },
+      phone: { type: "text", required: false, description: "Phone number" },
+      date_of_birth: { type: "date", required: false, description: "Date of birth" },
+      gender: { type: "text", required: false, description: "Gender" },
+      union_membership_status: { type: "enum", required: false, description: "Union membership status", 
+        options: ["member", "non_member", "potential_member"] },
+      qualifications: { type: "array", required: false, description: "Qualifications (comma-separated)" },
+      inductions: { type: "array", required: false, description: "Inductions (comma-separated)" },
+      superannuation_fund: { type: "text", required: false, description: "Superannuation fund" },
+      redundancy_fund: { type: "text", required: false, description: "Redundancy fund" }
+    }
+  },
+  employers: {
+    label: "Employers",
+    columns: {
+      name: { type: "text", required: true, description: "Employer name" },
+      abn: { type: "text", required: false, description: "Australian Business Number" },
+      employer_type: { type: "enum", required: true, description: "Type of employer",
+        options: ["head_contractor", "subcontractor", "labour_hire", "other"] }
+    }
+  },
+  job_sites: {
+    label: "Job Sites",
+    columns: {
+      name: { type: "text", required: true, description: "Site name" },
+      location: { type: "text", required: true, description: "Site location" },
+      project_type: { type: "text", required: false, description: "Type of project" },
+      shifts: { type: "array", required: false, description: "Available shifts (comma-separated)",
+        options: ["day", "night", "afternoon"] }
+    }
+  },
+  worker_placements: {
+    label: "Worker Placements",
+    columns: {
+      start_date: { type: "date", required: true, description: "Placement start date" },
+      end_date: { type: "date", required: false, description: "Placement end date" },
+      job_title: { type: "text", required: false, description: "Job title" },
+      employment_status: { type: "enum", required: true, description: "Employment status",
+        options: ["full_time", "part_time", "casual", "contract"] },
+      shift: { type: "enum", required: false, description: "Work shift",
+        options: ["day", "night", "afternoon"] }
+    }
+  }
+};
+
+const ColumnMapper = ({ parsedCSV, onMappingComplete, onBack }: ColumnMapperProps) => {
+  const [selectedTable, setSelectedTable] = useState<string>('');
+  const [mappings, setMappings] = useState<ColumnMapping[]>([]);
+  const [newFields, setNewFields] = useState<Array<{
+    name: string;
+    type: string;
+    csvColumn: string;
+  }>>([]);
+
+  // Generate smart mapping suggestions
+  const generateSuggestions = useMemo(() => {
+    if (!selectedTable || !DATABASE_TABLES[selectedTable as keyof typeof DATABASE_TABLES]) return [];
+
+    const tableSchema = DATABASE_TABLES[selectedTable as keyof typeof DATABASE_TABLES];
+    const suggestions: ColumnMapping[] = [];
+
+    parsedCSV.headers.forEach(csvHeader => {
+      const normalizedHeader = csvHeader.toLowerCase().replace(/[^a-z0-9]/g, '');
+      let bestMatch: { column: string; confidence: number } | null = null;
+
+      // Exact match
+      Object.keys(tableSchema.columns).forEach(dbColumn => {
+        const normalizedDbColumn = dbColumn.toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        if (normalizedHeader === normalizedDbColumn) {
+          bestMatch = { column: dbColumn, confidence: 100 };
+        } else if (normalizedHeader.includes(normalizedDbColumn) || normalizedDbColumn.includes(normalizedHeader)) {
+          const confidence = Math.max(
+            (normalizedHeader.length / normalizedDbColumn.length) * 70,
+            (normalizedDbColumn.length / normalizedHeader.length) * 70
+          );
+          if (!bestMatch || confidence > bestMatch.confidence) {
+            bestMatch = { column: dbColumn, confidence };
+          }
+        }
+      });
+
+      // Content-based matching
+      if (!bestMatch && parsedCSV.rows.length > 0) {
+        const sampleValues = parsedCSV.rows.slice(0, 5).map(row => row[csvHeader]).filter(Boolean);
+        
+        Object.entries(tableSchema.columns).forEach(([dbColumn, columnInfo]) => {
+          let confidence = 0;
+          
+          if (columnInfo.type === 'date' && sampleValues.some(val => {
+            const dateStr = String(val);
+            return /\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}-\d{2}-\d{4}/.test(dateStr);
+          })) {
+            confidence = 80;
+          } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('name')) {
+            if (dbColumn === 'name') confidence = 90;
+          } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('email')) {
+            if (dbColumn === 'email') confidence = 95;
+          } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('phone')) {
+            if (dbColumn === 'phone') confidence = 95;
+          }
+
+          if (confidence > 0 && (!bestMatch || confidence > bestMatch.confidence)) {
+            bestMatch = { column: dbColumn, confidence };
+          }
+        });
+      }
+
+      suggestions.push({
+        csvColumn: csvHeader,
+        dbTable: selectedTable,
+        dbColumn: bestMatch?.column || '',
+        action: bestMatch ? 'map' : 'skip',
+        confidence: bestMatch?.confidence || 0
+      });
+    });
+
+    return suggestions;
+  }, [selectedTable, parsedCSV]);
+
+  useEffect(() => {
+    if (selectedTable) {
+      setMappings(generateSuggestions);
+    }
+  }, [selectedTable, generateSuggestions]);
+
+  const updateMapping = (index: number, updates: Partial<ColumnMapping>) => {
+    setMappings(prev => prev.map((mapping, i) => 
+      i === index ? { ...mapping, ...updates } : mapping
+    ));
+  };
+
+  const addNewField = (csvColumn: string) => {
+    const fieldName = csvColumn.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    setNewFields(prev => [...prev, {
+      name: fieldName,
+      type: 'text',
+      csvColumn
+    }]);
+    
+    const mappingIndex = mappings.findIndex(m => m.csvColumn === csvColumn);
+    if (mappingIndex >= 0) {
+      updateMapping(mappingIndex, {
+        action: 'create',
+        dbColumn: fieldName,
+        dataType: 'text'
+      });
+    }
+  };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 90) return 'bg-green-500';
+    if (confidence >= 70) return 'bg-yellow-500';
+    if (confidence >= 50) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+
+  const getConfidenceLabel = (confidence: number) => {
+    if (confidence >= 90) return 'Excellent';
+    if (confidence >= 70) return 'Good';
+    if (confidence >= 50) return 'Fair';
+    return 'Poor';
+  };
+
+  const canProceed = selectedTable && mappings.some(m => m.action !== 'skip');
+
+  const handleContinue = () => {
+    if (canProceed) {
+      onMappingComplete(selectedTable, mappings.filter(m => m.action !== 'skip'));
+    }
+  };
+
+  const getSampleData = (csvColumn: string) => {
+    return parsedCSV.rows.slice(0, 3)
+      .map(row => row[csvColumn])
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Column Mapping
+          </CardTitle>
+          <CardDescription>
+            Map your CSV columns to database fields. Smart suggestions are provided based on column names and content.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Table Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="table-select">Select Target Table</Label>
+            <Select value={selectedTable} onValueChange={setSelectedTable}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose which table to import data into" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(DATABASE_TABLES).map(([key, table]) => (
+                  <SelectItem key={key} value={key}>
+                    {table.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedTable && (
+            <>
+              <Separator />
+              
+              {/* Mapping Summary */}
+              <div className="grid grid-cols-4 gap-4 text-center">
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold text-green-600">
+                    {mappings.filter(m => m.action === 'map').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Mapped</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {mappings.filter(m => m.action === 'create').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">New Fields</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold text-gray-600">
+                    {mappings.filter(m => m.action === 'skip').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Skipped</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold">
+                    {parsedCSV.headers.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Columns</div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Column Mappings */}
+              <ScrollArea className="h-96">
+                <div className="space-y-4">
+                  {mappings.map((mapping, index) => (
+                    <Card key={mapping.csvColumn} className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{mapping.csvColumn}</h4>
+                            {mapping.confidence && mapping.confidence > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                <div className={`w-2 h-2 rounded-full mr-1 ${getConfidenceColor(mapping.confidence)}`} />
+                                {getConfidenceLabel(mapping.confidence)} ({mapping.confidence.toFixed(0)}%)
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Sample: {getSampleData(mapping.csvColumn)}
+                          </p>
+                        </div>
+
+                        <div className="flex-1 space-y-2">
+                          <div className="flex gap-2">
+                            <Select 
+                              value={mapping.action} 
+                              onValueChange={(value: 'map' | 'create' | 'skip') => 
+                                updateMapping(index, { action: value })
+                              }
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="map">Map</SelectItem>
+                                <SelectItem value="create">Create New</SelectItem>
+                                <SelectItem value="skip">Skip</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {mapping.action === 'map' && (
+                              <Select 
+                                value={mapping.dbColumn} 
+                                onValueChange={(value) => updateMapping(index, { dbColumn: value })}
+                              >
+                                <SelectTrigger className="flex-1">
+                                  <SelectValue placeholder="Select database column" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(DATABASE_TABLES[selectedTable as keyof typeof DATABASE_TABLES].columns).map(([key, col]) => (
+                                    <SelectItem key={key} value={key}>
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{key}</span>
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                          {col.type} {col.required && '*'}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            {mapping.action === 'create' && (
+                              <div className="flex gap-2 flex-1">
+                                <Input 
+                                  placeholder="New field name"
+                                  value={mapping.dbColumn}
+                                  onChange={(e) => updateMapping(index, { dbColumn: e.target.value })}
+                                />
+                                <Select 
+                                  value={mapping.dataType || 'text'} 
+                                  onValueChange={(value) => updateMapping(index, { dataType: value })}
+                                >
+                                  <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text">Text</SelectItem>
+                                    <SelectItem value="date">Date</SelectItem>
+                                    <SelectItem value="number">Number</SelectItem>
+                                    <SelectItem value="boolean">Boolean</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+
+                          {mapping.action === 'map' && mapping.dbColumn && (
+                            <p className="text-xs text-muted-foreground">
+                              {DATABASE_TABLES[selectedTable as keyof typeof DATABASE_TABLES].columns[mapping.dbColumn]?.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex items-center justify-between">
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Upload
+        </Button>
+
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => {
+              // Auto-map all high confidence matches
+              const autoMapped = mappings.map(mapping => 
+                mapping.confidence && mapping.confidence >= 70 
+                  ? { ...mapping, action: 'map' as const }
+                  : mapping
+              );
+              setMappings(autoMapped);
+            }}
+          >
+            <Brain className="h-4 w-4 mr-2" />
+            Auto-Map High Confidence
+          </Button>
+          
+          <Button 
+            onClick={handleContinue}
+            disabled={!canProceed}
+          >
+            Continue to Preview
+          </Button>
+        </div>
+      </div>
+
+      {!canProceed && selectedTable && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Please map or create at least one column before proceeding.
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+};
+
+export default ColumnMapper;
