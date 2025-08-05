@@ -22,7 +22,10 @@ const DATABASE_TABLES = {
   workers: {
     label: "Workers",
     columns: {
-      name: { type: "text", required: true, description: "Worker full name" },
+      first_name: { type: "text", required: true, description: "Worker's first name" },
+      surname: { type: "text", required: true, description: "Worker's surname/last name" },
+      other_name: { type: "text", required: false, description: "Middle name or other names" },
+      nickname: { type: "text", required: false, description: "Preferred name or nickname" },
       email: { type: "text", required: false, description: "Email address" },
       phone: { type: "text", required: false, description: "Phone number" },
       date_of_birth: { type: "date", required: false, description: "Date of birth" },
@@ -118,7 +121,20 @@ const ColumnMapper = ({ parsedCSV, onMappingComplete, onBack }: ColumnMapperProp
           })) {
             confidence = 80;
           } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('name')) {
-            if (dbColumn === 'name') confidence = 90;
+            // Enhanced name field matching
+            const headerLower = csvHeader.toLowerCase();
+            if (dbColumn === 'first_name' && (headerLower.includes('first') || headerLower.includes('given') || headerLower.includes('forename'))) {
+              confidence = 95;
+            } else if (dbColumn === 'surname' && (headerLower.includes('last') || headerLower.includes('family') || headerLower.includes('surname'))) {
+              confidence = 95;
+            } else if (dbColumn === 'other_name' && (headerLower.includes('middle') || headerLower.includes('other'))) {
+              confidence = 90;
+            } else if (dbColumn === 'nickname' && (headerLower.includes('nick') || headerLower.includes('preferred') || headerLower.includes('known'))) {
+              confidence = 90;
+            } else if (headerLower === 'name' || headerLower === 'full name' || headerLower === 'fullname') {
+              // For generic "name" fields, suggest first_name as most likely
+              if (dbColumn === 'first_name') confidence = 70;
+            }
           } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('email')) {
             if (dbColumn === 'email') confidence = 95;
           } else if (columnInfo.type === 'text' && csvHeader.toLowerCase().includes('phone')) {

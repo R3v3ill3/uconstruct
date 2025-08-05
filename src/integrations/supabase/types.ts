@@ -412,16 +412,19 @@ export type Database = {
           created_at: string | null
           date_of_birth: string | null
           email: string | null
+          first_name: string
           gender: string | null
           id: string
           inductions: string[] | null
           informal_network_tags: string[] | null
-          name: string
+          nickname: string | null
           other_industry_bodies: string[] | null
+          other_name: string | null
           phone: string | null
           qualifications: string[] | null
           redundancy_fund: string | null
           superannuation_fund: string | null
+          surname: string
           union_membership_status:
             | Database["public"]["Enums"]["union_membership_status"]
             | null
@@ -431,16 +434,19 @@ export type Database = {
           created_at?: string | null
           date_of_birth?: string | null
           email?: string | null
+          first_name: string
           gender?: string | null
           id?: string
           inductions?: string[] | null
           informal_network_tags?: string[] | null
-          name: string
+          nickname?: string | null
           other_industry_bodies?: string[] | null
+          other_name?: string | null
           phone?: string | null
           qualifications?: string[] | null
           redundancy_fund?: string | null
           superannuation_fund?: string | null
+          surname: string
           union_membership_status?:
             | Database["public"]["Enums"]["union_membership_status"]
             | null
@@ -450,16 +456,19 @@ export type Database = {
           created_at?: string | null
           date_of_birth?: string | null
           email?: string | null
+          first_name?: string
           gender?: string | null
           id?: string
           inductions?: string[] | null
           informal_network_tags?: string[] | null
-          name?: string
+          nickname?: string | null
           other_industry_bodies?: string[] | null
+          other_name?: string | null
           phone?: string | null
           qualifications?: string[] | null
           redundancy_fund?: string | null
           superannuation_fund?: string | null
+          surname?: string
           union_membership_status?:
             | Database["public"]["Enums"]["union_membership_status"]
             | null
