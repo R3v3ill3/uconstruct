@@ -89,6 +89,52 @@ const DATABASE_TABLES = {
       end_date: { type: "date", required: false, description: "Contract end date" },
       notes: { type: "text", required: false, description: "Additional notes about the trade contract" }
     }
+  },
+  
+  projects: {
+    label: "Projects",
+    columns: {
+      name: { type: "text", required: true, description: "Project name (e.g., 'Southbank Redevelopment')" },
+      value: { type: "number", required: false, description: "Project value in dollars" },
+      builder_id: { type: "uuid", required: false, description: "Main builder/contractor ID (must match existing employer)" },
+      proposed_start_date: { type: "date", required: false, description: "Proposed project start date" },
+      proposed_finish_date: { type: "date", required: false, description: "Proposed project completion date" },
+      roe_email: { type: "email", required: false, description: "Right of entry email address" }
+    }
+  },
+  
+  organisers: {
+    label: "Organisers",
+    columns: {
+      first_name: { type: "text", required: true, description: "First name" },
+      last_name: { type: "text", required: true, description: "Last name" },
+      email: { type: "email", required: false, description: "Email address" },
+      phone: { type: "text", required: false, description: "Phone number" }
+    }
+  },
+  
+  project_eba_details: {
+    label: "Project EBA Details",
+    columns: {
+      project_id: { type: "uuid", required: true, description: "Related project ID (must match existing project)" },
+      status: { type: "enum", required: true, description: "EBA status",
+        options: ["yes", "no", "pending"] },
+      registration_number: { type: "text", required: false, description: "EBA registration number (required if status is 'yes')" },
+      eba_title: { type: "text", required: false, description: "EBA title (required if status is 'yes')" },
+      bargaining_status: { type: "text", required: false, description: "Bargaining status (required if status is 'pending')" }
+    }
+  },
+  
+  site_contacts: {
+    label: "Site Contacts",
+    columns: {
+      job_site_id: { type: "uuid", required: true, description: "Related job site ID (must match existing site)" },
+      role: { type: "enum", required: true, description: "Contact role",
+        options: ["project_manager", "site_manager"] },
+      name: { type: "text", required: true, description: "Contact person full name" },
+      email: { type: "email", required: false, description: "Email address" },
+      phone: { type: "text", required: false, description: "Phone number" }
+    }
   }
 };
 

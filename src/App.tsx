@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Auth from "@/pages/Auth";
 import Upload from "@/pages/Upload";
 import Workers from "@/pages/Workers";
+import Projects from "@/pages/Projects";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,11 @@ const App = () => (
             <Route path="/workers" element={
               <ProtectedRoute>
                 <Workers />
+              </ProtectedRoute>
+            } />
+            <Route path="/projects" element={
+              <ProtectedRoute>
+                <Projects />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

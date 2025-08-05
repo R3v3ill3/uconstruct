@@ -58,35 +58,51 @@ export type Database = {
       job_sites: {
         Row: {
           created_at: string | null
+          full_address: string | null
           id: string
+          is_main_site: boolean | null
           location: string
           main_builder_id: string | null
           name: string
+          project_id: string | null
           project_type: string | null
           shifts: Database["public"]["Enums"]["shift_type"][] | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          full_address?: string | null
           id?: string
+          is_main_site?: boolean | null
           location: string
           main_builder_id?: string | null
           name: string
+          project_id?: string | null
           project_type?: string | null
           shifts?: Database["public"]["Enums"]["shift_type"][] | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          full_address?: string | null
           id?: string
+          is_main_site?: boolean | null
           location?: string
           main_builder_id?: string | null
           name?: string
+          project_id?: string | null
           project_type?: string | null
           shifts?: Database["public"]["Enums"]["shift_type"][] | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_job_sites_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_sites_main_builder_id_fkey"
             columns: ["main_builder_id"]
@@ -95,6 +111,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      organisers: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -128,6 +174,181 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      project_eba_details: {
+        Row: {
+          bargaining_status: string | null
+          created_at: string
+          eba_title: string | null
+          id: string
+          project_id: string
+          registration_number: string | null
+          status: Database["public"]["Enums"]["eba_status"]
+          updated_at: string
+        }
+        Insert: {
+          bargaining_status?: string | null
+          created_at?: string
+          eba_title?: string | null
+          id?: string
+          project_id: string
+          registration_number?: string | null
+          status?: Database["public"]["Enums"]["eba_status"]
+          updated_at?: string
+        }
+        Update: {
+          bargaining_status?: string | null
+          created_at?: string
+          eba_title?: string | null
+          id?: string
+          project_id?: string
+          registration_number?: string | null
+          status?: Database["public"]["Enums"]["eba_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_project_eba_details_project"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_organisers: {
+        Row: {
+          created_at: string
+          id: string
+          organiser_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organiser_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organiser_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_project_organisers_organiser"
+            columns: ["organiser_id"]
+            isOneToOne: false
+            referencedRelation: "organisers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_project_organisers_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          builder_id: string | null
+          created_at: string
+          id: string
+          main_job_site_id: string | null
+          name: string
+          proposed_finish_date: string | null
+          proposed_start_date: string | null
+          roe_email: string | null
+          updated_at: string
+          value: number | null
+        }
+        Insert: {
+          builder_id?: string | null
+          created_at?: string
+          id?: string
+          main_job_site_id?: string | null
+          name: string
+          proposed_finish_date?: string | null
+          proposed_start_date?: string | null
+          roe_email?: string | null
+          updated_at?: string
+          value?: number | null
+        }
+        Update: {
+          builder_id?: string | null
+          created_at?: string
+          id?: string
+          main_job_site_id?: string | null
+          name?: string
+          proposed_finish_date?: string | null
+          proposed_start_date?: string | null
+          roe_email?: string | null
+          updated_at?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_projects_builder"
+            columns: ["builder_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_projects_main_job_site"
+            columns: ["main_job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          job_site_id: string
+          name: string
+          phone: string | null
+          role: Database["public"]["Enums"]["site_contact_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          job_site_id: string
+          name: string
+          phone?: string | null
+          role: Database["public"]["Enums"]["site_contact_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          job_site_id?: string
+          name?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["site_contact_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_site_contacts_job_site"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_contractor_trades: {
         Row: {
@@ -305,9 +526,14 @@ export type Database = {
         Row: {
           created_at: string | null
           end_date: string | null
+          experience_level: string | null
+          gets_paid_time: boolean | null
           id: string
+          is_senior: boolean | null
           job_site_id: string | null
           name: Database["public"]["Enums"]["union_role_type"]
+          notes: string | null
+          rating: string | null
           start_date: string
           updated_at: string | null
           worker_id: string | null
@@ -315,9 +541,14 @@ export type Database = {
         Insert: {
           created_at?: string | null
           end_date?: string | null
+          experience_level?: string | null
+          gets_paid_time?: boolean | null
           id?: string
+          is_senior?: boolean | null
           job_site_id?: string | null
           name: Database["public"]["Enums"]["union_role_type"]
+          notes?: string | null
+          rating?: string | null
           start_date: string
           updated_at?: string | null
           worker_id?: string | null
@@ -325,9 +556,14 @@ export type Database = {
         Update: {
           created_at?: string | null
           end_date?: string | null
+          experience_level?: string | null
+          gets_paid_time?: boolean | null
           id?: string
+          is_senior?: boolean | null
           job_site_id?: string | null
           name?: Database["public"]["Enums"]["union_role_type"]
+          notes?: string | null
+          rating?: string | null
           start_date?: string
           updated_at?: string | null
           worker_id?: string | null
@@ -572,6 +808,7 @@ export type Database = {
         | "conversation"
         | "action"
         | "meeting"
+      eba_status: "yes" | "no" | "pending"
       employer_type:
         | "individual"
         | "small_contractor"
@@ -585,6 +822,7 @@ export type Database = {
         | "trainee"
       rating_type: "support_level" | "leadership" | "risk"
       shift_type: "day" | "night" | "split" | "weekend"
+      site_contact_role: "project_manager" | "site_manager"
       trade_type:
         | "scaffolding"
         | "form_work"
@@ -757,6 +995,7 @@ export const Constants = {
         "action",
         "meeting",
       ],
+      eba_status: ["yes", "no", "pending"],
       employer_type: [
         "individual",
         "small_contractor",
@@ -772,6 +1011,7 @@ export const Constants = {
       ],
       rating_type: ["support_level", "leadership", "risk"],
       shift_type: ["day", "night", "split", "weekend"],
+      site_contact_role: ["project_manager", "site_manager"],
       trade_type: [
         "scaffolding",
         "form_work",
