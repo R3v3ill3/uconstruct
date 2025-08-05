@@ -39,7 +39,7 @@ const Workers = () => {
         .from("workers")
         .select(`
           *,
-          worker_placements!inner(
+          worker_placements(
             id,
             job_title,
             employment_status,

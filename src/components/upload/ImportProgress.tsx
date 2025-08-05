@@ -117,20 +117,24 @@ const ImportProgress = ({
         const transformedBatch = batch.map(transformRowData);
         
         // Insert batch into database
+        console.log('Inserting batch:', transformedBatch.slice(0, 2)); // Log first 2 rows for debugging
         const { data, error } = await supabase
           .from(selectedTable as any)
           .insert(transformedBatch)
           .select();
 
         if (error) {
+          console.log('Batch error:', error.message, error.details);
           // Handle batch error - try individual rows
           for (let j = 0; j < transformedBatch.length; j++) {
             const rowData = transformedBatch[j];
+            console.log('Trying individual row:', rowData);
             const { error: rowError } = await supabase
               .from(selectedTable as any)
               .insert([rowData]);
             
             if (rowError) {
+              console.log('Row error:', rowError.message, rowError.details);
               errors++;
               importErrorList.push({
                 row: i + j + 2, // +2 for header and 0-based index
