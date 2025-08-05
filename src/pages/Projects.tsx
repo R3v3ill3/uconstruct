@@ -76,12 +76,13 @@ const Projects = () => {
     },
   });
 
-  const { data: employers = [] } = useQuery({
-    queryKey: ["employers"],
+  const { data: builders = [] } = useQuery({
+    queryKey: ["builders"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employers")
         .select("id, name")
+        .eq("employer_type", "builder")
         .order("name");
 
       if (error) throw error;
@@ -203,9 +204,9 @@ const Projects = () => {
                     <SelectValue placeholder="Select builder" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employers.map((employer) => (
-                      <SelectItem key={employer.id} value={employer.id}>
-                        {employer.name}
+                    {builders.map((builder) => (
+                      <SelectItem key={builder.id} value={builder.id}>
+                        {builder.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

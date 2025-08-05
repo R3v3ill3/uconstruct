@@ -10,6 +10,7 @@ import Auth from "@/pages/Auth";
 import Upload from "@/pages/Upload";
 import Workers from "@/pages/Workers";
 import Projects from "@/pages/Projects";
+import Employers from "@/pages/Employers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,11 @@ const App = () => (
             <Route path="/projects" element={
               <ProtectedRoute>
                 <Projects />
+              </ProtectedRoute>
+            } />
+            <Route path="/employers" element={
+              <ProtectedRoute>
+                <Employers />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

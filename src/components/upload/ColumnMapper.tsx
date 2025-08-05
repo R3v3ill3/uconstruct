@@ -52,7 +52,7 @@ const DATABASE_TABLES = {
       name: { type: "text", required: true, description: "Employer name" },
       abn: { type: "text", required: false, description: "Australian Business Number" },
       employer_type: { type: "enum", required: true, description: "Type of employer",
-        options: ["head_contractor", "subcontractor", "labour_hire", "other"] }
+        options: ["builder", "principal_contractor", "large_contractor", "small_contractor", "individual"] }
     }
   },
   job_sites: {

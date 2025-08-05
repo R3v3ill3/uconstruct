@@ -814,6 +814,7 @@ export type Database = {
         | "small_contractor"
         | "large_contractor"
         | "principal_contractor"
+        | "builder"
       employment_status:
         | "permanent"
         | "casual"
@@ -1001,6 +1002,7 @@ export const Constants = {
         "small_contractor",
         "large_contractor",
         "principal_contractor",
+        "builder",
       ],
       employment_status: [
         "permanent",
