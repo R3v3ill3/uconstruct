@@ -14,16 +14,505 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      employers: {
+        Row: {
+          abn: string | null
+          created_at: string | null
+          employer_type: Database["public"]["Enums"]["employer_type"]
+          enterprise_agreement_status: boolean | null
+          id: string
+          name: string
+          parent_employer_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          abn?: string | null
+          created_at?: string | null
+          employer_type: Database["public"]["Enums"]["employer_type"]
+          enterprise_agreement_status?: boolean | null
+          id?: string
+          name: string
+          parent_employer_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          abn?: string | null
+          created_at?: string | null
+          employer_type?: Database["public"]["Enums"]["employer_type"]
+          enterprise_agreement_status?: boolean | null
+          id?: string
+          name?: string
+          parent_employer_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employers_parent_employer_id_fkey"
+            columns: ["parent_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_sites: {
+        Row: {
+          created_at: string | null
+          id: string
+          location: string
+          main_builder_id: string | null
+          name: string
+          project_type: string | null
+          shifts: Database["public"]["Enums"]["shift_type"][] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location: string
+          main_builder_id?: string | null
+          name: string
+          project_type?: string | null
+          shifts?: Database["public"]["Enums"]["shift_type"][] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location?: string
+          main_builder_id?: string | null
+          name?: string
+          project_type?: string | null
+          shifts?: Database["public"]["Enums"]["shift_type"][] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_sites_main_builder_id_fkey"
+            columns: ["main_builder_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          role: string | null
+          scoped_employers: string[] | null
+          scoped_sites: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          role?: string | null
+          scoped_employers?: string[] | null
+          scoped_sites?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          scoped_employers?: string[] | null
+          scoped_sites?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      site_employers: {
+        Row: {
+          created_at: string | null
+          employer_id: string | null
+          id: string
+          job_site_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employer_id?: string | null
+          id?: string
+          job_site_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employer_id?: string | null
+          id?: string
+          job_site_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_employers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_employers_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_participation: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          location: string | null
+          status: Database["public"]["Enums"]["training_status"] | null
+          training_type: string
+          updated_at: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          location?: string | null
+          status?: Database["public"]["Enums"]["training_status"] | null
+          training_type: string
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          location?: string | null
+          status?: Database["public"]["Enums"]["training_status"] | null
+          training_type?: string
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_participation_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_activities: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          created_at: string | null
+          date: string
+          id: string
+          job_site_id: string | null
+          notes: string | null
+          topic: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          created_at?: string | null
+          date: string
+          id?: string
+          job_site_id?: string | null
+          notes?: string | null
+          topic?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
+          created_at?: string | null
+          date?: string
+          id?: string
+          job_site_id?: string | null
+          notes?: string | null
+          topic?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_activities_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_roles: {
+        Row: {
+          created_at: string | null
+          end_date: string | null
+          id: string
+          job_site_id: string | null
+          name: Database["public"]["Enums"]["union_role_type"]
+          start_date: string
+          updated_at: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          job_site_id?: string | null
+          name: Database["public"]["Enums"]["union_role_type"]
+          start_date: string
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          job_site_id?: string | null
+          name?: Database["public"]["Enums"]["union_role_type"]
+          start_date?: string
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_roles_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_roles_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_activity_ratings: {
+        Row: {
+          activity_id: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          rated_by: string | null
+          rating_type: Database["public"]["Enums"]["rating_type"]
+          rating_value: number | null
+          worker_id: string | null
+        }
+        Insert: {
+          activity_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          rated_by?: string | null
+          rating_type: Database["public"]["Enums"]["rating_type"]
+          rating_value?: number | null
+          worker_id?: string | null
+        }
+        Update: {
+          activity_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          rated_by?: string | null
+          rating_type?: Database["public"]["Enums"]["rating_type"]
+          rating_value?: number | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_activity_ratings_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "union_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_activity_ratings_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_placements: {
+        Row: {
+          created_at: string | null
+          employer_id: string | null
+          employment_status: Database["public"]["Enums"]["employment_status"]
+          end_date: string | null
+          id: string
+          job_site_id: string | null
+          job_title: string | null
+          shift: Database["public"]["Enums"]["shift_type"] | null
+          start_date: string
+          updated_at: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employer_id?: string | null
+          employment_status: Database["public"]["Enums"]["employment_status"]
+          end_date?: string | null
+          id?: string
+          job_site_id?: string | null
+          job_title?: string | null
+          shift?: Database["public"]["Enums"]["shift_type"] | null
+          start_date: string
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employer_id?: string | null
+          employment_status?: Database["public"]["Enums"]["employment_status"]
+          end_date?: string | null
+          id?: string
+          job_site_id?: string | null
+          job_title?: string | null
+          shift?: Database["public"]["Enums"]["shift_type"] | null
+          start_date?: string
+          updated_at?: string | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_placements_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workers: {
+        Row: {
+          created_at: string | null
+          date_of_birth: string | null
+          email: string | null
+          gender: string | null
+          id: string
+          inductions: string[] | null
+          informal_network_tags: string[] | null
+          name: string
+          other_industry_bodies: string[] | null
+          phone: string | null
+          qualifications: string[] | null
+          redundancy_fund: string | null
+          superannuation_fund: string | null
+          union_membership_status:
+            | Database["public"]["Enums"]["union_membership_status"]
+            | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          gender?: string | null
+          id?: string
+          inductions?: string[] | null
+          informal_network_tags?: string[] | null
+          name: string
+          other_industry_bodies?: string[] | null
+          phone?: string | null
+          qualifications?: string[] | null
+          redundancy_fund?: string | null
+          superannuation_fund?: string | null
+          union_membership_status?:
+            | Database["public"]["Enums"]["union_membership_status"]
+            | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          gender?: string | null
+          id?: string
+          inductions?: string[] | null
+          informal_network_tags?: string[] | null
+          name?: string
+          other_industry_bodies?: string[] | null
+          phone?: string | null
+          qualifications?: string[] | null
+          redundancy_fund?: string | null
+          superannuation_fund?: string | null
+          union_membership_status?:
+            | Database["public"]["Enums"]["union_membership_status"]
+            | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: string
+      }
+      has_site_access: {
+        Args: { user_id: string; site_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      activity_type:
+        | "strike"
+        | "training"
+        | "conversation"
+        | "action"
+        | "meeting"
+      employer_type:
+        | "individual"
+        | "small_contractor"
+        | "large_contractor"
+        | "principal_contractor"
+      employment_status:
+        | "permanent"
+        | "casual"
+        | "subcontractor"
+        | "apprentice"
+        | "trainee"
+      rating_type: "support_level" | "leadership" | "risk"
+      shift_type: "day" | "night" | "split" | "weekend"
+      training_status: "completed" | "in_progress" | "cancelled" | "no_show"
+      union_membership_status:
+        | "member"
+        | "non_member"
+        | "potential"
+        | "declined"
+      union_role_type:
+        | "member"
+        | "hsr"
+        | "site_delegate"
+        | "shift_delegate"
+        | "company_delegate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +639,43 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      activity_type: [
+        "strike",
+        "training",
+        "conversation",
+        "action",
+        "meeting",
+      ],
+      employer_type: [
+        "individual",
+        "small_contractor",
+        "large_contractor",
+        "principal_contractor",
+      ],
+      employment_status: [
+        "permanent",
+        "casual",
+        "subcontractor",
+        "apprentice",
+        "trainee",
+      ],
+      rating_type: ["support_level", "leadership", "risk"],
+      shift_type: ["day", "night", "split", "weekend"],
+      training_status: ["completed", "in_progress", "cancelled", "no_show"],
+      union_membership_status: [
+        "member",
+        "non_member",
+        "potential",
+        "declined",
+      ],
+      union_role_type: [
+        "member",
+        "hsr",
+        "site_delegate",
+        "shift_delegate",
+        "company_delegate",
+      ],
+    },
   },
 } as const
