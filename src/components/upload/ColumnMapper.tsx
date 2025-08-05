@@ -76,6 +76,19 @@ const DATABASE_TABLES = {
       shift: { type: "enum", required: false, description: "Work shift",
         options: ["day", "night", "afternoon"] }
     }
+  },
+  site_contractor_trades: {
+    label: "Site Contractor Trades",
+    columns: {
+      job_site_id: { type: "uuid", required: true, description: "Job site ID (must match existing site)" },
+      employer_id: { type: "uuid", required: true, description: "Employer/contractor ID (must match existing employer)" },
+      trade_type: { type: "enum", required: true, description: "Trade type",
+        options: ["scaffolding", "form_work", "reinforcing_steel", "concrete", "crane_and_rigging", "plant_and_equipment", "electrical", "plumbing", "carpentry", "painting", "flooring", "roofing", "glazing", "landscaping", "demolition", "earthworks", "structural_steel", "mechanical_services", "fire_protection", "security_systems", "cleaning", "traffic_management", "waste_management", "general_construction", "other"] },
+      eba_status: { type: "boolean", required: false, description: "Enterprise Bargaining Agreement status (true/false)" },
+      start_date: { type: "date", required: false, description: "Contract start date" },
+      end_date: { type: "date", required: false, description: "Contract end date" },
+      notes: { type: "text", required: false, description: "Additional notes about the trade contract" }
+    }
   }
 };
 

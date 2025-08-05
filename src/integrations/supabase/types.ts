@@ -129,6 +129,60 @@ export type Database = {
         }
         Relationships: []
       }
+      site_contractor_trades: {
+        Row: {
+          created_at: string
+          eba_status: boolean | null
+          employer_id: string | null
+          end_date: string | null
+          id: string
+          job_site_id: string | null
+          notes: string | null
+          start_date: string | null
+          trade_type: Database["public"]["Enums"]["trade_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          eba_status?: boolean | null
+          employer_id?: string | null
+          end_date?: string | null
+          id?: string
+          job_site_id?: string | null
+          notes?: string | null
+          start_date?: string | null
+          trade_type: Database["public"]["Enums"]["trade_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          eba_status?: boolean | null
+          employer_id?: string | null
+          end_date?: string | null
+          id?: string
+          job_site_id?: string | null
+          notes?: string | null
+          start_date?: string | null
+          trade_type?: Database["public"]["Enums"]["trade_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_contractor_trades_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_contractor_trades_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_employers: {
         Row: {
           created_at: string | null
@@ -531,6 +585,32 @@ export type Database = {
         | "trainee"
       rating_type: "support_level" | "leadership" | "risk"
       shift_type: "day" | "night" | "split" | "weekend"
+      trade_type:
+        | "scaffolding"
+        | "form_work"
+        | "reinforcing_steel"
+        | "concrete"
+        | "crane_and_rigging"
+        | "plant_and_equipment"
+        | "electrical"
+        | "plumbing"
+        | "carpentry"
+        | "painting"
+        | "flooring"
+        | "roofing"
+        | "glazing"
+        | "landscaping"
+        | "demolition"
+        | "earthworks"
+        | "structural_steel"
+        | "mechanical_services"
+        | "fire_protection"
+        | "security_systems"
+        | "cleaning"
+        | "traffic_management"
+        | "waste_management"
+        | "general_construction"
+        | "other"
       training_status: "completed" | "in_progress" | "cancelled" | "no_show"
       union_membership_status:
         | "member"
@@ -692,6 +772,33 @@ export const Constants = {
       ],
       rating_type: ["support_level", "leadership", "risk"],
       shift_type: ["day", "night", "split", "weekend"],
+      trade_type: [
+        "scaffolding",
+        "form_work",
+        "reinforcing_steel",
+        "concrete",
+        "crane_and_rigging",
+        "plant_and_equipment",
+        "electrical",
+        "plumbing",
+        "carpentry",
+        "painting",
+        "flooring",
+        "roofing",
+        "glazing",
+        "landscaping",
+        "demolition",
+        "earthworks",
+        "structural_steel",
+        "mechanical_services",
+        "fire_protection",
+        "security_systems",
+        "cleaning",
+        "traffic_management",
+        "waste_management",
+        "general_construction",
+        "other",
+      ],
       training_status: ["completed", "in_progress", "cancelled", "no_show"],
       union_membership_status: [
         "member",
