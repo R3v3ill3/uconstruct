@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,6 +169,9 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
             <Building className="h-5 w-5" />
             Assign EBA to {employer.name}
           </DialogTitle>
+          <DialogDescription>
+            Select an existing EBA from another company or create a new one for this employer.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -184,7 +187,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                 <Input
                   placeholder="Search by company name, EBA file number, or sector..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSearchTerm(e.target.value);
+                  }}
+                  onFocus={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   className="pl-10"
                 />
               </div>
@@ -204,7 +212,10 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                         className={`cursor-pointer transition-colors ${
                           selectedEba === eba.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
                         }`}
-                        onClick={() => setSelectedEba(eba.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedEba(eba.id);
+                        }}
                       >
                         <CardHeader className="pb-2">
                           <div className="flex items-start justify-between">
@@ -276,7 +287,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                   <Input
                     id="eba_file_number"
                     value={newEbaData.eba_file_number || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, eba_file_number: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, eba_file_number: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="Enter EBA file number"
                   />
                 </div>
@@ -288,7 +304,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                   <Input
                     id="sector"
                     value={newEbaData.sector || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, sector: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, sector: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="e.g., Construction, Manufacturing"
                   />
                 </div>
@@ -298,7 +319,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                     id="fwc_document_url"
                     type="url"
                     value={newEbaData.fwc_document_url || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, fwc_document_url: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, fwc_document_url: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="https://..."
                   />
                 </div>
@@ -310,7 +336,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                   <Input
                     id="contact_name"
                     value={newEbaData.contact_name || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, contact_name: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, contact_name: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="Contact person name"
                   />
                 </div>
@@ -319,7 +350,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                   <Input
                     id="contact_phone"
                     value={newEbaData.contact_phone || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, contact_phone: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="Phone number"
                   />
                 </div>
@@ -329,7 +365,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                     id="contact_email"
                     type="email"
                     value={newEbaData.contact_email || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, contact_email: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, contact_email: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="email@example.com"
                   />
                 </div>
@@ -341,7 +382,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                   <Input
                     id="fwc_lodgement_number"
                     value={newEbaData.fwc_lodgement_number || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, fwc_lodgement_number: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, fwc_lodgement_number: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="FWC lodgement number"
                   />
                 </div>
@@ -350,7 +396,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                   <Input
                     id="fwc_matter_number"
                     value={newEbaData.fwc_matter_number || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, fwc_matter_number: e.target.value }))}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setNewEbaData(prev => ({ ...prev, fwc_matter_number: e.target.value }));
+                    }}
+                    onFocus={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     placeholder="FWC matter number"
                   />
                 </div>
@@ -361,7 +412,12 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                 <Textarea
                   id="comments"
                   value={newEbaData.comments || ""}
-                  onChange={(e) => setNewEbaData(prev => ({ ...prev, comments: e.target.value }))}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setNewEbaData(prev => ({ ...prev, comments: e.target.value }));
+                  }}
+                  onFocus={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   placeholder="Additional comments or notes"
                   rows={3}
                 />
