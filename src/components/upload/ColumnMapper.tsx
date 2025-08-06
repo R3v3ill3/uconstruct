@@ -68,7 +68,8 @@ const DATABASE_TABLES = {
       eba_lodged_fwc: { type: "date", required: false, description: "EBA lodged with FWC date" },
       fwc_lodgement_number: { type: "text", required: false, description: "FWC lodgement number" },
       fwc_matter_number: { type: "text", required: false, description: "FWC matter number" },
-      fwc_certified_date: { type: "date", required: false, description: "FWC certified date" }
+      fwc_certified_date: { type: "date", required: false, description: "FWC certified date" },
+      fwc_document_url: { type: "text", required: false, description: "FWC document/agreement URL or link" }
     }
   },
   employers: {
