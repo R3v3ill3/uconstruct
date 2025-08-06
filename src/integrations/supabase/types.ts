@@ -98,6 +98,13 @@ export type Database = {
             foreignKeyName: "company_eba_records_employer_id_fkey"
             columns: ["employer_id"]
             isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "company_eba_records_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
             referencedRelation: "employers"
             referencedColumns: ["id"]
           },
@@ -136,6 +143,13 @@ export type Database = {
             foreignKeyName: "contractor_trade_capabilities_employer_id_fkey"
             columns: ["employer_id"]
             isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "contractor_trade_capabilities_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
             referencedRelation: "employers"
             referencedColumns: ["id"]
           },
@@ -168,6 +182,13 @@ export type Database = {
             foreignKeyName: "employer_organisers_employer_id_fkey"
             columns: ["employer_id"]
             isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "employer_organisers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
             referencedRelation: "employers"
             referencedColumns: ["id"]
           },
@@ -190,6 +211,7 @@ export type Database = {
           email: string | null
           employer_type: Database["public"]["Enums"]["employer_type"]
           enterprise_agreement_status: boolean | null
+          estimated_worker_count: number | null
           id: string
           name: string
           parent_employer_id: string | null
@@ -210,6 +232,7 @@ export type Database = {
           email?: string | null
           employer_type: Database["public"]["Enums"]["employer_type"]
           enterprise_agreement_status?: boolean | null
+          estimated_worker_count?: number | null
           id?: string
           name: string
           parent_employer_id?: string | null
@@ -230,6 +253,7 @@ export type Database = {
           email?: string | null
           employer_type?: Database["public"]["Enums"]["employer_type"]
           enterprise_agreement_status?: boolean | null
+          estimated_worker_count?: number | null
           id?: string
           name?: string
           parent_employer_id?: string | null
@@ -242,6 +266,13 @@ export type Database = {
           website?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employers_parent_employer_id_fkey"
+            columns: ["parent_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
           {
             foreignKeyName: "employers_parent_employer_id_fkey"
             columns: ["parent_employer_id"]
@@ -298,6 +329,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_sites_main_builder_id_fkey"
+            columns: ["main_builder_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
           },
           {
             foreignKeyName: "job_sites_main_builder_id_fkey"
@@ -493,6 +531,13 @@ export type Database = {
             foreignKeyName: "fk_projects_builder"
             columns: ["builder_id"]
             isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "fk_projects_builder"
+            columns: ["builder_id"]
+            isOneToOne: false
             referencedRelation: "employers"
             referencedColumns: ["id"]
           },
@@ -591,6 +636,13 @@ export type Database = {
             foreignKeyName: "site_contractor_trades_employer_id_fkey"
             columns: ["employer_id"]
             isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "site_contractor_trades_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
             referencedRelation: "employers"
             referencedColumns: ["id"]
           },
@@ -623,6 +675,13 @@ export type Database = {
           job_site_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "site_employers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
           {
             foreignKeyName: "site_employers_employer_id_fkey"
             columns: ["employer_id"]
@@ -671,6 +730,13 @@ export type Database = {
           worker_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "training_participation_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "unallocated_workers_analysis"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "training_participation_worker_id_fkey"
             columns: ["worker_id"]
@@ -779,6 +845,13 @@ export type Database = {
             foreignKeyName: "union_roles_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "unallocated_workers_analysis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_roles_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -821,6 +894,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "union_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_activity_ratings_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "unallocated_workers_analysis"
             referencedColumns: ["id"]
           },
           {
@@ -877,6 +957,13 @@ export type Database = {
             foreignKeyName: "worker_placements_employer_id_fkey"
             columns: ["employer_id"]
             isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "worker_placements_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
             referencedRelation: "employers"
             referencedColumns: ["id"]
           },
@@ -885,6 +972,13 @@ export type Database = {
             columns: ["job_site_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "unallocated_workers_analysis"
             referencedColumns: ["id"]
           },
           {
@@ -1002,7 +1096,61 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      employer_analytics: {
+        Row: {
+          current_worker_count: number | null
+          employer_id: string | null
+          employer_name: string | null
+          estimated_density_percent: number | null
+          estimated_worker_count: number | null
+          member_count: number | null
+          member_density_percent: number | null
+          workers_with_job_site: number | null
+          workers_without_job_site: number | null
+        }
+        Relationships: []
+      }
+      unallocated_workers_analysis: {
+        Row: {
+          allocation_status: string | null
+          email: string | null
+          employer_id: string | null
+          employer_name: string | null
+          first_name: string | null
+          id: string | null
+          job_site_id: string | null
+          job_site_name: string | null
+          member_number: string | null
+          mobile_phone: string | null
+          surname: string | null
+          union_membership_status:
+            | Database["public"]["Enums"]["union_membership_status"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_placements_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "worker_placements_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_user_role: {
