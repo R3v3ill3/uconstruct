@@ -14,36 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      contractor_trade_capabilities: {
+        Row: {
+          created_at: string | null
+          employer_id: string | null
+          id: string
+          is_primary: boolean | null
+          notes: string | null
+          trade_type: Database["public"]["Enums"]["trade_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employer_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          notes?: string | null
+          trade_type: Database["public"]["Enums"]["trade_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employer_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          notes?: string | null
+          trade_type?: Database["public"]["Enums"]["trade_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_trade_capabilities_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employers: {
         Row: {
           abn: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          contact_notes: string | null
           created_at: string | null
+          email: string | null
           employer_type: Database["public"]["Enums"]["employer_type"]
           enterprise_agreement_status: boolean | null
           id: string
           name: string
           parent_employer_id: string | null
+          phone: string | null
+          postcode: string | null
+          state: string | null
+          suburb: string | null
           updated_at: string | null
+          website: string | null
         }
         Insert: {
           abn?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          contact_notes?: string | null
           created_at?: string | null
+          email?: string | null
           employer_type: Database["public"]["Enums"]["employer_type"]
           enterprise_agreement_status?: boolean | null
           id?: string
           name: string
           parent_employer_id?: string | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          suburb?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
           abn?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          contact_notes?: string | null
           created_at?: string | null
+          email?: string | null
           employer_type?: Database["public"]["Enums"]["employer_type"]
           enterprise_agreement_status?: boolean | null
           id?: string
           name?: string
           parent_employer_id?: string | null
+          phone?: string | null
+          postcode?: string | null
+          state?: string | null
+          suburb?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: [
           {
@@ -353,6 +418,7 @@ export type Database = {
       site_contractor_trades: {
         Row: {
           created_at: string
+          eba_signatory: Database["public"]["Enums"]["eba_status_type"] | null
           eba_status: boolean | null
           employer_id: string | null
           end_date: string | null
@@ -365,6 +431,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          eba_signatory?: Database["public"]["Enums"]["eba_status_type"] | null
           eba_status?: boolean | null
           employer_id?: string | null
           end_date?: string | null
@@ -377,6 +444,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          eba_signatory?: Database["public"]["Enums"]["eba_status_type"] | null
           eba_status?: boolean | null
           employer_id?: string | null
           end_date?: string | null
@@ -809,6 +877,7 @@ export type Database = {
         | "action"
         | "meeting"
       eba_status: "yes" | "no" | "pending"
+      eba_status_type: "yes" | "no" | "not_specified"
       employer_type:
         | "individual"
         | "small_contractor"
@@ -850,6 +919,21 @@ export type Database = {
         | "waste_management"
         | "general_construction"
         | "other"
+        | "tower_crane"
+        | "mobile_crane"
+        | "post_tensioning"
+        | "concreting"
+        | "steel_fixing"
+        | "bricklaying"
+        | "traffic_control"
+        | "labour_hire"
+        | "windows"
+        | "waterproofing"
+        | "plastering"
+        | "edge_protection"
+        | "hoist"
+        | "kitchens"
+        | "tiling"
       training_status: "completed" | "in_progress" | "cancelled" | "no_show"
       union_membership_status:
         | "member"
@@ -997,6 +1081,7 @@ export const Constants = {
         "meeting",
       ],
       eba_status: ["yes", "no", "pending"],
+      eba_status_type: ["yes", "no", "not_specified"],
       employer_type: [
         "individual",
         "small_contractor",
@@ -1040,6 +1125,21 @@ export const Constants = {
         "waste_management",
         "general_construction",
         "other",
+        "tower_crane",
+        "mobile_crane",
+        "post_tensioning",
+        "concreting",
+        "steel_fixing",
+        "bricklaying",
+        "traffic_control",
+        "labour_hire",
+        "windows",
+        "waterproofing",
+        "plastering",
+        "edge_protection",
+        "hoist",
+        "kitchens",
+        "tiling",
       ],
       training_status: ["completed", "in_progress", "cancelled", "no_show"],
       union_membership_status: [

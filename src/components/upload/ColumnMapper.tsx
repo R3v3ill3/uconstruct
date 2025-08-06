@@ -52,7 +52,27 @@ const DATABASE_TABLES = {
       name: { type: "text", required: true, description: "Employer name" },
       abn: { type: "text", required: false, description: "Australian Business Number" },
       employer_type: { type: "enum", required: true, description: "Type of employer",
-        options: ["builder", "principal_contractor", "large_contractor", "small_contractor", "individual"] }
+        options: ["builder", "principal_contractor", "large_contractor", "small_contractor", "individual"] },
+      phone: { type: "text", required: false, description: "Contact phone number" },
+      email: { type: "email", required: false, description: "Contact email address" },
+      address_line_1: { type: "text", required: false, description: "Address line 1" },
+      address_line_2: { type: "text", required: false, description: "Address line 2" },
+      suburb: { type: "text", required: false, description: "Suburb" },
+      state: { type: "text", required: false, description: "State" },
+      postcode: { type: "text", required: false, description: "Postcode" },
+      website: { type: "text", required: false, description: "Website URL" },
+      contact_notes: { type: "text", required: false, description: "Additional contact information" }
+    }
+  },
+  contractors: {
+    label: "Contractors",
+    columns: {
+      trade: { type: "enum", required: true, description: "Primary trade type",
+        options: ["tower_crane", "mobile_crane", "demolition", "scaffolding", "post_tensioning", "concreting", "form_work", "steel_fixing", "bricklaying", "traffic_control", "labour_hire", "carpentry", "windows", "painting", "waterproofing", "plastering", "edge_protection", "hoist", "kitchens", "tiling", "cleaning", "flooring", "structural_steel", "landscaping"] },
+      company: { type: "text", required: true, description: "Company name" },
+      contact_details: { type: "text", required: false, description: "Contact details (will be parsed into separate fields)" },
+      eba_signatory: { type: "enum", required: false, description: "EBA signatory status",
+        options: ["yes", "no", "not_specified"] }
     }
   },
   job_sites: {
@@ -83,7 +103,7 @@ const DATABASE_TABLES = {
       job_site_id: { type: "uuid", required: true, description: "Job site ID (must match existing site)" },
       employer_id: { type: "uuid", required: true, description: "Employer/contractor ID (must match existing employer)" },
       trade_type: { type: "enum", required: true, description: "Trade type",
-        options: ["scaffolding", "form_work", "reinforcing_steel", "concrete", "crane_and_rigging", "plant_and_equipment", "electrical", "plumbing", "carpentry", "painting", "flooring", "roofing", "glazing", "landscaping", "demolition", "earthworks", "structural_steel", "mechanical_services", "fire_protection", "security_systems", "cleaning", "traffic_management", "waste_management", "general_construction", "other"] },
+        options: ["tower_crane", "mobile_crane", "demolition", "scaffolding", "post_tensioning", "concreting", "form_work", "steel_fixing", "bricklaying", "traffic_control", "labour_hire", "carpentry", "windows", "painting", "waterproofing", "plastering", "edge_protection", "hoist", "kitchens", "tiling", "cleaning", "flooring", "structural_steel", "landscaping"] },
       eba_status: { type: "boolean", required: false, description: "Enterprise Bargaining Agreement status (true/false)" },
       start_date: { type: "date", required: false, description: "Contract start date" },
       end_date: { type: "date", required: false, description: "Contract end date" },

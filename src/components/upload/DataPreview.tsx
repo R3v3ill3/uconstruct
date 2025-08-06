@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Eye, AlertTriangle, CheckCircle, XCircle, Upload } from "lucide-react";
 import { ParsedCSV, ColumnMapping, ValidationResult } from "@/pages/Upload";
+import ContractorImport from "./ContractorImport";
 
 interface DataPreviewProps {
   parsedCSV: ParsedCSV;
@@ -185,6 +186,29 @@ const DataPreview = ({
   const handleImport = () => {
     onImportStart();
   };
+
+  // Handle contractor imports differently
+  if (selectedTable === 'contractors') {
+    return (
+      <ContractorImport
+        csvData={parsedCSV.rows}
+        onImportComplete={(results) => {
+          onValidationComplete({
+            isValid: true,
+            errors: [],
+            warnings: results.errors.map(error => ({
+              row: 0,
+              column: '',
+              message: error,
+              value: ''
+            }))
+          });
+          onImportStart();
+        }}
+        onBack={onBack}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
