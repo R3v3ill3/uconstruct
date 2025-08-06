@@ -14,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_delegations: {
+        Row: {
+          activity_id: string
+          assigned_worker_id: string
+          assignment_type: string | null
+          created_at: string
+          delegate_worker_id: string
+          id: string
+          source_activity_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          assigned_worker_id: string
+          assignment_type?: string | null
+          created_at?: string
+          delegate_worker_id: string
+          id?: string
+          source_activity_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          assigned_worker_id?: string
+          assignment_type?: string | null
+          created_at?: string
+          delegate_worker_id?: string
+          id?: string
+          source_activity_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      activity_participants: {
+        Row: {
+          activity_id: string
+          assignment_method: string
+          assignment_source_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          participation_status: string | null
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          activity_id: string
+          assignment_method: string
+          assignment_source_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          participation_status?: string | null
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          activity_id?: string
+          assignment_method?: string
+          assignment_source_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          participation_status?: string | null
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      activity_templates: {
+        Row: {
+          category: string
+          created_at: string
+          default_rating_criteria: Json | null
+          description: string | null
+          id: string
+          is_predefined: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          default_rating_criteria?: Json | null
+          description?: string | null
+          id?: string
+          is_predefined?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_rating_criteria?: Json | null
+          description?: string | null
+          id?: string
+          is_predefined?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       company_eba_records: {
         Row: {
           approved_date: string | null
@@ -755,32 +857,47 @@ export type Database = {
       union_activities: {
         Row: {
           activity_type: Database["public"]["Enums"]["activity_type"]
+          assignment_metadata: Json | null
           created_at: string | null
+          custom_activity_type: string | null
           date: string
           id: string
           job_site_id: string | null
           notes: string | null
+          template_id: string | null
           topic: string | null
+          total_delegates: number | null
+          total_participants: number | null
           updated_at: string | null
         }
         Insert: {
           activity_type: Database["public"]["Enums"]["activity_type"]
+          assignment_metadata?: Json | null
           created_at?: string | null
+          custom_activity_type?: string | null
           date: string
           id?: string
           job_site_id?: string | null
           notes?: string | null
+          template_id?: string | null
           topic?: string | null
+          total_delegates?: number | null
+          total_participants?: number | null
           updated_at?: string | null
         }
         Update: {
           activity_type?: Database["public"]["Enums"]["activity_type"]
+          assignment_metadata?: Json | null
           created_at?: string | null
+          custom_activity_type?: string | null
           date?: string
           id?: string
           job_site_id?: string | null
           notes?: string | null
+          template_id?: string | null
           topic?: string | null
+          total_delegates?: number | null
+          total_participants?: number | null
           updated_at?: string | null
         }
         Relationships: [
