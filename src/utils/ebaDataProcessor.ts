@@ -89,7 +89,7 @@ export function processEbaRow(row: Record<string, string>): ProcessedEbaData | n
     comments: row['COMMENTS'] || row['comments'] || undefined,
     fwc_lodgement_number: row['FWC Lodgement #'] || row['fwc_lodgement_number'] || undefined,
     fwc_matter_number: row['FWC Matter #'] || row['fwc_matter_number'] || undefined,
-    fwc_document_url: row['FWC Document URL'] || row['fwc_document_url'] || row['Document URL'] || row['document_url'] || undefined,
+    fwc_document_url: row['FWC Document Search Link'] || row['FWC Document URL'] || row['fwc_document_url'] || row['Document URL'] || row['document_url'] || undefined,
     
     ...contactDetails,
     
