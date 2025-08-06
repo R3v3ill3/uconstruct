@@ -18,7 +18,7 @@ import { Plus, Edit, Trash2, Award, Calendar, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 const unionRoleSchema = z.object({
-  name: z.enum(["site_delegate", "hsr", "shop_steward", "organising_committee"]),
+  name: z.enum(["site_delegate", "hsr", "shift_delegate", "company_delegate", "member"]),
   job_site_id: z.string().optional(),
   start_date: z.string().min(1, "Start date is required"),
   end_date: z.string().optional(),
@@ -39,8 +39,9 @@ interface WorkerUnionRolesTabProps {
 const unionRoleTypes = [
   { value: "site_delegate", label: "Site Delegate" },
   { value: "hsr", label: "Health & Safety Representative" },
-  { value: "shop_steward", label: "Shop Steward" },
-  { value: "organising_committee", label: "Organising Committee" },
+  { value: "shift_delegate", label: "Shift Delegate" },
+  { value: "company_delegate", label: "Company Delegate" },
+  { value: "member", label: "Member" },
 ];
 
 export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabProps) => {
@@ -103,10 +104,13 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
   const createMutation = useMutation({
     mutationFn: async (data: UnionRoleFormData) => {
       const cleanedData = {
-        ...data,
         worker_id: workerId,
+        name: data.name,
         job_site_id: data.job_site_id || null,
+        start_date: data.start_date,
         end_date: data.end_date || null,
+        is_senior: data.is_senior,
+        gets_paid_time: data.gets_paid_time,
         rating: data.rating || null,
         experience_level: data.experience_level || null,
         notes: data.notes || null,
@@ -140,9 +144,12 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
   const updateMutation = useMutation({
     mutationFn: async (data: UnionRoleFormData) => {
       const cleanedData = {
-        ...data,
+        name: data.name,
         job_site_id: data.job_site_id || null,
+        start_date: data.start_date,
         end_date: data.end_date || null,
+        is_senior: data.is_senior,
+        gets_paid_time: data.gets_paid_time,
         rating: data.rating || null,
         experience_level: data.experience_level || null,
         notes: data.notes || null,

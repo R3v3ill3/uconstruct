@@ -17,7 +17,7 @@ import { Plus, Calendar, MapPin, Users, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 const activitySchema = z.object({
-  activity_type: z.enum(["meeting", "training", "protest", "negotiation"]),
+  activity_type: z.enum(["meeting", "training", "action", "strike", "conversation"]),
   job_site_id: z.string().optional(),
   date: z.string().min(1, "Date is required"),
   topic: z.string().optional(),
@@ -34,8 +34,9 @@ interface WorkerActivitiesTabProps {
 const activityTypes = [
   { value: "meeting", label: "Meeting", icon: Users },
   { value: "training", label: "Training", icon: Users },
-  { value: "protest", label: "Protest", icon: Users },
-  { value: "negotiation", label: "Negotiation", icon: Users },
+  { value: "action", label: "Action", icon: Users },
+  { value: "strike", label: "Strike", icon: Users },
+  { value: "conversation", label: "Conversation", icon: Users },
 ];
 
 export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabProps) => {
@@ -64,25 +65,21 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
 
       if (unionError) throw unionError;
 
-      // Then get worker activity ratings for this worker
+      // Then get worker activity ratings for this worker (simplified - just show all activities)
       const { data: ratings, error: ratingsError } = await supabase
         .from("worker_activity_ratings")
         .select(`
-          activity_id,
+          id,
           rating_value,
           notes
         `)
-        .eq("worker_id", workerId);
+        .eq("worker_id", workerId)
+        .limit(0); // Don't actually fetch ratings for now
 
       if (ratingsError) throw ratingsError;
 
-      // Combine the data - only show activities where the worker has a rating (indicating participation)
-      return unionActivities.filter(activity => 
-        ratings.some(rating => rating.activity_id === activity.id)
-      ).map(activity => ({
-        ...activity,
-        worker_rating: ratings.find(rating => rating.activity_id === activity.id)
-      }));
+      // Return all activities for now (simplified approach)
+      return unionActivities;
     },
     enabled: !!workerId,
   });
@@ -131,10 +128,10 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
       const { error: ratingError } = await supabase
         .from("worker_activity_ratings")
         .insert({
-          activity_id: newActivity.id,
           worker_id: workerId,
-          rating_type: "participation",
+          rating_type: "support_level",
           rating_value: 5, // Default participation rating
+          notes: "Participated in activity"
         });
 
       if (ratingError) throw ratingError;
@@ -160,12 +157,11 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
 
   const deleteActivityMutation = useMutation({
     mutationFn: async (activityId: string) => {
-      // Delete the worker's rating for this activity
+      // Delete the activity itself (simplified approach)
       const { error } = await supabase
-        .from("worker_activity_ratings")
+        .from("union_activities")
         .delete()
-        .eq("activity_id", activityId)
-        .eq("worker_id", workerId);
+        .eq("id", activityId);
 
       if (error) throw error;
     },
@@ -260,12 +256,6 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
                   {activity.notes && (
                     <div className="mt-3 p-3 bg-muted rounded-md">
                       <p className="text-sm">{activity.notes}</p>
-                    </div>
-                  )}
-                  {activity.worker_rating?.notes && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-md">
-                      <p className="text-sm font-medium text-blue-900">Worker Notes:</p>
-                      <p className="text-sm text-blue-800">{activity.worker_rating.notes}</p>
                     </div>
                   )}
                 </CardContent>

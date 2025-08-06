@@ -16,7 +16,7 @@ import { Plus, Star, TrendingUp, Shield, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 const ratingSchema = z.object({
-  rating_type: z.enum(["leadership", "support", "risk"]),
+  rating_type: z.enum(["leadership", "support_level", "risk"]),
   rating_value: z.number().min(1).max(10),
   notes: z.string().optional(),
 });
@@ -30,7 +30,7 @@ interface WorkerRatingsTabProps {
 
 const ratingTypes = [
   { value: "leadership", label: "Leadership Potential", icon: Star, description: "Ability to lead and inspire others" },
-  { value: "support", label: "Union Support", icon: TrendingUp, description: "Level of support for union activities" },
+  { value: "support_level", label: "Union Support", icon: TrendingUp, description: "Level of support for union activities" },
   { value: "risk", label: "Risk Assessment", icon: Shield, description: "Potential risks or concerns" },
 ];
 
@@ -47,14 +47,9 @@ export const WorkerRatingsTab = ({ workerId, onUpdate }: WorkerRatingsTabProps) 
       
       const { data, error } = await supabase
         .from("worker_activity_ratings")
-        .select(`
-          *,
-          profiles!worker_activity_ratings_rated_by_fkey (
-            full_name
-          )
-        `)
+        .select("*")
         .eq("worker_id", workerId)
-        .in("rating_type", ["leadership", "support", "risk"])
+        .in("rating_type", ["leadership", "support_level", "risk"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -273,7 +268,6 @@ export const WorkerRatingsTab = ({ workerId, onUpdate }: WorkerRatingsTabProps) 
                 <CardContent>
                   <div className="text-sm text-muted-foreground mb-2">
                     Rated on {format(new Date(rating.created_at), "MMM dd, yyyy")}
-                    {rating.profiles?.full_name && ` by ${rating.profiles.full_name}`}
                   </div>
                   {rating.notes && (
                     <div className="p-3 bg-muted rounded-md">

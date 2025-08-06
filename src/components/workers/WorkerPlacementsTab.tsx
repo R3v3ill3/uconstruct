@@ -19,8 +19,8 @@ const placementSchema = z.object({
   employer_id: z.string().min(1, "Employer is required"),
   job_site_id: z.string().min(1, "Job site is required"),
   job_title: z.string().optional(),
-  employment_status: z.enum(["active", "inactive", "terminated"]),
-  shift: z.enum(["day", "night", "afternoon"]).optional(),
+  employment_status: z.enum(["permanent", "casual", "subcontractor", "apprentice", "trainee"]),
+  shift: z.enum(["day", "night", "split", "weekend"]).optional(),
   start_date: z.string().min(1, "Start date is required"),
   end_date: z.string().optional(),
 });
@@ -96,7 +96,7 @@ export const WorkerPlacementsTab = ({ workerId, onUpdate }: WorkerPlacementsTabP
       employer_id: "",
       job_site_id: "",
       job_title: "",
-      employment_status: "active",
+      employment_status: "permanent",
       shift: "day",
       start_date: "",
       end_date: "",
@@ -106,10 +106,13 @@ export const WorkerPlacementsTab = ({ workerId, onUpdate }: WorkerPlacementsTabP
   const createMutation = useMutation({
     mutationFn: async (data: PlacementFormData) => {
       const cleanedData = {
-        ...data,
         worker_id: workerId,
+        employer_id: data.employer_id,
+        job_site_id: data.job_site_id,
         job_title: data.job_title || null,
+        employment_status: data.employment_status,
         shift: data.shift || null,
+        start_date: data.start_date,
         end_date: data.end_date || null,
       };
 
@@ -141,9 +144,12 @@ export const WorkerPlacementsTab = ({ workerId, onUpdate }: WorkerPlacementsTabP
   const updateMutation = useMutation({
     mutationFn: async (data: PlacementFormData) => {
       const cleanedData = {
-        ...data,
+        employer_id: data.employer_id,
+        job_site_id: data.job_site_id,
         job_title: data.job_title || null,
+        employment_status: data.employment_status,
         shift: data.shift || null,
+        start_date: data.start_date,
         end_date: data.end_date || null,
       };
 
@@ -222,12 +228,16 @@ export const WorkerPlacementsTab = ({ workerId, onUpdate }: WorkerPlacementsTabP
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
+      case "permanent":
         return "bg-green-100 text-green-800";
-      case "inactive":
+      case "casual":
+        return "bg-blue-100 text-blue-800";
+      case "subcontractor":
+        return "bg-purple-100 text-purple-800";
+      case "apprentice":
+        return "bg-orange-100 text-orange-800";
+      case "trainee":
         return "bg-yellow-100 text-yellow-800";
-      case "terminated":
-        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -402,9 +412,11 @@ export const WorkerPlacementsTab = ({ workerId, onUpdate }: WorkerPlacementsTabP
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="terminated">Terminated</SelectItem>
+                          <SelectItem value="permanent">Permanent</SelectItem>
+                          <SelectItem value="casual">Casual</SelectItem>
+                          <SelectItem value="subcontractor">Subcontractor</SelectItem>
+                          <SelectItem value="apprentice">Apprentice</SelectItem>
+                          <SelectItem value="trainee">Trainee</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -426,8 +438,9 @@ export const WorkerPlacementsTab = ({ workerId, onUpdate }: WorkerPlacementsTabP
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="day">Day</SelectItem>
-                          <SelectItem value="afternoon">Afternoon</SelectItem>
                           <SelectItem value="night">Night</SelectItem>
+                          <SelectItem value="split">Split</SelectItem>
+                          <SelectItem value="weekend">Weekend</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
