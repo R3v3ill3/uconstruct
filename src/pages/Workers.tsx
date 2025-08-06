@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Plus, Search, Filter, Download, Users } from "lucide-react";
+import { Plus, Search, Filter, Download, Users, Upload } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 export interface WorkerFilters {
@@ -21,6 +22,7 @@ export interface WorkerFilters {
 }
 
 const Workers = () => {
+  const navigate = useNavigate();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [filters, setFilters] = useState<WorkerFilters>({
     search: "",
@@ -170,6 +172,15 @@ const Workers = () => {
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4" />
                 Export
+              </Button>
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/upload?table=workers')}
+              >
+                <Upload className="h-4 w-4" />
+                Upload Worker List
               </Button>
 
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

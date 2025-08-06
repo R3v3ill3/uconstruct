@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink } from "lucide-react";
+import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink, Upload } from "lucide-react";
 import { getEbaStatusInfo } from "./ebaHelpers";
+import { useNavigate } from "react-router-dom";
 
 type EmployerWithEba = {
   id: string;
@@ -30,6 +31,8 @@ interface EmployerCardProps {
 }
 
 export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
+  const navigate = useNavigate();
+
   const getEmployerTypeIcon = (type: string) => {
     switch (type) {
       case "builder": return <Hammer className="h-4 w-4" />;
@@ -119,21 +122,50 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
               )}
             </div>
 
-            {employer.company_eba_records[0].fwc_document_url && (
+            <div className="flex gap-2">
+              {employer.company_eba_records[0].fwc_document_url && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(employer.company_eba_records![0].fwc_document_url!, '_blank');
+                  }}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  View Document
+                </Button>
+              )}
               <Button 
-                variant="outline" 
+                variant="secondary" 
                 size="sm" 
-                className="w-full text-xs"
+                className="flex-1 text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(employer.company_eba_records![0].fwc_document_url!, '_blank');
+                  navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`);
                 }}
               >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                View Document
+                <Upload className="h-3 w-3 mr-1" />
+                Upload Workers
               </Button>
-            )}
+            </div>
           </div>
+        )}
+        
+        {!employer.company_eba_records?.[0] && (
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="w-full text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`);
+            }}
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            Upload Workers
+          </Button>
         )}
       </CardContent>
     </Card>

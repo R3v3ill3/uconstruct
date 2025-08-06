@@ -15,6 +15,7 @@ import {
 
 interface WorkerImportProps {
   csvData: any[];
+  selectedEmployer?: {id: string, name: string};
   onImportComplete: (results: ImportResults) => void;
   onBack: () => void;
 }
@@ -32,7 +33,7 @@ interface WorkerWithEmployer extends ProcessedWorkerData {
   needsNewEmployer?: boolean;
 }
 
-export default function WorkerImport({ csvData, onImportComplete, onBack }: WorkerImportProps) {
+export default function WorkerImport({ csvData, selectedEmployer, onImportComplete, onBack }: WorkerImportProps) {
   const [isImporting, setIsImporting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewData, setPreviewData] = useState<WorkerWithEmployer[]>([]);
@@ -41,8 +42,10 @@ export default function WorkerImport({ csvData, onImportComplete, onBack }: Work
   const { toast } = useToast();
 
   useEffect(() => {
-    loadExistingEmployers();
-  }, []);
+    if (!selectedEmployer) {
+      loadExistingEmployers();
+    }
+  }, [selectedEmployer]);
 
   const loadExistingEmployers = async () => {
     try {
@@ -62,27 +65,49 @@ export default function WorkerImport({ csvData, onImportComplete, onBack }: Work
     try {
       const processed = processWorkerData(csvData);
       
-      // Match workers to existing employers
-      const workersWithEmployers: WorkerWithEmployer[] = processed.map(worker => {
-        const employerMatch = findBestEmployerMatch(worker.company_name, existingEmployers);
-        
-        return {
+      // If employer is pre-selected, assign all workers to it
+      if (selectedEmployer) {
+        const workersWithEmployers: WorkerWithEmployer[] = processed.map(worker => ({
           ...worker,
-          employerMatch,
-          needsNewEmployer: !employerMatch
-        };
-      });
-      
-      setPreviewData(workersWithEmployers);
-      setIsProcessed(true);
-      
-      const matchedCount = workersWithEmployers.filter(w => w.employerMatch).length;
-      const newEmployerCount = workersWithEmployers.filter(w => w.needsNewEmployer).length;
-      
-      toast({
-        title: "Data processed",
-        description: `${processed.length} workers processed. ${matchedCount} matched to existing employers, ${newEmployerCount} need new employers.`,
-      });
+          employerMatch: {
+            id: selectedEmployer.id,
+            name: selectedEmployer.name,
+            confidence: 'exact' as const,
+            distance: 0
+          },
+          needsNewEmployer: false
+        }));
+        
+        setPreviewData(workersWithEmployers);
+        setIsProcessed(true);
+        
+        toast({
+          title: "Data processed",
+          description: `${processed.length} workers processed and will be assigned to ${selectedEmployer.name}.`,
+        });
+      } else {
+        // Match workers to existing employers
+        const workersWithEmployers: WorkerWithEmployer[] = processed.map(worker => {
+          const employerMatch = findBestEmployerMatch(worker.company_name, existingEmployers);
+          
+          return {
+            ...worker,
+            employerMatch,
+            needsNewEmployer: !employerMatch
+          };
+        });
+        
+        setPreviewData(workersWithEmployers);
+        setIsProcessed(true);
+        
+        const matchedCount = workersWithEmployers.filter(w => w.employerMatch).length;
+        const newEmployerCount = workersWithEmployers.filter(w => w.needsNewEmployer).length;
+        
+        toast({
+          title: "Data processed",
+          description: `${processed.length} workers processed. ${matchedCount} matched to existing employers, ${newEmployerCount} need new employers.`,
+        });
+      }
     } catch (error) {
       toast({
         title: "Processing failed",
@@ -193,7 +218,7 @@ export default function WorkerImport({ csvData, onImportComplete, onBack }: Work
 
       toast({
         title: "Import completed",
-        description: `Successfully imported ${results.successful} workers with ${results.newEmployers} new employers`,
+        description: `Successfully imported ${results.successful} workers${selectedEmployer ? ` to ${selectedEmployer.name}` : ` with ${results.newEmployers} new employers`}`,
       });
 
       onImportComplete(results);
@@ -214,8 +239,19 @@ export default function WorkerImport({ csvData, onImportComplete, onBack }: Work
         <div className="text-center">
           <h3 className="text-lg font-semibold mb-2">Process Worker Data</h3>
           <p className="text-muted-foreground mb-6">
-            Click below to process and preview your worker data. We'll automatically match workers to existing employers.
+            {selectedEmployer 
+              ? `Click below to process your worker data. All workers will be assigned to ${selectedEmployer.name}.`
+              : "Click below to process and preview your worker data. We'll automatically match workers to existing employers."
+            }
           </p>
+          {selectedEmployer && (
+            <div className="mb-4">
+              <Badge variant="secondary" className="text-sm">
+                <Building className="h-3 w-3 mr-1" />
+                Assigning to: {selectedEmployer.name}
+              </Badge>
+            </div>
+          )}
           <Button onClick={processData} size="lg" disabled={isProcessing}>
             <CheckCircle className="mr-2 h-5 w-5" />
             {isProcessing ? "Processing..." : "Process Data"}
@@ -242,7 +278,10 @@ export default function WorkerImport({ csvData, onImportComplete, onBack }: Work
         <div>
           <h3 className="text-lg font-semibold">Worker Import Preview</h3>
           <p className="text-muted-foreground">
-            Review worker-employer matches before importing to the database
+            {selectedEmployer 
+              ? `Review workers before importing to ${selectedEmployer.name}`
+              : "Review worker-employer matches before importing to the database"
+            }
           </p>
         </div>
         <Badge variant="secondary">
@@ -250,35 +289,56 @@ export default function WorkerImport({ csvData, onImportComplete, onBack }: Work
         </Badge>
       </div>
 
-      {/* Matching Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            Employer Matching Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{exactMatches}</div>
-              <div className="text-muted-foreground">Exact Matches</div>
+      {selectedEmployer && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Selected Company
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge variant="default" className="text-sm">
+              {selectedEmployer.name}
+            </Badge>
+            <p className="text-sm text-muted-foreground mt-2">
+              All {previewData.length} workers will be assigned to this company
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Matching Summary - only show if no pre-selected employer */}
+      {!selectedEmployer && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Employer Matching Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{exactMatches}</div>
+                <div className="text-muted-foreground">Exact Matches</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{highMatches}</div>
+                <div className="text-muted-foreground">High Confidence</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{mediumMatches}</div>
+                <div className="text-muted-foreground">Medium Confidence</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{newEmployers}</div>
+                <div className="text-muted-foreground">New Employers</div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{highMatches}</div>
-              <div className="text-muted-foreground">High Confidence</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{mediumMatches}</div>
-              <div className="text-muted-foreground">Medium Confidence</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{newEmployers}</div>
-              <div className="text-muted-foreground">New Employers</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {previewData.length === 0 ? (
         <Alert>
@@ -301,29 +361,39 @@ export default function WorkerImport({ csvData, onImportComplete, onBack }: Work
                       <Badge variant="outline">
                         {worker.union_membership_status.replace('_', ' ')}
                       </Badge>
-                      {worker.employerMatch && (
-                        <Badge 
-                          variant={
-                            worker.employerMatch.confidence === 'exact' ? 'default' :
-                            worker.employerMatch.confidence === 'high' ? 'secondary' :
-                            'outline'
-                          }
-                        >
-                          {worker.employerMatch.confidence} match
+                      {selectedEmployer ? (
+                        <Badge variant="default">
+                          Assigned to {selectedEmployer.name}
                         </Badge>
-                      )}
-                      {worker.needsNewEmployer && (
-                        <Badge variant="destructive">New Employer</Badge>
+                      ) : (
+                        <>
+                          {worker.employerMatch && (
+                            <Badge 
+                              variant={
+                                worker.employerMatch.confidence === 'exact' ? 'default' :
+                                worker.employerMatch.confidence === 'high' ? 'secondary' :
+                                'outline'
+                              }
+                            >
+                              {worker.employerMatch.confidence} match
+                            </Badge>
+                          )}
+                          {worker.needsNewEmployer && (
+                            <Badge variant="destructive">New Employer</Badge>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Company:</span> {worker.company_name}
-                    </div>
-                    {worker.employerMatch && (
+                    {!selectedEmployer && (
+                      <div>
+                        <span className="font-medium">Company:</span> {worker.company_name}
+                      </div>
+                    )}
+                    {worker.employerMatch && !selectedEmployer && (
                       <div>
                         <span className="font-medium">Matched to:</span> {worker.employerMatch.name}
                       </div>
