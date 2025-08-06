@@ -212,7 +212,8 @@ const DataPreview = ({
   }
 
   // Handle EBA tracking imports differently
-  if (selectedTable === 'eba_tracking') {
+  console.log('DataPreview: selectedTable =', selectedTable);
+  if (selectedTable === 'company_eba_records') {
     return (
       <EbaImport
         csvData={parsedCSV.rows}

@@ -46,8 +46,8 @@ const DATABASE_TABLES = {
       redundancy_fund: { type: "text", required: false, description: "Redundancy fund" }
     }
   },
-  eba_tracking: {
-    label: "EBA Tracking",
+  company_eba_records: {
+    label: "EBA Records",
     columns: {
       company_name: { type: "text", required: true, description: "Company name" },
       eba_file_number: { type: "text", required: false, description: "EBA file number" },
