@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, UserCheck, Shield, Phone, Mail, Plus } from "lucide-react";
 import { UnionRoleAssignmentModal } from "./UnionRoleAssignmentModal";
+import { WorkerDetailModal } from "./WorkerDetailModal";
+import { WorkerCard } from "./WorkerCard";
 
 interface EmployerWorkersListProps {
   employerId: string;
@@ -38,6 +40,7 @@ type WorkerWithRoles = {
 
 export const EmployerWorkersList = ({ employerId }: EmployerWorkersListProps) => {
   const [showRoleAssignment, setShowRoleAssignment] = useState(false);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
 
   const { data: workers, isLoading, refetch } = useQuery({
     queryKey: ["employer-workers", employerId],

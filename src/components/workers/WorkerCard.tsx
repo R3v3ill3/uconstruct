@@ -13,11 +13,12 @@ import { Mail, Phone, MapPin, MoreHorizontal, Edit, Trash2, User } from "lucide-
 interface WorkerCardProps {
   worker: any;
   variant: "card" | "table";
-  onEdit: (worker: any) => void;
+  onEdit?: (worker: any) => void;
   onUpdate: () => void;
+  onClick?: (worker: any) => void;
 }
 
-export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProps) => {
+export const WorkerCard = ({ worker, variant, onEdit, onUpdate, onClick }: WorkerCardProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { toast } = useToast();
 
@@ -85,7 +86,10 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
 
   if (variant === "table") {
     return (
-      <TableRow>
+      <TableRow 
+        className={onClick ? "cursor-pointer hover:bg-muted/50" : ""}
+        onClick={() => onClick?.(worker)}
+      >
         <TableCell>
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
@@ -177,10 +181,15 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(worker)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
+                {onEdit && (
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(worker);
+                  }}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem 
                   onClick={() => setShowDeleteDialog(true)}
                   className="text-destructive"
@@ -199,7 +208,10 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
   // Card variant for mobile
   return (
     <>
-      <Card>
+      <Card 
+        className={onClick ? "cursor-pointer hover:bg-muted/50" : ""}
+        onClick={() => onClick?.(worker)}
+      >
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <Avatar className="h-12 w-12">
@@ -264,10 +276,15 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit(worker)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
+                    {onEdit && (
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(worker);
+                      }}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem 
                       onClick={() => setShowDeleteDialog(true)}
                       className="text-destructive"
