@@ -41,6 +41,7 @@ type WorkerWithRoles = {
 export const EmployerWorkersList = ({ employerId }: EmployerWorkersListProps) => {
   const [showRoleAssignment, setShowRoleAssignment] = useState(false);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+  const [showWorkerDetail, setShowWorkerDetail] = useState(false);
 
   const { data: workers, isLoading, refetch } = useQuery({
     queryKey: ["employer-workers", employerId],
@@ -131,56 +132,10 @@ export const EmployerWorkersList = ({ employerId }: EmployerWorkersListProps) =>
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const WorkerCard = ({ worker, role }: { worker: WorkerWithRoles; role?: any }) => (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-sm font-medium">
-                {worker.first_name[0]}{worker.surname[0]}
-              </span>
-            </div>
-            <div className="flex-1">
-              <h4 className="font-medium">{worker.first_name} {worker.surname}</h4>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant={getUnionStatusVariant(worker.union_membership_status)} className="text-xs">
-                  {formatUnionStatus(worker.union_membership_status)}
-                </Badge>
-                {worker.member_number && (
-                  <span className="text-xs text-muted-foreground">#{worker.member_number}</span>
-                )}
-              </div>
-              {role && (
-                <div className="flex items-center gap-2 mt-2">
-                  {role.name === 'hsr' ? <Shield className="h-4 w-4 text-orange-600" /> : <UserCheck className="h-4 w-4 text-blue-600" />}
-                  <span className="text-sm font-medium capitalize">{role.name.replace(/_/g, ' ')}</span>
-                  {role.is_senior && <Badge variant="outline" className="text-xs">Senior</Badge>}
-                  {role.gets_paid_time && <Badge variant="outline" className="text-xs">Paid Time</Badge>}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {worker.email && (
-              <Button size="sm" variant="outline" asChild>
-                <a href={`mailto:${worker.email}`}>
-                  <Mail className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
-            {worker.mobile_phone && (
-              <Button size="sm" variant="outline" asChild>
-                <a href={`tel:${worker.mobile_phone}`}>
-                  <Phone className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const handleWorkerClick = (workerId: string) => {
+    setSelectedWorkerId(workerId);
+    setShowWorkerDetail(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -219,7 +174,9 @@ export const EmployerWorkersList = ({ employerId }: EmployerWorkersListProps) =>
             <WorkerCard 
               key={worker.id} 
               worker={worker} 
-              role={worker.union_roles.find(r => r.name.includes('delegate'))} 
+              variant="card"
+              onClick={() => handleWorkerClick(worker.id)}
+              onUpdate={refetch}
             />
           ))}
         </div>
@@ -242,7 +199,9 @@ export const EmployerWorkersList = ({ employerId }: EmployerWorkersListProps) =>
             <WorkerCard 
               key={worker.id} 
               worker={worker} 
-              role={worker.union_roles.find(r => r.name === 'hsr')} 
+              variant="card"
+              onClick={() => handleWorkerClick(worker.id)}
+              onUpdate={refetch}
             />
           ))}
         </div>
@@ -264,7 +223,13 @@ export const EmployerWorkersList = ({ employerId }: EmployerWorkersListProps) =>
             )}
           </div>
           {regularWorkers.map(worker => (
-            <WorkerCard key={worker.id} worker={worker} />
+            <WorkerCard 
+              key={worker.id} 
+              worker={worker} 
+              variant="card"
+              onClick={() => handleWorkerClick(worker.id)}
+              onUpdate={refetch}
+            />
           ))}
         </div>
       )}
@@ -279,6 +244,17 @@ export const EmployerWorkersList = ({ employerId }: EmployerWorkersListProps) =>
           setShowRoleAssignment(false);
           refetch();
         }}
+      />
+
+      {/* Worker Detail Modal */}
+      <WorkerDetailModal
+        workerId={selectedWorkerId}
+        isOpen={showWorkerDetail}
+        onClose={() => {
+          setShowWorkerDetail(false);
+          setSelectedWorkerId(null);
+        }}
+        onUpdate={refetch}
       />
     </div>
   );

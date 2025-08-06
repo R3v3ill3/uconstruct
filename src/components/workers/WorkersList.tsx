@@ -2,6 +2,7 @@ import { useState } from "react";
 // Worker type is defined inline since it includes relations
 import { WorkerCard } from "./WorkerCard";
 import { WorkerForm } from "./WorkerForm";
+import { WorkerDetailModal } from "./WorkerDetailModal";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,8 @@ interface WorkersListProps {
 
 export const WorkersList = ({ workers, loading, onWorkerUpdate }: WorkersListProps) => {
   const [editingWorker, setEditingWorker] = useState<any>(null);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+  const [showWorkerDetail, setShowWorkerDetail] = useState(false);
 
   if (loading) {
     return (
@@ -107,6 +110,11 @@ export const WorkersList = ({ workers, loading, onWorkerUpdate }: WorkersListPro
     );
   }
 
+  const handleWorkerClick = (workerId: string) => {
+    setSelectedWorkerId(workerId);
+    setShowWorkerDetail(true);
+  };
+
   return (
     <>
       <ScrollArea className="h-full">
@@ -131,6 +139,7 @@ export const WorkersList = ({ workers, loading, onWorkerUpdate }: WorkersListPro
                     variant="table"
                     onEdit={setEditingWorker}
                     onUpdate={onWorkerUpdate}
+                    onClick={() => handleWorkerClick(worker.id)}
                   />
                 ))}
               </TableBody>
@@ -147,6 +156,7 @@ export const WorkersList = ({ workers, loading, onWorkerUpdate }: WorkersListPro
               variant="card"
               onEdit={setEditingWorker}
               onUpdate={onWorkerUpdate}
+              onClick={() => handleWorkerClick(worker.id)}
             />
           ))}
         </div>
@@ -169,6 +179,17 @@ export const WorkersList = ({ workers, loading, onWorkerUpdate }: WorkersListPro
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Worker Detail Modal */}
+      <WorkerDetailModal
+        workerId={selectedWorkerId}
+        isOpen={showWorkerDetail}
+        onClose={() => {
+          setShowWorkerDetail(false);
+          setSelectedWorkerId(null);
+        }}
+        onUpdate={onWorkerUpdate}
+      />
     </>
   );
 };
