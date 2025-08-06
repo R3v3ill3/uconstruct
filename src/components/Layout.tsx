@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck } from "lucide-react";
+import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck, Shield } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: BarChart3 },
@@ -24,10 +25,35 @@ const Layout = ({ children }: LayoutProps) => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      
+      setUserRole(profile?.role || null);
+    };
+
+    checkUserRole();
+  }, [user]);
+
+  const getVisibleNavItems = () => {
+    const items = [...navItems];
+    if (userRole === "admin") {
+      items.push({ path: "/admin", label: "Administration", icon: Shield });
+    }
+    return items;
+  };
 
   const NavItems = ({ mobile = false }: { mobile?: boolean }) => (
     <div className={`flex ${mobile ? "flex-col" : "flex-row"} gap-2`}>
-      {navItems.map((item) => {
+      {getVisibleNavItems().map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
         return (
