@@ -53,7 +53,7 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
     fwc_matter_number?: string;
     comments?: string;
     nominal_expiry_date?: Date;
-    approved_date?: Date;
+    fwc_certified_date?: Date;
   }>({});
   
   const { toast } = useToast();
@@ -137,7 +137,7 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
         fwc_matter_number: ebaData.fwc_matter_number,
         comments: ebaData.comments,
         nominal_expiry_date: ebaData.nominal_expiry_date?.toISOString().split('T')[0] || null,
-        approved_date: ebaData.approved_date?.toISOString().split('T')[0] || null,
+        fwc_certified_date: ebaData.fwc_certified_date?.toISOString().split('T')[0] || null,
       };
       
       const { error } = await supabase
@@ -362,20 +362,20 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                   </Popover>
                 </div>
                 <div>
-                  <Label htmlFor="approved_date">Approved Date</Label>
+                  <Label htmlFor="fwc_certified_date">Approved Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !newEbaData.approved_date && "text-muted-foreground"
+                          !newEbaData.fwc_certified_date && "text-muted-foreground"
                         )}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {newEbaData.approved_date ? (
-                          format(newEbaData.approved_date, "PPP")
+                        {newEbaData.fwc_certified_date ? (
+                          format(newEbaData.fwc_certified_date, "PPP")
                         ) : (
                           <span>Pick a date</span>
                         )}
@@ -384,8 +384,8 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={newEbaData.approved_date}
-                        onSelect={(date) => setNewEbaData(prev => ({ ...prev, approved_date: date }))}
+                        selected={newEbaData.fwc_certified_date}
+                        onSelect={(date) => setNewEbaData(prev => ({ ...prev, fwc_certified_date: date }))}
                         initialFocus
                         className="p-3 pointer-events-auto"
                       />
