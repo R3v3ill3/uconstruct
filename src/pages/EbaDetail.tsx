@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building, Calendar, Phone, Mail, FileText, Edit, CheckCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Building, Calendar, Phone, Mail, FileText, Edit, CheckCircle, ExternalLink, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EbaEditDatesModal } from "@/components/employers/EbaEditDatesModal";
+import { workflowSteps, getSmartStepStatus, getEbaProgress } from "@/components/employers/ebaHelpers";
 
 interface EbaRecord {
   id: string;
@@ -85,7 +86,7 @@ const EbaDetail = () => {
     }
   };
 
-  const workflowSteps = [
+  const workflowStepsWithIcons = [
     { key: 'eba_data_form_received', label: 'EBA Data Form Received', icon: FileText },
     { key: 'date_draft_signing_sent', label: 'Draft Signing Sent', icon: FileText },
     { key: 'followup_phone_call', label: 'Follow-up Phone Call', icon: Phone },
@@ -98,6 +99,8 @@ const EbaDetail = () => {
     { key: 'eba_lodged_fwc', label: 'EBA Lodged with FWC', icon: FileText },
     { key: 'fwc_certified_date', label: 'FWC Certified', icon: CheckCircle },
   ];
+  
+  const progress = record ? getEbaProgress(record) : { stage: 'Not Started', percentage: 0 };
 
   if (loading) {
     return (
@@ -264,6 +267,9 @@ const EbaDetail = () => {
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               EBA Workflow Progress
+              <Badge variant="outline" className="ml-2">
+                {progress.stage} ({progress.percentage}%)
+              </Badge>
             </CardTitle>
             <Button 
               variant="outline" 
@@ -277,28 +283,70 @@ const EbaDetail = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {workflowSteps.map((step, index) => {
+            {workflowStepsWithIcons.map((step, index) => {
               const Icon = step.icon;
               const date = record[step.key as keyof EbaRecord] as string;
-              const isCompleted = !!date;
-              const isNext = !isCompleted && workflowSteps.slice(0, index).every(s => record[s.key as keyof EbaRecord]);
+              const stepStatus = getSmartStepStatus(step.key, record);
+              
+              const getStepColors = () => {
+                switch (stepStatus.status) {
+                  case 'completed':
+                    return 'text-green-600';
+                  case 'implied':
+                    return 'text-green-600';
+                  case 'next':
+                    return 'text-blue-600';
+                  default:
+                    return 'text-muted-foreground';
+                }
+              };
+              
+              const getBadgeConfig = () => {
+                switch (stepStatus.status) {
+                  case 'completed':
+                    return { text: 'Completed', className: 'text-green-600 border-green-600' };
+                  case 'implied':
+                    return { text: 'Completed (implied)', className: 'text-green-600 border-green-600' };
+                  case 'next':
+                    return { text: 'Next', className: 'text-blue-600 border-blue-600' };
+                  default:
+                    return null;
+                }
+              };
+              
+              const colors = getStepColors();
+              const badgeConfig = getBadgeConfig();
               
               return (
                 <div key={step.key} className="flex items-center gap-4 p-3 rounded-lg border">
-                  <div className={`flex-shrink-0 ${isCompleted ? 'text-green-600' : isNext ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                  <div className={`flex-shrink-0 ${colors}`}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className={`font-medium ${isCompleted ? 'text-green-600' : isNext ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                      <span className={`font-medium ${colors}`}>
                         {step.label}
                       </span>
-                      {isCompleted && <Badge variant="outline" className="text-green-600 border-green-600">Completed</Badge>}
-                      {isNext && <Badge variant="outline" className="text-blue-600 border-blue-600">Next</Badge>}
+                      {badgeConfig && (
+                        <Badge variant="outline" className={badgeConfig.className}>
+                          {badgeConfig.text}
+                        </Badge>
+                      )}
+                      {stepStatus.needsAttention && (
+                        <div className="flex items-center gap-1 text-amber-600" title="Missing date information">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="text-xs">Missing date</span>
+                        </div>
+                      )}
                     </div>
                     {date && (
                       <p className="text-sm text-muted-foreground">
                         {new Date(date).toLocaleDateString()}
+                      </p>
+                    )}
+                    {stepStatus.status === 'implied' && !date && (
+                      <p className="text-sm text-amber-600">
+                        Completed by process flow - consider adding date
                       </p>
                     )}
                   </div>

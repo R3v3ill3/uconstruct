@@ -4,6 +4,19 @@ export type EbaStatusInfo = {
   variant: "default" | "secondary" | "destructive" | "outline";
 };
 
+export type EbaStepStatus = {
+  status: 'completed' | 'implied' | 'next' | 'pending';
+  hasDate: boolean;
+  needsAttention: boolean;
+};
+
+export type EbaWorkflowStep = {
+  key: string;
+  label: string;
+  isMilestone: boolean;
+  dependsOn?: string[];
+};
+
 export function getEbaStatusInfo(ebaRecord: any): EbaStatusInfo {
   if (ebaRecord.fwc_certified_date) {
     return {
@@ -44,30 +57,98 @@ export function getEbaStatusInfo(ebaRecord: any): EbaStatusInfo {
   };
 }
 
-export function getEbaProgress(ebaRecord: any): { stage: string; percentage: number } {
-  const stages = [
-    { key: 'eba_data_form_received', label: 'Form Received' },
-    { key: 'date_barg_docs_sent', label: 'Docs Sent' },
-    { key: 'date_draft_signing_sent', label: 'Draft Sent' },
-    { key: 'date_eba_signed', label: 'Signed' },
-    { key: 'eba_lodged_fwc', label: 'Lodged' },
-    { key: 'fwc_certified_date', label: 'Certified' }
+// Define workflow steps with milestone markers and dependencies
+export const workflowSteps: EbaWorkflowStep[] = [
+  { key: 'eba_data_form_received', label: 'EBA Data Form Received', isMilestone: false },
+  { key: 'date_draft_signing_sent', label: 'Draft Signing Sent', isMilestone: false },
+  { key: 'followup_phone_call', label: 'Follow-up Phone Call', isMilestone: false },
+  { key: 'followup_email_sent', label: 'Follow-up Email Sent', isMilestone: false },
+  { key: 'out_of_office_received', label: 'Out of Office Received', isMilestone: false },
+  { key: 'docs_prepared', label: 'Documents Prepared', isMilestone: false },
+  { key: 'date_barg_docs_sent', label: 'Bargaining Docs Sent', isMilestone: true },
+  { key: 'date_eba_signed', label: 'EBA Signed', isMilestone: true },
+  { key: 'date_vote_occurred', label: 'Vote Occurred', isMilestone: false },
+  { key: 'eba_lodged_fwc', label: 'EBA Lodged with FWC', isMilestone: true },
+  { key: 'fwc_certified_date', label: 'FWC Certified', isMilestone: true },
+];
+
+// Find the highest completed milestone
+export function getHighestMilestone(ebaRecord: any): string | null {
+  const milestones = [
+    'fwc_certified_date',
+    'eba_lodged_fwc', 
+    'date_eba_signed',
+    'date_barg_docs_sent'
   ];
   
-  let completedStages = 0;
-  let currentStage = 'Not Started';
-  
-  for (const stage of stages) {
-    if (ebaRecord[stage.key]) {
-      completedStages++;
-      currentStage = stage.label;
-    } else {
-      break;
+  for (const milestone of milestones) {
+    if (ebaRecord[milestone]) {
+      return milestone;
     }
   }
+  return null;
+}
+
+// Calculate smart step status based on milestones
+export function getSmartStepStatus(stepKey: string, ebaRecord: any): EbaStepStatus {
+  const hasDate = !!ebaRecord[stepKey];
+  const highestMilestone = getHighestMilestone(ebaRecord);
+  
+  if (hasDate) {
+    return {
+      status: 'completed',
+      hasDate: true,
+      needsAttention: false
+    };
+  }
+  
+  // Check if this step should be implied complete based on milestones
+  const stepIndex = workflowSteps.findIndex(s => s.key === stepKey);
+  const milestoneIndex = highestMilestone ? workflowSteps.findIndex(s => s.key === highestMilestone) : -1;
+  
+  if (milestoneIndex >= 0 && stepIndex <= milestoneIndex) {
+    return {
+      status: 'implied',
+      hasDate: false,
+      needsAttention: true // Missing date for completed process
+    };
+  }
+  
+  // Determine if this is the next logical step
+  const isNext = stepIndex === 0 || workflowSteps.slice(0, stepIndex).every(s => {
+    const status = getSmartStepStatus(s.key, ebaRecord);
+    return status.status === 'completed' || status.status === 'implied';
+  });
   
   return {
-    stage: currentStage,
-    percentage: Math.round((completedStages / stages.length) * 100)
+    status: isNext ? 'next' : 'pending',
+    hasDate: false,
+    needsAttention: false
+  };
+}
+
+export function getEbaProgress(ebaRecord: any): { stage: string; percentage: number } {
+  const highestMilestone = getHighestMilestone(ebaRecord);
+  
+  if (!highestMilestone) {
+    return {
+      stage: 'Not Started',
+      percentage: 0
+    };
+  }
+  
+  const milestoneLabels = {
+    'date_barg_docs_sent': 'Docs Sent',
+    'date_eba_signed': 'Signed',
+    'eba_lodged_fwc': 'Lodged',
+    'fwc_certified_date': 'Certified'
+  };
+  
+  const milestoneOrder = ['date_barg_docs_sent', 'date_eba_signed', 'eba_lodged_fwc', 'fwc_certified_date'];
+  const milestoneIndex = milestoneOrder.indexOf(highestMilestone);
+  
+  return {
+    stage: milestoneLabels[highestMilestone as keyof typeof milestoneLabels] || 'In Progress',
+    percentage: Math.round(((milestoneIndex + 1) / milestoneOrder.length) * 100)
   };
 }
