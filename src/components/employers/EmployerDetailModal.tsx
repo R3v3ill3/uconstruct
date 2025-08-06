@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building, Phone, Mail, FileText, ExternalLink, MapPin, Users, Briefcase } from "lucide-react";
 import { getEbaStatusInfo } from "./ebaHelpers";
+import { EmployerWorkersList } from "../workers/EmployerWorkersList";
 
 type EmployerWithEba = {
   id: string;
@@ -345,15 +346,7 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDet
             </TabsContent>
 
             <TabsContent value="workers" className="space-y-4">
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Workers</h3>
-                  <p className="text-muted-foreground text-center">
-                    No worker information is currently available for this employer.
-                  </p>
-                </CardContent>
-              </Card>
+              <EmployerWorkersList employerId={employerId!} />
             </TabsContent>
           </Tabs>
         ) : (
