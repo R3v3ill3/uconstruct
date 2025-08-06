@@ -11,6 +11,8 @@ import Upload from "@/pages/Upload";
 import Workers from "@/pages/Workers";
 import Projects from "@/pages/Projects";
 import Employers from "@/pages/Employers";
+import EbaTracking from "@/pages/EbaTracking";
+import EbaDetail from "@/pages/EbaDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +63,16 @@ const App = () => (
             <Route path="/employers" element={
               <ProtectedRoute>
                 <Employers />
+              </ProtectedRoute>
+            } />
+            <Route path="/eba" element={
+              <ProtectedRoute>
+                <EbaTracking />
+              </ProtectedRoute>
+            } />
+            <Route path="/eba/:id" element={
+              <ProtectedRoute>
+                <EbaDetail />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

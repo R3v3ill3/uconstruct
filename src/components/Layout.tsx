@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen } from "lucide-react";
+import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { path: "/projects", label: "Projects", icon: FolderOpen },
   { path: "/workers", label: "Workers", icon: Users },
   { path: "/employers", label: "Employers", icon: Building },
+  { path: "/eba", label: "EBA Tracking", icon: FileCheck },
   { path: "/sites", label: "Job Sites", icon: MapPin },
   { path: "/activities", label: "Activities", icon: Activity },
   { path: "/upload", label: "Data Upload", icon: Upload },
