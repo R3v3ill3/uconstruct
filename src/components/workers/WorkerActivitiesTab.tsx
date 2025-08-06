@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, MapPin, Users, Edit, Trash2 } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Edit, Trash2, Star } from "lucide-react";
 import { format } from "date-fns";
 
 const activitySchema = z.object({
@@ -39,19 +39,28 @@ const activityTypes = [
   { value: "conversation", label: "Conversation", icon: Users },
 ];
 
+// New rating scale labels: 1=Supporter Activist, 5=Opposed Activist
+const ratingLabels = {
+  1: { label: "Supporter Activist", color: "bg-green-600", description: "Actively promotes union activities" },
+  2: { label: "Supporter", color: "bg-green-400", description: "Supports union activities" },
+  3: { label: "Undecided", color: "bg-yellow-500", description: "Neutral stance" },
+  4: { label: "Opposed", color: "bg-red-400", description: "Against activities but not actively opposing" },
+  5: { label: "Opposed Activist", color: "bg-red-600", description: "Actively works against union activities" },
+};
+
 export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabProps) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: activities = [], isLoading } = useQuery({
-    queryKey: ["worker-activities", workerId],
+  // Fetch all union activities with worker's ratings
+  const { data: activitiesWithRatings = [], isLoading } = useQuery({
+    queryKey: ["worker-activities-ratings", workerId],
     queryFn: async () => {
       if (!workerId) return [];
       
-      // First get union activities where the worker participated
-      const { data: unionActivities, error: unionError } = await supabase
+      // Get all union activities
+      const { data: activities, error: activitiesError } = await supabase
         .from("union_activities")
         .select(`
           *,
@@ -63,23 +72,32 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
         `)
         .order("date", { ascending: false });
 
-      if (unionError) throw unionError;
+      if (activitiesError) throw activitiesError;
 
-      // Then get worker activity ratings for this worker (simplified - just show all activities)
+      // Get all ratings for this worker
       const { data: ratings, error: ratingsError } = await supabase
         .from("worker_activity_ratings")
-        .select(`
-          id,
-          rating_value,
-          notes
-        `)
+        .select("*")
         .eq("worker_id", workerId)
-        .limit(0); // Don't actually fetch ratings for now
+        .eq("rating_type", "activity_participation");
 
       if (ratingsError) throw ratingsError;
 
-      // Return all activities for now (simplified approach)
-      return unionActivities;
+      // Combine activities with their ratings
+      const activitiesWithRatings = activities.map(activity => {
+        const rating = ratings.find(r => r.activity_id === activity.id);
+        return {
+          ...activity,
+          rating: rating ? {
+            id: rating.id,
+            value: rating.rating_value,
+            notes: rating.notes,
+            created_at: rating.created_at
+          } : null
+        };
+      });
+
+      return activitiesWithRatings;
     },
     enabled: !!workerId,
   });
@@ -109,8 +127,7 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
 
   const createActivityMutation = useMutation({
     mutationFn: async (data: ActivityFormData) => {
-      // First create the union activity
-      const { data: newActivity, error: activityError } = await supabase
+      const { data: newActivity, error } = await supabase
         .from("union_activities")
         .insert({
           activity_type: data.activity_type,
@@ -122,61 +139,100 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
         .select()
         .single();
 
-      if (activityError) throw activityError;
-
-      // Then create a worker activity rating to indicate participation
-      const { error: ratingError } = await supabase
-        .from("worker_activity_ratings")
-        .insert({
-          worker_id: workerId,
-          rating_type: "support_level",
-          rating_value: 5, // Default participation rating
-          notes: "Participated in activity"
-        });
-
-      if (ratingError) throw ratingError;
+      if (error) throw error;
+      return newActivity;
     },
     onSuccess: () => {
       toast({
-        title: "Activity added",
-        description: "Worker activity has been successfully added.",
+        title: "Activity created",
+        description: "New union activity has been created successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["worker-activities", workerId] });
+      queryClient.invalidateQueries({ queryKey: ["worker-activities-ratings", workerId] });
       setShowAddDialog(false);
       form.reset();
       onUpdate();
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to add activity. Please try again.",
+        description: "Failed to create activity. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const deleteActivityMutation = useMutation({
-    mutationFn: async (activityId: string) => {
-      // Delete the activity itself (simplified approach)
-      const { error } = await supabase
-        .from("union_activities")
-        .delete()
-        .eq("id", activityId);
+  const rateActivityMutation = useMutation({
+    mutationFn: async ({ activityId, rating, notes }: { activityId: string; rating: number; notes?: string }) => {
+      // Check if rating already exists
+      const { data: existing } = await supabase
+        .from("worker_activity_ratings")
+        .select("id")
+        .eq("worker_id", workerId)
+        .eq("activity_id", activityId)
+        .eq("rating_type", "activity_participation")
+        .single();
 
+      if (existing) {
+        // Update existing rating
+        const { error } = await supabase
+          .from("worker_activity_ratings")
+          .update({
+            rating_value: rating,
+            notes: notes || null,
+          })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        // Create new rating
+        const { error } = await supabase
+          .from("worker_activity_ratings")
+          .insert({
+            worker_id: workerId,
+            activity_id: activityId,
+            rating_type: "activity_participation",
+            rating_value: rating,
+            notes: notes || null,
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Rating updated",
+        description: "Worker's activity rating has been updated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["worker-activities-ratings", workerId] });
+      onUpdate();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update rating. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteRatingMutation = useMutation({
+    mutationFn: async (ratingId: string) => {
+      const { error } = await supabase
+        .from("worker_activity_ratings")
+        .delete()
+        .eq("id", ratingId);
       if (error) throw error;
     },
     onSuccess: () => {
       toast({
-        title: "Activity participation removed",
-        description: "Worker's participation in this activity has been removed.",
+        title: "Rating removed",
+        description: "Worker's activity rating has been removed.",
       });
-      queryClient.invalidateQueries({ queryKey: ["worker-activities", workerId] });
+      queryClient.invalidateQueries({ queryKey: ["worker-activities-ratings", workerId] });
       onUpdate();
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to remove activity participation. Please try again.",
+        description: "Failed to remove rating. Please try again.",
         variant: "destructive",
       });
     },
@@ -195,27 +251,50 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
     return activityTypes.find(t => t.value === type)?.label || type;
   };
 
+  const getRatingBadge = (rating: any) => {
+    if (!rating || rating.value === null) {
+      return <Badge variant="secondary">Unassessed</Badge>;
+    }
+    const ratingInfo = ratingLabels[rating.value as keyof typeof ratingLabels];
+    return (
+      <Badge 
+        className={`text-white ${ratingInfo.color}`}
+        title={ratingInfo.description}
+      >
+        {ratingInfo.label}
+      </Badge>
+    );
+  };
+
+  const handleQuickRating = (activityId: string, rating: number) => {
+    rateActivityMutation.mutate({ activityId, rating });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Union Activities</h3>
+        <h3 className="text-lg font-semibold">Union Activities & Ratings</h3>
         <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Activity
         </Button>
       </div>
 
+      <div className="text-sm text-muted-foreground mb-4">
+        Rate each worker on their stance toward union activities: 1=Supporter Activist, 3=Undecided, 5=Opposed Activist
+      </div>
+
       {isLoading ? (
         <div className="text-center text-muted-foreground">Loading activities...</div>
-      ) : activities.length === 0 ? (
+      ) : activitiesWithRatings.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
-            No activities recorded. Add an activity to track participation.
+            No activities found. Create activities to start rating worker participation.
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {activities.map((activity) => {
+          {activitiesWithRatings.map((activity) => {
             const IconComponent = getActivityTypeIcon(activity.activity_type);
             return (
               <Card key={activity.id}>
@@ -226,14 +305,7 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
                       {getActivityTypeLabel(activity.activity_type)}
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">Participated</Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => deleteActivityMutation.mutate(activity.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {getRatingBadge(activity.rating)}
                     </div>
                   </div>
                   {activity.topic && (
@@ -241,7 +313,7 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
                   )}
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span>{format(new Date(activity.date), "MMM dd, yyyy")}</span>
@@ -253,9 +325,55 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
                       </div>
                     )}
                   </div>
+
+                  {/* Quick Rating Buttons */}
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">Rate this worker's stance:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(ratingLabels).map(([value, info]) => (
+                        <Button
+                          key={value}
+                          size="sm"
+                          variant={activity.rating?.value === parseInt(value) ? "default" : "outline"}
+                          className={activity.rating?.value === parseInt(value) ? `text-white ${info.color}` : ""}
+                          onClick={() => handleQuickRating(activity.id, parseInt(value))}
+                          title={info.description}
+                        >
+                          {value}. {info.label}
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    {activity.rating && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteRatingMutation.mutate(activity.rating.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Remove Rating
+                        </Button>
+                        {activity.rating.created_at && (
+                          <span className="text-xs text-muted-foreground">
+                            Rated {format(new Date(activity.rating.created_at), "MMM dd, yyyy")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {activity.notes && (
                     <div className="mt-3 p-3 bg-muted rounded-md">
+                      <p className="text-sm font-medium mb-1">Activity Notes:</p>
                       <p className="text-sm">{activity.notes}</p>
+                    </div>
+                  )}
+
+                  {activity.rating?.notes && (
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                      <p className="text-sm font-medium mb-1">Rating Notes:</p>
+                      <p className="text-sm">{activity.rating.notes}</p>
                     </div>
                   )}
                 </CardContent>
@@ -265,11 +383,11 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
         </div>
       )}
 
-      {/* Add Dialog */}
+      {/* Add Activity Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Activity</DialogTitle>
+            <DialogTitle>Create New Union Activity</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -386,7 +504,7 @@ export const WorkerActivitiesTab = ({ workerId, onUpdate }: WorkerActivitiesTabP
                   type="submit" 
                   disabled={createActivityMutation.isPending}
                 >
-                  Add Activity
+                  Create Activity
                 </Button>
               </div>
             </form>
