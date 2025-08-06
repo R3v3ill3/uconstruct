@@ -11,6 +11,7 @@ import { ArrowLeft, Eye, AlertTriangle, CheckCircle, XCircle, Upload } from "luc
 import { ParsedCSV, ColumnMapping, ValidationResult } from "@/pages/Upload";
 import ContractorImport from "./ContractorImport";
 import { EbaImport } from "./EbaImport";
+import WorkerImport from "./WorkerImport";
 
 interface DataPreviewProps {
   parsedCSV: ParsedCSV;
@@ -192,6 +193,29 @@ const DataPreview = ({
   if (selectedTable === 'contractors') {
     return (
       <ContractorImport
+        csvData={parsedCSV.rows}
+        onImportComplete={(results) => {
+          onValidationComplete({
+            isValid: true,
+            errors: [],
+            warnings: results.errors.map(error => ({
+              row: 0,
+              column: '',
+              message: error,
+              value: ''
+            }))
+          });
+          onImportStart();
+        }}
+        onBack={onBack}
+      />
+    );
+  }
+
+  // Handle worker imports differently
+  if (selectedTable === 'workers') {
+    return (
+      <WorkerImport
         csvData={parsedCSV.rows}
         onImportComplete={(results) => {
           onValidationComplete({
