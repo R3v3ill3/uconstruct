@@ -2,11 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink, Upload, Award, TrendingUp } from "lucide-react";
+import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink, Upload, Award, TrendingUp, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getEbaStatusInfo } from "./ebaHelpers";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { EbaAssignmentModal } from "./EbaAssignmentModal";
 
 type EmployerWithEba = {
   id: string;
@@ -48,6 +50,7 @@ interface EmployerCardProps {
 
 export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
   const navigate = useNavigate();
+  const [showEbaModal, setShowEbaModal] = useState(false);
 
   // Fetch employer analytics
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
@@ -239,20 +242,40 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
         )}
         
         {!employer.company_eba_records?.[0] && (
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="w-full text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`);
-            }}
-          >
-            <Upload className="h-3 w-3 mr-1" />
-            Upload Workers
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEbaModal(true);
+              }}
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              Add EBA
+            </Button>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              className="text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`);
+              }}
+            >
+              <Upload className="h-3 w-3 mr-1" />
+              Upload Workers
+            </Button>
+          </div>
         )}
       </CardContent>
+      
+      <EbaAssignmentModal 
+        isOpen={showEbaModal}
+        onClose={() => setShowEbaModal(false)}
+        employer={{ id: employer.id, name: employer.name }}
+      />
     </Card>
   );
 };
