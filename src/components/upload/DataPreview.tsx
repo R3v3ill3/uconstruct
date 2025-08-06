@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Eye, AlertTriangle, CheckCircle, XCircle, Upload } from "lucide-react";
 import { ParsedCSV, ColumnMapping, ValidationResult } from "@/pages/Upload";
 import ContractorImport from "./ContractorImport";
+import { EbaImport } from "./EbaImport";
 
 interface DataPreviewProps {
   parsedCSV: ParsedCSV;
@@ -191,6 +192,29 @@ const DataPreview = ({
   if (selectedTable === 'contractors') {
     return (
       <ContractorImport
+        csvData={parsedCSV.rows}
+        onImportComplete={(results) => {
+          onValidationComplete({
+            isValid: true,
+            errors: [],
+            warnings: results.errors.map(error => ({
+              row: 0,
+              column: '',
+              message: error,
+              value: ''
+            }))
+          });
+          onImportStart();
+        }}
+        onBack={onBack}
+      />
+    );
+  }
+
+  // Handle EBA tracking imports differently
+  if (selectedTable === 'eba_tracking') {
+    return (
+      <EbaImport
         csvData={parsedCSV.rows}
         onImportComplete={(results) => {
           onValidationComplete({

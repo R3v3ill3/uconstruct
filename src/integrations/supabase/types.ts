@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_eba_records: {
+        Row: {
+          comments: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          date_barg_docs_sent: string | null
+          date_draft_signing_sent: string | null
+          date_eba_signed: string | null
+          date_vote_occurred: string | null
+          docs_prepared: string | null
+          eba_data_form_received: string | null
+          eba_file_number: string | null
+          eba_lodged_fwc: string | null
+          employer_id: string | null
+          followup_email_sent: string | null
+          followup_phone_call: string | null
+          fwc_certified_date: string | null
+          fwc_lodgement_number: string | null
+          fwc_matter_number: string | null
+          id: string
+          out_of_office_received: string | null
+          sector: string | null
+          updated_at: string
+        }
+        Insert: {
+          comments?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          date_barg_docs_sent?: string | null
+          date_draft_signing_sent?: string | null
+          date_eba_signed?: string | null
+          date_vote_occurred?: string | null
+          docs_prepared?: string | null
+          eba_data_form_received?: string | null
+          eba_file_number?: string | null
+          eba_lodged_fwc?: string | null
+          employer_id?: string | null
+          followup_email_sent?: string | null
+          followup_phone_call?: string | null
+          fwc_certified_date?: string | null
+          fwc_lodgement_number?: string | null
+          fwc_matter_number?: string | null
+          id?: string
+          out_of_office_received?: string | null
+          sector?: string | null
+          updated_at?: string
+        }
+        Update: {
+          comments?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          date_barg_docs_sent?: string | null
+          date_draft_signing_sent?: string | null
+          date_eba_signed?: string | null
+          date_vote_occurred?: string | null
+          docs_prepared?: string | null
+          eba_data_form_received?: string | null
+          eba_file_number?: string | null
+          eba_lodged_fwc?: string | null
+          employer_id?: string | null
+          followup_email_sent?: string | null
+          followup_phone_call?: string | null
+          fwc_certified_date?: string | null
+          fwc_lodgement_number?: string | null
+          fwc_matter_number?: string | null
+          id?: string
+          out_of_office_received?: string | null
+          sector?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_eba_records_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_trade_capabilities: {
         Row: {
           created_at: string | null
@@ -67,6 +153,7 @@ export type Database = {
           parent_employer_id: string | null
           phone: string | null
           postcode: string | null
+          primary_contact_name: string | null
           state: string | null
           suburb: string | null
           updated_at: string | null
@@ -86,6 +173,7 @@ export type Database = {
           parent_employer_id?: string | null
           phone?: string | null
           postcode?: string | null
+          primary_contact_name?: string | null
           state?: string | null
           suburb?: string | null
           updated_at?: string | null
@@ -105,6 +193,7 @@ export type Database = {
           parent_employer_id?: string | null
           phone?: string | null
           postcode?: string | null
+          primary_contact_name?: string | null
           state?: string | null
           suburb?: string | null
           updated_at?: string | null

@@ -46,6 +46,31 @@ const DATABASE_TABLES = {
       redundancy_fund: { type: "text", required: false, description: "Redundancy fund" }
     }
   },
+  eba_tracking: {
+    label: "EBA Tracking",
+    columns: {
+      company_name: { type: "text", required: true, description: "Company name" },
+      eba_file_number: { type: "text", required: false, description: "EBA file number" },
+      sector: { type: "text", required: false, description: "Industry sector" },
+      contact_name: { type: "text", required: false, description: "Primary contact person" },
+      contact_phone: { type: "text", required: false, description: "Contact phone number" },
+      contact_email: { type: "text", required: false, description: "Contact email address" },
+      comments: { type: "text", required: false, description: "Comments and notes" },
+      docs_prepared: { type: "date", required: false, description: "Documents prepared date" },
+      date_barg_docs_sent: { type: "date", required: false, description: "Bargaining documents sent date" },
+      followup_email_sent: { type: "date", required: false, description: "Follow-up email sent date" },
+      out_of_office_received: { type: "date", required: false, description: "Out of office email received date" },
+      followup_phone_call: { type: "date", required: false, description: "Follow-up phone call date" },
+      date_draft_signing_sent: { type: "date", required: false, description: "Draft/signing EBAs sent date" },
+      eba_data_form_received: { type: "date", required: false, description: "EBA data form received date" },
+      date_eba_signed: { type: "date", required: false, description: "EBA signed date" },
+      date_vote_occurred: { type: "date", required: false, description: "Vote occurred date" },
+      eba_lodged_fwc: { type: "date", required: false, description: "EBA lodged with FWC date" },
+      fwc_lodgement_number: { type: "text", required: false, description: "FWC lodgement number" },
+      fwc_matter_number: { type: "text", required: false, description: "FWC matter number" },
+      fwc_certified_date: { type: "date", required: false, description: "FWC certified date" }
+    }
+  },
   employers: {
     label: "Employers",
     columns: {
