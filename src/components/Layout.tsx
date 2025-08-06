@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck, Shield } from "lucide-react";
+import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck, Shield, AlertTriangle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,6 +15,7 @@ const navItems = [
   { path: "/sites", label: "Job Sites", icon: MapPin },
   { path: "/activities", label: "Activities", icon: Activity },
   { path: "/upload", label: "Data Upload", icon: Upload },
+  { path: "/workspace/unallocated", label: "Unallocated", icon: AlertTriangle },
 ];
 
 interface LayoutProps {

@@ -1,7 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink, Upload } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink, Upload, Award, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { getEbaStatusInfo } from "./ebaHelpers";
 import { useNavigate } from "react-router-dom";
 
@@ -11,6 +14,7 @@ type EmployerWithEba = {
   abn: string | null;
   employer_type: string;
   enterprise_agreement_status: boolean | null;
+  estimated_worker_count?: number;
   company_eba_records: {
     id: string;
     contact_name: string | null;
@@ -25,6 +29,18 @@ type EmployerWithEba = {
   }[];
 };
 
+interface EmployerAnalytics {
+  employer_id: string;
+  employer_name: string;
+  estimated_worker_count: number;
+  current_worker_count: number;
+  member_count: number;
+  workers_with_job_site: number;
+  workers_without_job_site: number;
+  member_density_percent: number;
+  estimated_density_percent: number;
+}
+
 interface EmployerCardProps {
   employer: EmployerWithEba;
   onClick: () => void;
@@ -32,6 +48,21 @@ interface EmployerCardProps {
 
 export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
   const navigate = useNavigate();
+
+  // Fetch employer analytics
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['employer-analytics', employer.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('employer_analytics')
+        .select('*')
+        .eq('employer_id', employer.id)
+        .single();
+      
+      if (error) throw error;
+      return data as EmployerAnalytics;
+    },
+  });
 
   const getEmployerTypeIcon = (type: string) => {
     switch (type) {
@@ -97,6 +128,60 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
             </Badge>
           )}
         </div>
+
+        {/* Analytics Section */}
+        {analytics && !analyticsLoading && (
+          <div className="space-y-3 p-3 bg-secondary/20 rounded-lg">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <TrendingUp size={14} />
+              <span>Worker Analytics</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Users size={12} className="text-muted-foreground" />
+                <span className="text-muted-foreground">Workers:</span>
+                <Badge variant="secondary" className="text-xs">
+                  {analytics.current_worker_count}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Award size={12} className="text-muted-foreground" />
+                <span className="text-muted-foreground">Members:</span>
+                <Badge variant="default" className="text-xs">
+                  {analytics.member_count}
+                </Badge>
+              </div>
+            </div>
+
+            {analytics.current_worker_count > 0 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Member Density</span>
+                  <span>{analytics.member_density_percent}%</span>
+                </div>
+                <Progress value={analytics.member_density_percent} className="h-2" />
+              </div>
+            )}
+
+            {analytics.estimated_worker_count > 0 && analytics.estimated_worker_count !== analytics.current_worker_count && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Est. Density ({analytics.estimated_worker_count} total)</span>
+                  <span>{analytics.estimated_density_percent}%</span>
+                </div>
+                <Progress value={analytics.estimated_density_percent} className="h-2" />
+              </div>
+            )}
+
+            {analytics.workers_without_job_site > 0 && (
+              <div className="text-xs text-amber-600 dark:text-amber-400">
+                {analytics.workers_without_job_site} worker(s) unassigned to job sites
+              </div>
+            )}
+          </div>
+        )}
 
         {employer.company_eba_records?.[0] && (
           <div className="space-y-2">

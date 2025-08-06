@@ -14,6 +14,7 @@ import Employers from "@/pages/Employers";
 import EbaTracking from "@/pages/EbaTracking";
 import EbaDetail from "@/pages/EbaDetail";
 import Admin from "@/pages/Admin";
+import { UnallocatedWorkspace } from "@/pages/UnallocatedWorkspace";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +75,11 @@ const App = () => (
             <Route path="/eba/:id" element={
               <ProtectedRoute>
                 <EbaDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace/unallocated" element={
+              <ProtectedRoute>
+                <UnallocatedWorkspace />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
