@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Building, Calendar, Phone, Mail, FileText, Edit, CheckCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { EbaEditDatesModal } from "@/components/employers/EbaEditDatesModal";
 
 interface EbaRecord {
   id: string;
@@ -29,6 +30,7 @@ interface EbaRecord {
   date_vote_occurred: string;
   eba_lodged_fwc: string;
   fwc_certified_date: string;
+  nominal_expiry_date: string;
   comments: string;
   created_at: string;
   updated_at: string;
@@ -44,6 +46,7 @@ const EbaDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [record, setRecord] = useState<EbaRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -262,7 +265,11 @@ const EbaDetail = () => {
               <Calendar className="h-5 w-5" />
               EBA Workflow Progress
             </CardTitle>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsEditModalOpen(true)}
+            >
               <Edit className="h-4 w-4 mr-2" />
               Edit Dates
             </Button>
@@ -332,6 +339,21 @@ const EbaDetail = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Dates Modal */}
+      {record && (
+        <EbaEditDatesModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            // Refresh the data after editing
+            if (id) {
+              fetchEbaRecord(id);
+            }
+          }}
+          ebaRecord={record}
+        />
+      )}
     </div>
   );
 };
