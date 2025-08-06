@@ -8,7 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Building, ExternalLink } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Search, Plus, Building, ExternalLink, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -38,9 +42,19 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
   const [activeTab, setActiveTab] = useState("existing");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEba, setSelectedEba] = useState<string | null>(null);
-  const [newEbaData, setNewEbaData] = useState<Partial<ProcessedEbaData>>({
-    company_name: employer.name,
-  });
+  const [newEbaData, setNewEbaData] = useState<{
+    eba_file_number?: string;
+    sector?: string;
+    contact_name?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    fwc_document_url?: string;
+    fwc_lodgement_number?: string;
+    fwc_matter_number?: string;
+    comments?: string;
+    nominal_expiry_date?: Date;
+    approved_date?: Date;
+  }>({});
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -59,9 +73,9 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
           contact_email,
           contact_phone,
           fwc_document_url,
-          employers!inner(name)
+          employers(name)
         `)
-        .neq('employer_id', employer.id);
+        .is('employer_id', null);
       
       if (error) throw error;
       
@@ -110,13 +124,25 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
 
   // Mutation to create new EBA
   const createNewMutation = useMutation({
-    mutationFn: async (ebaData: Partial<ProcessedEbaData>) => {
+    mutationFn: async (ebaData: any) => {
+      const insertData = {
+        employer_id: employer.id,
+        eba_file_number: ebaData.eba_file_number,
+        sector: ebaData.sector,
+        contact_name: ebaData.contact_name,
+        contact_email: ebaData.contact_email,
+        contact_phone: ebaData.contact_phone,
+        fwc_document_url: ebaData.fwc_document_url,
+        fwc_lodgement_number: ebaData.fwc_lodgement_number,
+        fwc_matter_number: ebaData.fwc_matter_number,
+        comments: ebaData.comments,
+        nominal_expiry_date: ebaData.nominal_expiry_date?.toISOString().split('T')[0] || null,
+        approved_date: ebaData.approved_date?.toISOString().split('T')[0] || null,
+      };
+      
       const { error } = await supabase
         .from('company_eba_records')
-        .insert({
-          ...ebaData,
-          employer_id: employer.id,
-        });
+        .insert(insertData);
       
       if (error) throw error;
     },
@@ -152,7 +178,7 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
   const resetForm = () => {
     setSelectedEba(null);
     setSearchTerm("");
-    setNewEbaData({ company_name: employer.name });
+    setNewEbaData({});
     setActiveTab("existing");
   };
 
@@ -274,15 +300,6 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
             <div className="grid gap-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="company_name">Company Name</Label>
-                  <Input
-                    id="company_name"
-                    value={newEbaData.company_name || ""}
-                    onChange={(e) => setNewEbaData(prev => ({ ...prev, company_name: e.target.value }))}
-                    disabled
-                  />
-                </div>
-                <div>
                   <Label htmlFor="eba_file_number">EBA File Number</Label>
                   <Input
                     id="eba_file_number"
@@ -296,9 +313,6 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                     placeholder="Enter EBA file number"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="sector">Sector</Label>
                   <Input
@@ -313,6 +327,74 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                     placeholder="e.g., Construction, Manufacturing"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="nominal_expiry_date">Nominal Expiry Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newEbaData.nominal_expiry_date && "text-muted-foreground"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEbaData.nominal_expiry_date ? (
+                          format(newEbaData.nominal_expiry_date, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={newEbaData.nominal_expiry_date}
+                        onSelect={(date) => setNewEbaData(prev => ({ ...prev, nominal_expiry_date: date }))}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="approved_date">Approved Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newEbaData.approved_date && "text-muted-foreground"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEbaData.approved_date ? (
+                          format(newEbaData.approved_date, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={newEbaData.approved_date}
+                        onSelect={(date) => setNewEbaData(prev => ({ ...prev, approved_date: date }))}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="fwc_document_url">FWC Document URL</Label>
                   <Input
@@ -327,6 +409,9 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                     onClick={(e) => e.stopPropagation()}
                     placeholder="https://..."
                   />
+                </div>
+                <div className="opacity-0 pointer-events-none">
+                  {/* Empty spacer */}
                 </div>
               </div>
 
@@ -429,7 +514,7 @@ export const EbaAssignmentModal = ({ isOpen, onClose, employer }: EbaAssignmentM
                 </Button>
                 <Button 
                   onClick={handleCreateNew}
-                  disabled={!newEbaData.company_name || createNewMutation.isPending}
+                  disabled={createNewMutation.isPending}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {createNewMutation.isPending ? "Creating..." : "Create New EBA"}

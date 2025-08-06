@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       company_eba_records: {
         Row: {
+          approved_date: string | null
           comments: string | null
           contact_email: string | null
           contact_name: string | null
@@ -37,11 +38,13 @@ export type Database = {
           fwc_lodgement_number: string | null
           fwc_matter_number: string | null
           id: string
+          nominal_expiry_date: string | null
           out_of_office_received: string | null
           sector: string | null
           updated_at: string
         }
         Insert: {
+          approved_date?: string | null
           comments?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -63,11 +66,13 @@ export type Database = {
           fwc_lodgement_number?: string | null
           fwc_matter_number?: string | null
           id?: string
+          nominal_expiry_date?: string | null
           out_of_office_received?: string | null
           sector?: string | null
           updated_at?: string
         }
         Update: {
+          approved_date?: string | null
           comments?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -89,6 +94,7 @@ export type Database = {
           fwc_lodgement_number?: string | null
           fwc_matter_number?: string | null
           id?: string
+          nominal_expiry_date?: string | null
           out_of_office_received?: string | null
           sector?: string | null
           updated_at?: string
