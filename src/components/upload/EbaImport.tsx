@@ -51,7 +51,7 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
             .from('employers')
             .select('id')
             .eq('name', record.company_name)
-            .single();
+            .maybeSingle();
 
           if (existingEmployer) {
             employerId = existingEmployer.id;
@@ -81,7 +81,7 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
             .from('company_eba_records')
             .select('id')
             .eq('employer_id', employerId)
-            .single();
+            .maybeSingle();
 
           if (existingRecord) {
             results.duplicates++;
@@ -101,6 +101,7 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
               comments: record.comments,
               fwc_lodgement_number: record.fwc_lodgement_number,
               fwc_matter_number: record.fwc_matter_number,
+              fwc_document_url: record.fwc_document_url,
               docs_prepared: record.docs_prepared,
               date_barg_docs_sent: record.date_barg_docs_sent,
               followup_email_sent: record.followup_email_sent,
