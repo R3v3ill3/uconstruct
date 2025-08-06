@@ -5,22 +5,30 @@ export interface ProcessedWorkerData {
   mobile_phone?: string;
   email?: string;
   union_membership_status: 'member' | 'non_member' | 'potential' | 'declined';
+  member_number?: string;
   
   // Employer linking
   company_name: string;
   
-  // Organizer info (optional for reference)
+  // Organizer info (for matching and assignment)
   organizer_number?: string;
   organizer_surname?: string;
   organizer_first_name?: string;
+  organizer_full_name?: string;
   
-  // Member info
-  member_number?: string;
+  // Additional fields
   comments?: string;
   source_file?: string;
 }
 
 export interface EmployerMatch {
+  id: string;
+  name: string;
+  confidence: 'exact' | 'high' | 'medium' | 'low';
+  distance?: number;
+}
+
+export interface OrganiserMatch {
   id: string;
   name: string;
   confidence: 'exact' | 'high' | 'medium' | 'low';
@@ -120,6 +128,53 @@ export function findBestEmployerMatch(
   return bestMatch;
 }
 
+export function findBestOrganiserMatch(
+  organiserName: string, 
+  existingOrganisers: Array<{id: string, first_name: string, last_name: string}>
+): OrganiserMatch | null {
+  if (!organiserName || !organiserName.trim()) return null;
+  
+  const normalizedSearchName = organiserName.trim().toUpperCase();
+  
+  let bestMatch: OrganiserMatch | null = null;
+  let bestScore = 0;
+  
+  for (const organiser of existingOrganisers) {
+    const fullName = `${organiser.first_name} ${organiser.last_name}`.toUpperCase();
+    const reverseName = `${organiser.last_name} ${organiser.first_name}`.toUpperCase();
+    
+    // Check for exact match first
+    if (normalizedSearchName === fullName || normalizedSearchName === reverseName) {
+      return {
+        id: organiser.id,
+        name: `${organiser.first_name} ${organiser.last_name}`,
+        confidence: 'exact',
+        distance: 0
+      };
+    }
+    
+    // Calculate similarity for both name orders
+    const similarity1 = calculateSimilarity(normalizedSearchName, fullName);
+    const similarity2 = calculateSimilarity(normalizedSearchName, reverseName);
+    const similarity = Math.max(similarity1, similarity2);
+    
+    if (similarity > bestScore && similarity > 0.7) {
+      bestScore = similarity;
+      const confidence = similarity >= 0.95 ? 'high' : 
+                       similarity >= 0.85 ? 'medium' : 'low';
+      
+      bestMatch = {
+        id: organiser.id,
+        name: `${organiser.first_name} ${organiser.last_name}`,
+        confidence,
+        distance: 1 - similarity
+      };
+    }
+  }
+  
+  return bestMatch;
+}
+
 export function cleanPhoneNumber(phone: string): string {
   if (!phone) return phone;
   
@@ -161,17 +216,27 @@ export function processWorkerRow(row: Record<string, string>): ProcessedWorkerDa
   } else if (comments && comments.toLowerCase().includes('declined')) {
     unionStatus = 'declined';
   }
+
+  // Build organiser full name from available fields
+  const organiserFirstName = row['OrganiserFirstName'] || row['Organiser First Name'];
+  const organiserSurname = row['OrganiserSurname'] || row['Organiser Surname'];
+  let organiserFullName = row['OrganiserFullName'] || row['Organiser Full Name'] || row['organiser_name'];
+  
+  if (!organiserFullName && organiserFirstName && organiserSurname) {
+    organiserFullName = `${organiserFirstName.trim()} ${organiserSurname.trim()}`;
+  }
   
   return {
     first_name: memberFirstName.trim(),
     surname: memberSurname.trim(),
     mobile_phone: mobile ? cleanPhoneNumber(mobile) : undefined,
     union_membership_status: unionStatus,
+    member_number: memberNumber?.trim(),
     company_name: companyName.trim(),
     organizer_number: row['OrganiserNumber'] || row['Organiser Number'],
-    organizer_surname: row['OrganiserSurname'] || row['Organiser Surname'],
-    organizer_first_name: row['OrganiserFirstName'] || row['Organiser First Name'],
-    member_number: memberNumber?.trim(),
+    organizer_surname: organiserSurname,
+    organizer_first_name: organiserFirstName,
+    organizer_full_name: organiserFullName,
     comments: comments?.trim(),
     source_file: row['SourceFile'] || row['Source File'] || row['source_file']
   };

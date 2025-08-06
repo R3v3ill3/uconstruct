@@ -141,6 +141,45 @@ export type Database = {
           },
         ]
       }
+      employer_organisers: {
+        Row: {
+          created_at: string
+          employer_id: string
+          id: string
+          organiser_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employer_id: string
+          id?: string
+          organiser_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employer_id?: string
+          id?: string
+          organiser_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_organisers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employer_organisers_organiser_id_fkey"
+            columns: ["organiser_id"]
+            isOneToOne: false
+            referencedRelation: "organisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employers: {
         Row: {
           abn: string | null
@@ -873,8 +912,10 @@ export type Database = {
           id: string
           inductions: string[] | null
           informal_network_tags: string[] | null
+          member_number: string | null
           mobile_phone: string | null
           nickname: string | null
+          organiser_id: string | null
           other_industry_bodies: string[] | null
           other_name: string | null
           qualifications: string[] | null
@@ -902,8 +943,10 @@ export type Database = {
           id?: string
           inductions?: string[] | null
           informal_network_tags?: string[] | null
+          member_number?: string | null
           mobile_phone?: string | null
           nickname?: string | null
+          organiser_id?: string | null
           other_industry_bodies?: string[] | null
           other_name?: string | null
           qualifications?: string[] | null
@@ -931,8 +974,10 @@ export type Database = {
           id?: string
           inductions?: string[] | null
           informal_network_tags?: string[] | null
+          member_number?: string | null
           mobile_phone?: string | null
           nickname?: string | null
+          organiser_id?: string | null
           other_industry_bodies?: string[] | null
           other_name?: string | null
           qualifications?: string[] | null
@@ -945,7 +990,15 @@ export type Database = {
           updated_at?: string | null
           work_phone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workers_organiser_id_fkey"
+            columns: ["organiser_id"]
+            isOneToOne: false
+            referencedRelation: "organisers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -98,6 +98,9 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
               {worker.nickname && (
                 <div className="text-sm text-muted-foreground">"{worker.nickname}"</div>
               )}
+              {worker.member_number && (
+                <div className="text-xs text-muted-foreground">Member: {worker.member_number}</div>
+              )}
             </div>
           </div>
         </TableCell>
@@ -132,9 +135,21 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
               <div className="text-sm text-muted-foreground">
                 {currentPlacement.job_sites?.name || "Unknown Site"}
               </div>
+              {worker.organisers && (
+                <div className="text-xs text-muted-foreground">
+                  Organiser: {worker.organisers.first_name} {worker.organisers.last_name}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">No current placement</div>
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">No current placement</div>
+              {worker.organisers && (
+                <div className="text-xs text-muted-foreground">
+                  Organiser: {worker.organisers.first_name} {worker.organisers.last_name}
+                </div>
+              )}
+            </div>
           )}
         </TableCell>
 
@@ -200,6 +215,9 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
                   {worker.nickname && (
                     <p className="text-sm text-muted-foreground">"{worker.nickname}"</p>
                   )}
+                  {worker.member_number && (
+                    <p className="text-xs text-muted-foreground">Member: {worker.member_number}</p>
+                  )}
                 </div>
                 
                 <Badge className={getUnionStatusColor(worker.union_membership_status)}>
@@ -207,12 +225,21 @@ export const WorkerCard = ({ worker, variant, onEdit, onUpdate }: WorkerCardProp
                 </Badge>
               </div>
 
-              {currentPlacement && (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  <div>{currentPlacement.job_title || "Unknown Role"}</div>
-                  <div>{currentPlacement.job_sites?.name || "Unknown Site"}</div>
-                </div>
-              )}
+              <div className="mt-2 text-sm text-muted-foreground">
+                {currentPlacement ? (
+                  <>
+                    <div>{currentPlacement.job_title || "Unknown Role"}</div>
+                    <div>{currentPlacement.job_sites?.name || "Unknown Site"}</div>
+                  </>
+                ) : (
+                  <div>No current placement</div>
+                )}
+                {worker.organisers && (
+                  <div className="text-xs mt-1">
+                    Organiser: {worker.organisers.first_name} {worker.organisers.last_name}
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center gap-2 mt-3">
                 {worker.email && (

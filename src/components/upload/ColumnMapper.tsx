@@ -26,10 +26,12 @@ const DATABASE_TABLES = {
       surname: { type: "text", required: true, description: "Worker's surname/last name" },
       other_name: { type: "text", required: false, description: "Middle name or other names" },
       nickname: { type: "text", required: false, description: "Preferred name or nickname" },
+      member_number: { type: "text", required: false, description: "Union member number" },
       email: { type: "text", required: false, description: "Email address" },
       home_phone: { type: "text", required: false, description: "Home phone number" },
       work_phone: { type: "text", required: false, description: "Work phone number" },
       mobile_phone: { type: "text", required: false, description: "Mobile phone number" },
+      organiser_id: { type: "uuid", required: false, description: "Assigned organiser ID" },
       home_address_line_1: { type: "text", required: false, description: "Home address line 1" },
       home_address_line_2: { type: "text", required: false, description: "Home address line 2" },
       home_address_suburb: { type: "text", required: false, description: "Home address suburb" },
@@ -312,12 +314,15 @@ const ColumnMapper = ({ parsedCSV, onMappingComplete, onBack }: ColumnMapperProp
 
   const addNewField = (csvColumn: string) => {
     const fieldName = csvColumn.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    
+    // Add to new fields for future database operations
     setNewFields(prev => [...prev, {
       name: fieldName,
       type: 'text',
       csvColumn
     }]);
     
+    // Update the mapping to use the new field
     const mappingIndex = mappings.findIndex(m => m.csvColumn === csvColumn);
     if (mappingIndex >= 0) {
       updateMapping(mappingIndex, {

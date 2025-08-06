@@ -10,7 +10,9 @@ import {
   processWorkerData, 
   ProcessedWorkerData, 
   findBestEmployerMatch, 
-  EmployerMatch 
+  findBestOrganiserMatch,
+  EmployerMatch,
+  OrganiserMatch
 } from "@/utils/workerDataProcessor";
 
 interface WorkerImportProps {
@@ -26,11 +28,14 @@ interface ImportResults {
   errors: string[];
   duplicates: number;
   newEmployers: number;
+  newOrganisers?: number;
 }
 
 interface WorkerWithEmployer extends ProcessedWorkerData {
   employerMatch?: EmployerMatch;
   needsNewEmployer?: boolean;
+  organiserMatch?: OrganiserMatch;
+  needsNewOrganiser?: boolean;
 }
 
 export default function WorkerImport({ csvData, selectedEmployer, onImportComplete, onBack }: WorkerImportProps) {
@@ -39,13 +44,28 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
   const [previewData, setPreviewData] = useState<WorkerWithEmployer[]>([]);
   const [isProcessed, setIsProcessed] = useState(false);
   const [existingEmployers, setExistingEmployers] = useState<Array<{id: string, name: string}>>([]);
+  const [existingOrganisers, setExistingOrganisers] = useState<Array<{id: string, first_name: string, last_name: string}>>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     if (!selectedEmployer) {
       loadExistingEmployers();
     }
+    loadExistingOrganisers();
   }, [selectedEmployer]);
+
+  const loadExistingOrganisers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('organisers')
+        .select('id, first_name, last_name');
+      
+      if (error) throw error;
+      setExistingOrganisers(data || []);
+    } catch (error) {
+      console.error('Error loading organisers:', error);
+    }
+  };
 
   const loadExistingEmployers = async () => {
     try {
@@ -86,14 +106,25 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
           description: `${processed.length} workers processed and will be assigned to ${selectedEmployer.name}.`,
         });
       } else {
-        // Match workers to existing employers
+        // Match workers to existing employers and organisers
         const workersWithEmployers: WorkerWithEmployer[] = processed.map(worker => {
           const employerMatch = findBestEmployerMatch(worker.company_name, existingEmployers);
+          
+          // Find organiser match if organiser info is available
+          let organiserMatch: OrganiserMatch | undefined;
+          let needsNewOrganiser = false;
+          
+          if (worker.organizer_full_name) {
+            organiserMatch = findBestOrganiserMatch(worker.organizer_full_name, existingOrganisers);
+            needsNewOrganiser = !organiserMatch;
+          }
           
           return {
             ...worker,
             employerMatch,
-            needsNewEmployer: !employerMatch
+            needsNewEmployer: !employerMatch,
+            organiserMatch,
+            needsNewOrganiser
           };
         });
         
@@ -171,7 +202,8 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
               .from('workers')
               .update({
                 mobile_phone: worker.mobile_phone,
-                union_membership_status: worker.union_membership_status as any
+                union_membership_status: worker.union_membership_status as any,
+                member_number: worker.member_number
               })
               .eq('id', existingWorker.id)
               .select('id')
@@ -181,14 +213,15 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
             workerId = updatedWorker.id;
             results.duplicates++;
           } else {
-            // Create new worker
+            // Create new worker  
             const { data: workerData, error: workerError } = await supabase
               .from('workers')
               .insert({
                 first_name: worker.first_name,
                 surname: worker.surname,
                 mobile_phone: worker.mobile_phone,
-                union_membership_status: worker.union_membership_status as any
+                union_membership_status: worker.union_membership_status as any,
+                member_number: worker.member_number
               })
               .select('id')
               .single();
