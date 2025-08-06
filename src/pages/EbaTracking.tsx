@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Calendar, Building, Phone, Mail, FileText, ExternalLink, RefreshCw } from "lucide-react";
+import { Search, Calendar, Building, Phone, Mail, FileText, ExternalLink, RefreshCw, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { getEbaStatusInfo } from "@/components/employers/ebaHelpers";
 
 interface EbaRecord {
   id: string;
@@ -31,6 +32,7 @@ interface EbaRecord {
   date_vote_occurred: string;
   eba_lodged_fwc: string;
   fwc_certified_date: string;
+  nominal_expiry_date: string;
   comments: string;
   created_at: string;
   employers: {
@@ -92,18 +94,22 @@ const EbaTracking = () => {
   });
 
   const getStatusFromRecord = (record: EbaRecord) => {
-    if (record.fwc_certified_date) return "certified";
-    if (record.eba_lodged_fwc) return "lodged_fwc";
-    if (record.date_vote_occurred) return "vote_occurred";
-    if (record.date_eba_signed) return "eba_signed";
-    if (record.date_barg_docs_sent) return "docs_sent";
-    if (record.docs_prepared) return "docs_prepared";
-    if (record.followup_email_sent) return "followup_sent";
-    if (record.eba_data_form_received) return "form_received";
-    return "initial";
+    const statusInfo = getEbaStatusInfo(record);
+    return statusInfo.status;
   };
 
   const getProgressStage = (record: EbaRecord) => {
+    const statusInfo = getEbaStatusInfo(record);
+    
+    // Special handling for expired status
+    if (statusInfo.status === "expired") {
+      return { 
+        stage: "Expired", 
+        variant: "destructive" as const,
+        isExpired: true
+      };
+    }
+    
     if (record.fwc_certified_date) return { stage: "Certified", variant: "default" as const };
     if (record.eba_lodged_fwc) return { stage: "Lodged with FWC", variant: "secondary" as const };
     if (record.date_vote_occurred) return { stage: "Vote Occurred", variant: "secondary" as const };
@@ -149,15 +155,12 @@ const EbaTracking = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="expired">Expired</SelectItem>
             <SelectItem value="certified">Certified</SelectItem>
-            <SelectItem value="lodged_fwc">Lodged with FWC</SelectItem>
-            <SelectItem value="vote_occurred">Vote Occurred</SelectItem>
-            <SelectItem value="eba_signed">EBA Signed</SelectItem>
-            <SelectItem value="docs_sent">Docs Sent</SelectItem>
-            <SelectItem value="docs_prepared">Docs Prepared</SelectItem>
-            <SelectItem value="followup_sent">Follow-up Sent</SelectItem>
-            <SelectItem value="form_received">Form Received</SelectItem>
-            <SelectItem value="initial">Initial</SelectItem>
+            <SelectItem value="lodged">Lodged with FWC</SelectItem>
+            <SelectItem value="signed">EBA Signed</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="no_eba">No EBA</SelectItem>
           </SelectContent>
         </Select>
 
@@ -197,9 +200,15 @@ const EbaTracking = () => {
                       )}
                     </div>
                   </div>
-                  <Badge variant={progress.variant}>
-                    {progress.stage}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={progress.variant}
+                      className={progress.isExpired ? "bg-destructive text-destructive-foreground animate-pulse font-bold" : ""}
+                    >
+                      {progress.isExpired && <AlertTriangle className="h-3 w-3 mr-1" />}
+                      {progress.stage}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -275,7 +284,15 @@ const EbaTracking = () => {
                         <Calendar className="h-4 w-4" />
                         Certified: {new Date(record.fwc_certified_date).toLocaleDateString()}
                       </div>
-                    )}
+                     )}
+                     {record.nominal_expiry_date && (
+                       <div className="flex items-center gap-2 text-sm">
+                         <Calendar className="h-4 w-4" />
+                         <span className={new Date(record.nominal_expiry_date) < new Date() ? "text-destructive font-medium" : ""}>
+                           Expires: {new Date(record.nominal_expiry_date).toLocaleDateString()}
+                         </span>
+                       </div>
+                     )}
                   </div>
                 </div>
 

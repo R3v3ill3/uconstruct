@@ -18,6 +18,22 @@ export type EbaWorkflowStep = {
 };
 
 export function getEbaStatusInfo(ebaRecord: any): EbaStatusInfo {
+  // Check for expiry first - this takes precedence
+  if (ebaRecord.nominal_expiry_date) {
+    const expiryDate = new Date(ebaRecord.nominal_expiry_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time for comparison
+    expiryDate.setHours(0, 0, 0, 0);
+    
+    if (expiryDate < today) {
+      return {
+        status: "expired",
+        label: "Expired",
+        variant: "destructive"
+      };
+    }
+  }
+  
   if (ebaRecord.fwc_certified_date) {
     return {
       status: "certified",

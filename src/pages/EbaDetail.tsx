@@ -256,6 +256,19 @@ const EbaDetail = () => {
                 </a>
               </div>
             )}
+            {record.nominal_expiry_date && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Nominal Expiry Date</label>
+                <p className={`text-sm ${new Date(record.nominal_expiry_date) < new Date() ? 'text-destructive font-medium' : ''}`}>
+                  {new Date(record.nominal_expiry_date).toLocaleDateString()}
+                  {new Date(record.nominal_expiry_date) < new Date() && (
+                    <span className="ml-2 text-xs bg-destructive text-destructive-foreground px-2 py-1 rounded">
+                      EXPIRED
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink, Upload, Award, TrendingUp, FileText } from "lucide-react";
+import { Building, Hammer, Users, Truck, Phone, Mail, ExternalLink, Upload, Award, TrendingUp, FileText, Calendar, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getEbaStatusInfo } from "./ebaHelpers";
@@ -27,6 +27,7 @@ type EmployerWithEba = {
     eba_lodged_fwc: string | null;
     date_eba_signed: string | null;
     fwc_certified_date: string | null;
+    nominal_expiry_date: string | null;
     sector: string | null;
   }[];
 };
@@ -126,7 +127,11 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
         <div className="flex items-center justify-between">
           {getEmployerTypeBadge(employer.employer_type)}
           {ebaStatus && (
-            <Badge variant={ebaStatus.variant} className="text-xs">
+            <Badge 
+              variant={ebaStatus.variant} 
+              className={`text-xs ${ebaStatus.status === 'expired' ? 'bg-destructive text-destructive-foreground animate-pulse font-bold' : ''}`}
+            >
+              {ebaStatus.status === 'expired' && <AlertTriangle className="h-3 w-3 mr-1" />}
               {ebaStatus.label}
             </Badge>
           )}
@@ -209,6 +214,17 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
                 </div>
               )}
             </div>
+            
+            {employer.company_eba_records[0].nominal_expiry_date && (
+              <div className="text-xs">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  <span className={new Date(employer.company_eba_records[0].nominal_expiry_date) < new Date() ? "text-destructive font-medium" : "text-muted-foreground"}>
+                    Expires: {new Date(employer.company_eba_records[0].nominal_expiry_date).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-2">
               {employer.company_eba_records[0].fwc_document_url && (

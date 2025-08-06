@@ -30,6 +30,7 @@ type EmployerWithEba = {
     eba_lodged_fwc: string | null;
     date_eba_signed: string | null;
     fwc_certified_date: string | null;
+    nominal_expiry_date: string | null;
     sector: string | null;
   }[];
 };
@@ -65,6 +66,7 @@ const Employers = () => {
             eba_lodged_fwc,
             date_eba_signed,
             fwc_certified_date,
+            nominal_expiry_date,
             sector
           )
         `)
