@@ -1189,7 +1189,11 @@ export type Database = {
         | "subcontractor"
         | "apprentice"
         | "trainee"
-      rating_type: "support_level" | "leadership" | "risk"
+      rating_type:
+        | "support_level"
+        | "leadership"
+        | "risk"
+        | "activity_participation"
       shift_type: "day" | "night" | "split" | "weekend"
       site_contact_role: "project_manager" | "site_manager"
       trade_type:
@@ -1395,7 +1399,12 @@ export const Constants = {
         "apprentice",
         "trainee",
       ],
-      rating_type: ["support_level", "leadership", "risk"],
+      rating_type: [
+        "support_level",
+        "leadership",
+        "risk",
+        "activity_participation",
+      ],
       shift_type: ["day", "night", "split", "weekend"],
       site_contact_role: ["project_manager", "site_manager"],
       trade_type: [
