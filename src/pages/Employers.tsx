@@ -5,25 +5,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building, Hammer, Users, Truck } from "lucide-react";
+import { Plus, Building, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { EmployerDetailModal } from "@/components/employers/EmployerDetailModal";
+import { EmployerCard } from "@/components/employers/EmployerCard";
 
-type Employer = {
+type EmployerWithEba = {
   id: string;
   name: string;
   abn: string | null;
   employer_type: "individual" | "small_contractor" | "large_contractor" | "principal_contractor" | "builder";
   enterprise_agreement_status: boolean | null;
   created_at: string;
+  company_eba_records: {
+    id: string;
+    contact_name: string | null;
+    contact_phone: string | null;
+    contact_email: string | null;
+    eba_file_number: string | null;
+    fwc_document_url: string | null;
+    eba_lodged_fwc: string | null;
+    date_eba_signed: string | null;
+    fwc_certified_date: string | null;
+    sector: string | null;
+  }[];
 };
 
 const Employers = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [ebaStatusFilter, setEbaStatusFilter] = useState("all");
+  const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     abn: "",
@@ -37,11 +53,25 @@ const Employers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employers")
-        .select("*")
+        .select(`
+          *,
+          company_eba_records (
+            id,
+            contact_name,
+            contact_phone,
+            contact_email,
+            eba_file_number,
+            fwc_document_url,
+            eba_lodged_fwc,
+            date_eba_signed,
+            fwc_certified_date,
+            sector
+          )
+        `)
         .order("name");
 
       if (error) throw error;
-      return data as Employer[];
+      return data as EmployerWithEba[];
     },
   });
 
@@ -76,47 +106,34 @@ const Employers = () => {
     },
   });
 
-  const getEmployerTypeIcon = (type: string) => {
-    switch (type) {
-      case "builder": return <Hammer className="h-4 w-4" />;
-      case "principal_contractor": return <Building className="h-4 w-4" />;
-      case "large_contractor": return <Users className="h-4 w-4" />;
-      case "small_contractor": return <Users className="h-4 w-4" />;
-      case "individual": return <Truck className="h-4 w-4" />;
-      default: return <Building className="h-4 w-4" />;
-    }
-  };
-
-  const getEmployerTypeBadge = (type: string) => {
-    const variants = {
-      builder: "default",
-      principal_contractor: "secondary", 
-      large_contractor: "outline",
-      small_contractor: "outline",
-      individual: "destructive",
-    } as const;
-
-    const labels = {
-      builder: "Builder",
-      principal_contractor: "Principal Contractor",
-      large_contractor: "Large Contractor", 
-      small_contractor: "Small Contractor",
-      individual: "Individual",
-    };
+  const getEbaStatusForFilter = (employer: EmployerWithEba) => {
+    const ebaRecord = employer.company_eba_records?.[0];
+    if (!ebaRecord) return "no_eba";
     
-    return (
-      <Badge variant={variants[type as keyof typeof variants] || "secondary"}>
-        {labels[type as keyof typeof labels] || type}
-      </Badge>
-    );
+    if (ebaRecord.fwc_certified_date) return "certified";
+    if (ebaRecord.date_eba_signed) return "signed";
+    if (ebaRecord.eba_lodged_fwc) return "lodged";
+    return "in_progress";
   };
 
   const filteredEmployers = employers.filter(employer => {
-    if (activeTab === "all") return true;
-    if (activeTab === "builders") return employer.employer_type === "builder";
-    if (activeTab === "contractors") return ["principal_contractor", "large_contractor", "small_contractor"].includes(employer.employer_type);
-    if (activeTab === "other") return ["individual"].includes(employer.employer_type);
-    return true;
+    // Filter by tab
+    let tabMatch = true;
+    if (activeTab === "builders") tabMatch = employer.employer_type === "builder";
+    else if (activeTab === "contractors") tabMatch = ["principal_contractor", "large_contractor", "small_contractor"].includes(employer.employer_type);
+    else if (activeTab === "other") tabMatch = ["individual"].includes(employer.employer_type);
+    
+    // Filter by search term
+    const searchMatch = searchTerm === "" || 
+      employer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employer.abn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employer.company_eba_records?.[0]?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employer.company_eba_records?.[0]?.eba_file_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filter by EBA status
+    const ebaStatusMatch = ebaStatusFilter === "all" || getEbaStatusForFilter(employer) === ebaStatusFilter;
+    
+    return tabMatch && searchMatch && ebaStatusMatch;
   });
 
   if (isLoading) {
@@ -194,6 +211,33 @@ const Employers = () => {
         </Dialog>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search employers by name, ABN, contact, or EBA number..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
+        <Select value={ebaStatusFilter} onValueChange={setEbaStatusFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filter by EBA status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All EBA Status</SelectItem>
+            <SelectItem value="certified">Certified</SelectItem>
+            <SelectItem value="signed">Signed</SelectItem>
+            <SelectItem value="lodged">Lodged with FWC</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="no_eba">No EBA</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all">All ({employers.length})</TabsTrigger>
@@ -220,39 +264,22 @@ const Employers = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredEmployers.map((employer) => (
-                <Card key={employer.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-2">
-                        {getEmployerTypeIcon(employer.employer_type)}
-                        <div>
-                          <CardTitle className="text-lg">{employer.name}</CardTitle>
-                          {employer.abn && (
-                            <CardDescription className="text-sm">
-                              ABN: {employer.abn}
-                            </CardDescription>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="pt-0">
-                    <div className="flex items-center justify-between">
-                      {getEmployerTypeBadge(employer.employer_type)}
-                      {employer.enterprise_agreement_status && (
-                        <Badge variant="outline" className="text-xs">
-                          EBA
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                <EmployerCard
+                  key={employer.id}
+                  employer={employer}
+                  onClick={() => setSelectedEmployerId(employer.id)}
+                />
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
+
+      <EmployerDetailModal
+        employerId={selectedEmployerId}
+        isOpen={!!selectedEmployerId}
+        onClose={() => setSelectedEmployerId(null)}
+      />
     </div>
   );
 };
