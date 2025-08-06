@@ -12,6 +12,7 @@ export interface ProcessedEbaData {
   contact_phone?: string;
   contact_email?: string;
   comments?: string;
+  fwc_document_url?: string;
   
   // Workflow date fields
   docs_prepared?: string;
@@ -88,6 +89,7 @@ export function processEbaRow(row: Record<string, string>): ProcessedEbaData | n
     comments: row['COMMENTS'] || row['comments'] || undefined,
     fwc_lodgement_number: row['FWC Lodgement #'] || row['fwc_lodgement_number'] || undefined,
     fwc_matter_number: row['FWC Matter #'] || row['fwc_matter_number'] || undefined,
+    fwc_document_url: row['FWC Document URL'] || row['fwc_document_url'] || row['Document URL'] || row['document_url'] || undefined,
     
     ...contactDetails,
     

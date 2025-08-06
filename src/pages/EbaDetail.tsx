@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building, Calendar, Phone, Mail, FileText, Edit, CheckCircle } from "lucide-react";
+import { ArrowLeft, Building, Calendar, Phone, Mail, FileText, Edit, CheckCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface EbaRecord {
@@ -17,6 +17,7 @@ interface EbaRecord {
   contact_email: string;
   fwc_lodgement_number: string;
   fwc_matter_number: string;
+  fwc_document_url: string;
   eba_data_form_received: string;
   date_draft_signing_sent: string;
   followup_phone_call: string;
@@ -233,6 +234,20 @@ const EbaDetail = () => {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">FWC Matter Number</label>
                 <p className="text-sm">{record.fwc_matter_number}</p>
+              </div>
+            )}
+            {record.fwc_document_url && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">FWC Document</label>
+                <a 
+                  href={record.fwc_document_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View FWC Record
+                </a>
               </div>
             )}
           </CardContent>

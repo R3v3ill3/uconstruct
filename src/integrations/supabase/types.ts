@@ -33,6 +33,7 @@ export type Database = {
           followup_email_sent: string | null
           followup_phone_call: string | null
           fwc_certified_date: string | null
+          fwc_document_url: string | null
           fwc_lodgement_number: string | null
           fwc_matter_number: string | null
           id: string
@@ -58,6 +59,7 @@ export type Database = {
           followup_email_sent?: string | null
           followup_phone_call?: string | null
           fwc_certified_date?: string | null
+          fwc_document_url?: string | null
           fwc_lodgement_number?: string | null
           fwc_matter_number?: string | null
           id?: string
@@ -83,6 +85,7 @@ export type Database = {
           followup_email_sent?: string | null
           followup_phone_call?: string | null
           fwc_certified_date?: string | null
+          fwc_document_url?: string | null
           fwc_lodgement_number?: string | null
           fwc_matter_number?: string | null
           id?: string

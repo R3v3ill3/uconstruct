@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Calendar, Building, Phone, Mail, FileText } from "lucide-react";
+import { Search, Calendar, Building, Phone, Mail, FileText, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
@@ -18,6 +18,7 @@ interface EbaRecord {
   contact_email: string;
   fwc_lodgement_number: string;
   fwc_matter_number: string;
+  fwc_document_url: string;
   eba_data_form_received: string;
   date_draft_signing_sent: string;
   followup_phone_call: string;
@@ -166,15 +167,28 @@ const EbaTracking = () => {
                         FWC Lodgement: {record.fwc_lodgement_number}
                       </div>
                     )}
-                    {record.fwc_matter_number && (
-                      <div className="text-sm">
-                        FWC Matter: {record.fwc_matter_number}
-                      </div>
-                    )}
-                  </div>
+                     {record.fwc_matter_number && (
+                       <div className="text-sm">
+                         FWC Matter: {record.fwc_matter_number}
+                       </div>
+                     )}
+                     {record.fwc_document_url && (
+                       <div className="text-sm">
+                         <a 
+                           href={record.fwc_document_url} 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           className="text-primary hover:underline flex items-center gap-1"
+                         >
+                           <ExternalLink className="h-3 w-3" />
+                           View FWC Record
+                         </a>
+                       </div>
+                     )}
+                   </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Contact Information</h4>
+                   <div className="space-y-2">
+                     <h4 className="font-semibold text-sm">Contact Information</h4>
                     {record.contact_name && (
                       <div className="text-sm">{record.contact_name}</div>
                     )}
