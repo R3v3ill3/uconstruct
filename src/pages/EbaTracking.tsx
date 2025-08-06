@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Calendar, Building, Phone, Mail, FileText, ExternalLink } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Calendar, Building, Phone, Mail, FileText, ExternalLink, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
@@ -42,6 +43,7 @@ const EbaTracking = () => {
   const [records, setRecords] = useState<EbaRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,12 +77,31 @@ const EbaTracking = () => {
     }
   };
 
-  const filteredRecords = records.filter(record =>
-    record.employers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.eba_file_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.sector?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.contact_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRecords = records.filter(record => {
+    // Search term filter
+    const matchesSearch = !searchTerm || 
+      record.employers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.eba_file_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.sector?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.contact_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Status filter
+    const matchesStatus = statusFilter === "all" || getStatusFromRecord(record) === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusFromRecord = (record: EbaRecord) => {
+    if (record.fwc_certified_date) return "certified";
+    if (record.eba_lodged_fwc) return "lodged_fwc";
+    if (record.date_vote_occurred) return "vote_occurred";
+    if (record.date_eba_signed) return "eba_signed";
+    if (record.date_barg_docs_sent) return "docs_sent";
+    if (record.docs_prepared) return "docs_prepared";
+    if (record.followup_email_sent) return "followup_sent";
+    if (record.eba_data_form_received) return "form_received";
+    return "initial";
+  };
 
   const getProgressStage = (record: EbaRecord) => {
     if (record.fwc_certified_date) return { stage: "Certified", variant: "default" as const };
@@ -111,7 +132,7 @@ const EbaTracking = () => {
         </p>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 flex-wrap gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
@@ -121,6 +142,35 @@ const EbaTracking = () => {
             className="pl-10"
           />
         </div>
+        
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="certified">Certified</SelectItem>
+            <SelectItem value="lodged_fwc">Lodged with FWC</SelectItem>
+            <SelectItem value="vote_occurred">Vote Occurred</SelectItem>
+            <SelectItem value="eba_signed">EBA Signed</SelectItem>
+            <SelectItem value="docs_sent">Docs Sent</SelectItem>
+            <SelectItem value="docs_prepared">Docs Prepared</SelectItem>
+            <SelectItem value="followup_sent">Follow-up Sent</SelectItem>
+            <SelectItem value="form_received">Form Received</SelectItem>
+            <SelectItem value="initial">Initial</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={fetchEbaRecords}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </Button>
+        
         <Badge variant="outline">
           {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
         </Badge>

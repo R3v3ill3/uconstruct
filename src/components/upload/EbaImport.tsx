@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { processEbaData, ProcessedEbaData } from '@/utils/ebaDataProcessor';
@@ -17,6 +18,7 @@ interface ImportResults {
   successful: number;
   failed: number;
   duplicates: number;
+  updated: number;
   errors: string[];
 }
 
@@ -24,6 +26,7 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
   const [isProcessed, setIsProcessed] = useState(false);
   const [previewData, setPreviewData] = useState<ProcessedEbaData[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [updateExisting, setUpdateExisting] = useState(false);
 
   const processData = () => {
     const processed = processEbaData(csvData);
@@ -37,6 +40,7 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
       successful: 0,
       failed: 0,
       duplicates: 0,
+      updated: 0,
       errors: []
     };
 
@@ -83,43 +87,58 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
             .eq('employer_id', employerId)
             .maybeSingle();
 
+          const recordData = {
+            employer_id: employerId,
+            eba_file_number: record.eba_file_number,
+            sector: record.sector,
+            contact_name: record.contact_name,
+            contact_phone: record.contact_phone,
+            contact_email: record.contact_email,
+            comments: record.comments,
+            fwc_lodgement_number: record.fwc_lodgement_number,
+            fwc_matter_number: record.fwc_matter_number,
+            fwc_document_url: record.fwc_document_url,
+            docs_prepared: record.docs_prepared,
+            date_barg_docs_sent: record.date_barg_docs_sent,
+            followup_email_sent: record.followup_email_sent,
+            out_of_office_received: record.out_of_office_received,
+            followup_phone_call: record.followup_phone_call,
+            date_draft_signing_sent: record.date_draft_signing_sent,
+            eba_data_form_received: record.eba_data_form_received,
+            date_eba_signed: record.date_eba_signed,
+            date_vote_occurred: record.date_vote_occurred,
+            eba_lodged_fwc: record.eba_lodged_fwc,
+            fwc_certified_date: record.fwc_certified_date
+          };
+
           if (existingRecord) {
-            results.duplicates++;
-            continue;
+            if (updateExisting) {
+              // Update existing record, preserving existing non-null values
+              const { error: ebaError } = await supabase
+                .from('company_eba_records')
+                .update(recordData)
+                .eq('id', existingRecord.id);
+
+              if (ebaError) {
+                throw new Error(`Failed to update EBA record: ${ebaError.message}`);
+              }
+              results.updated++;
+            } else {
+              results.duplicates++;
+              continue;
+            }
+          } else {
+            // Insert new EBA record
+            const { error: ebaError } = await supabase
+              .from('company_eba_records')
+              .insert(recordData);
+
+            if (ebaError) {
+              throw new Error(`Failed to insert EBA record: ${ebaError.message}`);
+            }
+            results.successful++;
           }
 
-          // Insert EBA record
-          const { error: ebaError } = await supabase
-            .from('company_eba_records')
-            .insert({
-              employer_id: employerId,
-              eba_file_number: record.eba_file_number,
-              sector: record.sector,
-              contact_name: record.contact_name,
-              contact_phone: record.contact_phone,
-              contact_email: record.contact_email,
-              comments: record.comments,
-              fwc_lodgement_number: record.fwc_lodgement_number,
-              fwc_matter_number: record.fwc_matter_number,
-              fwc_document_url: record.fwc_document_url,
-              docs_prepared: record.docs_prepared,
-              date_barg_docs_sent: record.date_barg_docs_sent,
-              followup_email_sent: record.followup_email_sent,
-              out_of_office_received: record.out_of_office_received,
-              followup_phone_call: record.followup_phone_call,
-              date_draft_signing_sent: record.date_draft_signing_sent,
-              eba_data_form_received: record.eba_data_form_received,
-              date_eba_signed: record.date_eba_signed,
-              date_vote_occurred: record.date_vote_occurred,
-              eba_lodged_fwc: record.eba_lodged_fwc,
-              fwc_certified_date: record.fwc_certified_date
-            });
-
-          if (ebaError) {
-            throw new Error(`Failed to insert EBA record: ${ebaError.message}`);
-          }
-
-          results.successful++;
         } catch (error) {
           results.failed++;
           results.errors.push(`${record.company_name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -201,20 +220,35 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
             </p>
           </div>
         </div>
-        <Button 
-          onClick={importEbaRecords} 
-          disabled={isImporting}
-          className="flex items-center gap-2"
-        >
-          {isImporting ? (
-            <>Importing...</>
-          ) : (
-            <>
-              <Upload className="h-4 w-4" />
-              Import EBA Records
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="update-existing" 
+              checked={updateExisting}
+              onCheckedChange={(checked) => setUpdateExisting(checked as boolean)}
+            />
+            <label 
+              htmlFor="update-existing" 
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Update existing records
+            </label>
+          </div>
+          <Button 
+            onClick={importEbaRecords} 
+            disabled={isImporting}
+            className="flex items-center gap-2"
+          >
+            {isImporting ? (
+              <>Importing...</>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Import EBA Records
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4">
@@ -256,6 +290,14 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
                 {record.fwc_certified_date && (
                   <div>
                     <span className="font-medium">FWC Certified:</span> {record.fwc_certified_date}
+                  </div>
+                )}
+                {record.fwc_document_url && (
+                  <div className="col-span-2 md:col-span-3">
+                    <span className="font-medium">FWC Document:</span> 
+                    <a href={record.fwc_document_url} target="_blank" rel="noopener noreferrer" className="ml-1 text-primary hover:underline">
+                      View Document
+                    </a>
                   </div>
                 )}
               </div>

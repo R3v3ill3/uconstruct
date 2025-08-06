@@ -30,10 +30,13 @@ interface ImportProgressProps {
     processed: number;
     total: number;
     results?: {
-      inserted: number;
+      inserted?: number;
+      successful?: number;
       updated: number;
-      skipped: number;
+      skipped?: number;
+      duplicates?: number;
       errors: number;
+      failed?: number;
     };
   };
   onComplete: (results: any) => void;
@@ -286,9 +289,9 @@ const ImportProgress = ({
             <div className="grid grid-cols-4 gap-4 text-center">
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-green-600">
-                  {progress.results.inserted.toLocaleString()}
+                  {((progress.results.inserted || progress.results.successful || 0)).toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground">Inserted</div>
+                <div className="text-sm text-muted-foreground">Created</div>
               </div>
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-blue-600">
@@ -298,13 +301,13 @@ const ImportProgress = ({
               </div>
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-gray-600">
-                  {progress.results.skipped.toLocaleString()}
+                  {((progress.results.skipped || progress.results.duplicates || 0)).toLocaleString()}
                 </div>
                 <div className="text-sm text-muted-foreground">Skipped</div>
               </div>
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-red-600">
-                  {progress.results.errors.toLocaleString()}
+                  {((progress.results.errors || progress.results.failed || 0)).toLocaleString()}
                 </div>
                 <div className="text-sm text-muted-foreground">Errors</div>
               </div>
@@ -316,8 +319,9 @@ const ImportProgress = ({
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                Import completed successfully! {progress.results.inserted} records were imported
-                {progress.results.errors > 0 && ` with ${progress.results.errors} errors`}.
+                Import completed successfully! {(progress.results.inserted || progress.results.successful || 0)} records were created
+                {progress.results.updated > 0 && `, ${progress.results.updated} updated`}
+                {((progress.results.errors || progress.results.failed || 0) > 0) && ` with ${(progress.results.errors || progress.results.failed || 0)} errors`}.
               </AlertDescription>
             </Alert>
           )}
