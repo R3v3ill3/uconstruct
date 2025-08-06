@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ArrowLeft, Upload, AlertCircle, CheckCircle, Clock, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { processEbaData, ProcessedEbaData } from '@/utils/ebaDataProcessor';
 
@@ -22,11 +24,26 @@ interface ImportResults {
   errors: string[];
 }
 
+interface ImportProgress {
+  status: 'idle' | 'importing' | 'completed' | 'error';
+  processed: number;
+  total: number;
+  currentRecord?: string;
+  startTime?: Date;
+  endTime?: Date;
+  errors: Array<{ row: number; company: string; error: string }>;
+}
+
 export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps) {
   const [isProcessed, setIsProcessed] = useState(false);
   const [previewData, setPreviewData] = useState<ProcessedEbaData[]>([]);
-  const [isImporting, setIsImporting] = useState(false);
   const [updateExisting, setUpdateExisting] = useState(false);
+  const [progress, setProgress] = useState<ImportProgress>({
+    status: 'idle',
+    processed: 0,
+    total: 0,
+    errors: []
+  });
 
   const processData = () => {
     const processed = processEbaData(csvData);
@@ -35,7 +52,15 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
   };
 
   const importEbaRecords = async () => {
-    setIsImporting(true);
+    setProgress(prev => ({
+      ...prev,
+      status: 'importing',
+      processed: 0,
+      total: previewData.length,
+      startTime: new Date(),
+      errors: []
+    }));
+
     const results: ImportResults = {
       successful: 0,
       failed: 0,
@@ -45,7 +70,15 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
     };
 
     try {
-      for (const record of previewData) {
+      for (let i = 0; i < previewData.length; i++) {
+        const record = previewData[i];
+        
+        // Update progress with current record
+        setProgress(prev => ({
+          ...prev,
+          processed: i,
+          currentRecord: record.company_name
+        }));
         try {
           // First, try to find or create the employer
           let employerId: string | null = null;
@@ -141,16 +174,182 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
 
         } catch (error) {
           results.failed++;
-          results.errors.push(`${record.company_name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          results.errors.push(`${record.company_name}: ${errorMessage}`);
+          
+          // Add to progress errors
+          setProgress(prev => ({
+            ...prev,
+            errors: [...prev.errors, {
+              row: i + 1,
+              company: record.company_name,
+              error: errorMessage
+            }]
+          }));
         }
       }
     } catch (error) {
-      results.errors.push(`Import process failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      results.errors.push(`Import process failed: ${errorMessage}`);
+      
+      setProgress(prev => ({
+        ...prev,
+        status: 'error',
+        endTime: new Date()
+      }));
     }
 
-    setIsImporting(false);
+    // Update final progress
+    setProgress(prev => ({
+      ...prev,
+      status: 'completed',
+      processed: previewData.length,
+      currentRecord: undefined,
+      endTime: new Date()
+    }));
+
     onImportComplete(results);
   };
+
+  const getProgressPercentage = () => {
+    if (progress.total === 0) return 0;
+    return Math.round((progress.processed / progress.total) * 100);
+  };
+
+  const getDuration = () => {
+    if (!progress.startTime) return '';
+    const endTime = progress.endTime || new Date();
+    const duration = Math.round((endTime.getTime() - progress.startTime.getTime()) / 1000);
+    return `${Math.floor(duration / 60)}m ${duration % 60}s`;
+  };
+
+  const downloadErrorReport = () => {
+    if (progress.errors.length === 0) return;
+    
+    const csvContent = [
+      'Row,Company,Error',
+      ...progress.errors.map(err => `${err.row},"${err.company}","${err.error}"`)
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `eba-import-errors-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  // Show progress during import
+  if (progress.status === 'importing' || progress.status === 'completed' || progress.status === 'error') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={onBack}
+            disabled={progress.status === 'importing'}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">
+              {progress.status === 'importing' ? 'Importing EBA Records' : 'Import Complete'}
+            </h2>
+            <p className="text-muted-foreground">
+              {progress.status === 'importing' 
+                ? `Processing ${progress.processed + 1} of ${progress.total} records`
+                : `Imported ${progress.processed} of ${progress.total} records in ${getDuration()}`
+              }
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {progress.status === 'importing' ? (
+                <Clock className="h-5 w-5 animate-spin" />
+              ) : (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              )}
+              Import Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Progress: {progress.processed}/{progress.total}</span>
+                <span>{getProgressPercentage()}%</span>
+              </div>
+              <Progress value={getProgressPercentage()} className="w-full" />
+            </div>
+
+            {progress.currentRecord && (
+              <div className="text-sm text-muted-foreground">
+                Currently processing: <span className="font-medium">{progress.currentRecord}</span>
+              </div>
+            )}
+
+            {progress.status === 'completed' && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {(progress.total - progress.errors.length)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Successful</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {progress.errors.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Failed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {progress.total}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-600">
+                    {getDuration()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Duration</div>
+                </div>
+              </div>
+            )}
+
+            {progress.errors.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-red-600">Import Errors ({progress.errors.length})</h4>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={downloadErrorReport}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Error Report
+                  </Button>
+                </div>
+                <ScrollArea className="h-48 w-full rounded border">
+                  <div className="p-4 space-y-2">
+                    {progress.errors.map((error, index) => (
+                      <div key={index} className="text-sm border-l-2 border-red-500 pl-3">
+                        <div className="font-medium">Row {error.row}: {error.company}</div>
+                        <div className="text-muted-foreground">{error.error}</div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isProcessed) {
     return (
@@ -236,10 +435,10 @@ export function EbaImport({ csvData, onImportComplete, onBack }: EbaImportProps)
           </div>
           <Button 
             onClick={importEbaRecords} 
-            disabled={isImporting}
+            disabled={progress.status !== 'idle'}
             className="flex items-center gap-2"
           >
-            {isImporting ? (
+            {progress.status !== 'idle' ? (
               <>Importing...</>
             ) : (
               <>
