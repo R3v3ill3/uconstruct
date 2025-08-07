@@ -1284,6 +1284,13 @@ export type Database = {
         Args: { user_id: string; site_id: string }
         Returns: boolean
       }
+      sync_auth_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          synced_count: number
+          message: string
+        }[]
+      }
     }
     Enums: {
       activity_type:

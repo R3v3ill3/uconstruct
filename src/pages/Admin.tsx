@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Shield, Users, UserCheck, UserX } from "lucide-react";
+import { Search, Shield, Users, UserCheck, UserX, UserPlus, RefreshCw } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import { InviteUserDialog } from "@/components/admin/InviteUserDialog";
 
 interface UserProfile {
   id: string;
@@ -42,6 +43,8 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Check if current user is admin
   useEffect(() => {
@@ -168,6 +171,41 @@ const Admin = () => {
     }
   };
 
+  const syncUsers = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.rpc('sync_auth_users');
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const result = data[0];
+        toast({
+          title: "Success",
+          description: result.message
+        });
+        
+        // Refresh user data
+        if (result.synced_count > 0) {
+          window.location.reload();
+        }
+      }
+    } catch (error: any) {
+      console.error("Error syncing users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to sync users",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const refreshUserData = () => {
+    window.location.reload();
+  };
+
   const filteredUsers = users.filter(user =>
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -221,6 +259,19 @@ const Admin = () => {
           <p className="text-muted-foreground">Manage users, roles, and permissions</p>
         </div>
         <div className="flex items-center gap-4">
+          <Button onClick={() => setInviteDialogOpen(true)} className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />
+            Invite User
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={syncUsers} 
+            disabled={syncing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            Sync Users
+          </Button>
           <Badge variant="destructive" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Administrator
@@ -376,6 +427,12 @@ const Admin = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onSuccess={refreshUserData}
+      />
     </div>
   );
 };
