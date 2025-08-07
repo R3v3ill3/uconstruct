@@ -263,6 +263,48 @@ export type Database = {
           },
         ]
       }
+      delegate_field_permissions: {
+        Row: {
+          can_edit: boolean
+          created_at: string
+          entity_field_id: string
+          id: string
+          organiser_id: string
+          updated_at: string
+        }
+        Insert: {
+          can_edit?: boolean
+          created_at?: string
+          entity_field_id: string
+          id?: string
+          organiser_id: string
+          updated_at?: string
+        }
+        Update: {
+          can_edit?: boolean
+          created_at?: string
+          entity_field_id?: string
+          id?: string
+          organiser_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delegate_field_permissions_entity_field_id_fkey"
+            columns: ["entity_field_id"]
+            isOneToOne: false
+            referencedRelation: "entity_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegate_field_permissions_organiser_id_fkey"
+            columns: ["organiser_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employer_organisers: {
         Row: {
           created_at: string
@@ -390,6 +432,86 @@ export type Database = {
           },
         ]
       }
+      entity_fields: {
+        Row: {
+          created_at: string
+          default_editable: boolean
+          default_viewable: boolean
+          entity_type: string
+          field_label: string
+          field_name: string
+          field_type: string
+          id: string
+          is_required: boolean
+          is_sensitive: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_editable?: boolean
+          default_viewable?: boolean
+          entity_type: string
+          field_label: string
+          field_name: string
+          field_type: string
+          id?: string
+          is_required?: boolean
+          is_sensitive?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_editable?: boolean
+          default_viewable?: boolean
+          entity_type?: string
+          field_label?: string
+          field_name?: string
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          is_sensitive?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      field_permissions: {
+        Row: {
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          entity_field_id: string
+          id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          entity_field_id: string
+          id?: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          entity_field_id?: string
+          id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_permissions_entity_field_id_fkey"
+            columns: ["entity_field_id"]
+            isOneToOne: false
+            referencedRelation: "entity_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_sites: {
         Row: {
           created_at: string | null
@@ -454,6 +576,63 @@ export type Database = {
           },
         ]
       }
+      organiser_allocations: {
+        Row: {
+          allocated_by: string | null
+          created_at: string
+          end_date: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organiser_id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_by?: string | null
+          created_at?: string
+          end_date?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          organiser_id: string
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_by?: string | null
+          created_at?: string
+          end_date?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          organiser_id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organiser_allocations_allocated_by_fkey"
+            columns: ["allocated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organiser_allocations_organiser_id_fkey"
+            columns: ["organiser_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organisers: {
         Row: {
           created_at: string
@@ -484,12 +663,61 @@ export type Database = {
         }
         Relationships: []
       }
+      permission_audit_log: {
+        Row: {
+          access_method: string | null
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          field_name: string | null
+          id: string
+          new_value: string | null
+          old_value: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_method?: string | null
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_method?: string | null
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
+          is_active: boolean
+          last_login_at: string | null
           role: string | null
           scoped_employers: string[] | null
           scoped_sites: string[] | null
@@ -500,6 +728,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean
+          last_login_at?: string | null
           role?: string | null
           scoped_employers?: string[] | null
           scoped_sites?: string[] | null
@@ -510,6 +740,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean
+          last_login_at?: string | null
           role?: string | null
           scoped_employers?: string[] | null
           scoped_sites?: string[] | null
@@ -654,6 +886,64 @@ export type Database = {
             columns: ["main_job_site_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_hierarchy: {
+        Row: {
+          assigned_by: string | null
+          child_user_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          parent_user_id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          child_user_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          parent_user_id: string
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          child_user_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          parent_user_id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_hierarchy_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_hierarchy_child_user_id_fkey"
+            columns: ["child_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_hierarchy_parent_user_id_fkey"
+            columns: ["parent_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -980,6 +1270,60 @@ export type Database = {
           },
         ]
       }
+      user_role_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          role: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          role: string
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          role?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_role_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_role_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_activity_ratings: {
         Row: {
           activity_id: string | null
@@ -1028,6 +1372,74 @@ export type Database = {
           },
           {
             foreignKeyName: "worker_activity_ratings_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_delegate_assignments: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          delegate_id: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          start_date: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          delegate_id: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          start_date?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          delegate_id?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          start_date?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_delegate_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_delegate_assignments_delegate_id_fkey"
+            columns: ["delegate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_delegate_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "unallocated_workers_analysis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_delegate_assignments_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "workers"
@@ -1280,8 +1692,20 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      has_role: {
+        Args: { _user_id: string; _role: string }
+        Returns: boolean
+      }
       has_site_access: {
         Args: { user_id: string; site_id: string }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_lead_of: {
+        Args: { _parent: string; _child: string }
         Returns: boolean
       }
       sync_auth_users: {

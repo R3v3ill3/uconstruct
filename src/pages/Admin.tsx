@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, Shield, Users, UserCheck, UserX, UserPlus, RefreshCw } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { InviteUserDialog } from "@/components/admin/InviteUserDialog";
+import { RoleHierarchyManager } from "@/components/admin/RoleHierarchyManager";
 
 interface UserProfile {
   id: string;
@@ -119,6 +120,18 @@ const Admin = () => {
 
       if (error) throw error;
 
+      // Mirror into role assignments (non-blocking)
+      const assignedBy = user?.id || null;
+      if (assignedBy) {
+        await supabase.from("user_role_assignments").insert({
+          user_id: userId,
+          role: newRole,
+          assigned_by: assignedBy,
+          is_active: true,
+          start_date: new Date().toISOString().slice(0,10),
+        });
+      }
+
       setUsers(users.map(user => 
         user.id === userId ? { ...user, role: newRole } : user
       ));
@@ -216,8 +229,12 @@ const Admin = () => {
     switch (role) {
       case "admin":
         return "destructive";
+      case "lead_organiser":
+        return "default";
       case "organiser":
         return "default";
+      case "delegate":
+        return "outline";
       case "viewer":
         return "secondary";
       default:
@@ -229,8 +246,12 @@ const Admin = () => {
     switch (role) {
       case "admin":
         return <Shield className="h-4 w-4" />;
+      case "lead_organiser":
+        return <Users className="h-4 w-4" />;
       case "organiser":
         return <UserCheck className="h-4 w-4" />;
+      case "delegate":
+        return <UserPlus className="h-4 w-4" />;
       case "viewer":
         return <UserX className="h-4 w-4" />;
       default:
@@ -400,7 +421,9 @@ const Admin = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="lead_organiser">Lead Organiser</SelectItem>
                           <SelectItem value="organiser">Organiser</SelectItem>
+                          <SelectItem value="delegate">Delegate</SelectItem>
                           <SelectItem value="viewer">Viewer</SelectItem>
                         </SelectContent>
                       </Select>
@@ -427,6 +450,8 @@ const Admin = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <RoleHierarchyManager users={users} />
 
       <InviteUserDialog
         open={inviteDialogOpen}
