@@ -663,6 +663,59 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          full_name: string | null
+          id: string
+          invited_at: string | null
+          notes: string | null
+          role: string
+          scoped_employers: string[] | null
+          scoped_sites: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string | null
+          notes?: string | null
+          role?: string
+          scoped_employers?: string[] | null
+          scoped_sites?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string | null
+          notes?: string | null
+          role?: string
+          scoped_employers?: string[] | null
+          scoped_sites?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permission_audit_log: {
         Row: {
           access_method: string | null
@@ -1688,6 +1741,14 @@ export type Database = {
       }
     }
     Functions: {
+      admin_update_user_scoping: {
+        Args: {
+          _user_id: string
+          _scoped_employers: string[]
+          _scoped_sites: string[]
+        }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string

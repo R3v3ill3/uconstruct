@@ -12,6 +12,8 @@ import { Search, Shield, Users, UserCheck, UserX, UserPlus, RefreshCw } from "lu
 import { Navigate } from "react-router-dom";
 import { InviteUserDialog } from "@/components/admin/InviteUserDialog";
 import { RoleHierarchyManager } from "@/components/admin/RoleHierarchyManager";
+import { AddDraftUserDialog } from "@/components/admin/AddDraftUserDialog";
+import { PendingUsersTable } from "@/components/admin/PendingUsersTable";
 
 interface UserProfile {
   id: string;
@@ -44,8 +46,9 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+const [addDraftDialogOpen, setAddDraftDialogOpen] = useState(false);
+const [syncing, setSyncing] = useState(false);
 
   // Check if current user is admin
   useEffect(() => {
@@ -280,6 +283,10 @@ const Admin = () => {
           <p className="text-muted-foreground">Manage users, roles, and permissions</p>
         </div>
         <div className="flex items-center gap-4">
+          <Button onClick={() => setAddDraftDialogOpen(true)} className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />
+            Add Draft User
+          </Button>
           <Button onClick={() => setInviteDialogOpen(true)} className="flex items-center gap-2">
             <UserPlus className="h-4 w-4" />
             Invite User
@@ -451,7 +458,15 @@ const Admin = () => {
         </CardContent>
       </Card>
 
+      <PendingUsersTable />
+
       <RoleHierarchyManager users={users} />
+
+      <AddDraftUserDialog
+        open={addDraftDialogOpen}
+        onOpenChange={setAddDraftDialogOpen}
+        onSuccess={refreshUserData}
+      />
 
       <InviteUserDialog
         open={inviteDialogOpen}
