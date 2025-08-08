@@ -302,14 +302,14 @@ const Employers = () => {
 
         {/* New: filter by Project */}
         <Select
-          value={selectedProjectId || ""}
-          onValueChange={(v) => setSelectedProjectId(v)}
+          value={selectedProjectId || "all"}
+          onValueChange={(v) => setSelectedProjectId(v === "all" ? "" : v)}
         >
           <SelectTrigger className="w-full sm:w-60">
             <SelectValue placeholder="Filter by Project (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Projects</SelectItem>
+            <SelectItem value="all">All Projects</SelectItem>
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}

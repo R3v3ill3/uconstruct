@@ -271,14 +271,14 @@ export function EnhancedActivityCreationDialog({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Job Site (Optional)</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={(v) => field.onChange(v === "none" ? "" : v)} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select a job site" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">No specific job site</SelectItem>
+                                  <SelectItem value="none">No specific job site</SelectItem>
                                   {jobSites.map((site) => (
                                     <SelectItem key={site.id} value={site.id}>
                                       {site.name} - {site.location}
