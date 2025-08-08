@@ -145,18 +145,28 @@ export function TradeContractorsManager({
 
               <div>
                 <Label>Employer</Label>
-                <Select value={chosenEmployer} onValueChange={setChosenEmployer}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={chosenTrade ? "Select employer" : "Select a trade first"} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {filteredEmployers.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="max-h-72 overflow-auto rounded border p-2 space-y-1">
+                  {filteredEmployers.map((e) => {
+                    const set = tradeEmployers[chosenTrade] || new Set<string>();
+                    const highlight = !!chosenTrade && set.has(e.id);
+                    const isSelected = chosenEmployer === e.id;
+                    return (
+                      <button
+                        key={e.id}
+                        onClick={() => setChosenEmployer(e.id)}
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-accent transition ${isSelected ? "bg-accent" : ""} ${highlight ? "font-semibold" : ""}`}
+                        disabled={!chosenTrade}
+                      >
+                        {e.name} {highlight ? <span className="text-muted-foreground">(prioritised)</span> : null}
+                      </button>
+                    );
+                  })}
+                  {filteredEmployers.length === 0 && (
+                    <div className="text-sm text-muted-foreground p-2">
+                      {chosenTrade ? "No employers match your search." : "Select a trade first"}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="pt-1">

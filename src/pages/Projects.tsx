@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { JVSelector } from "@/components/projects/JVSelector";
 import { MultiEmployerPicker } from "@/components/projects/MultiEmployerPicker";
-import { SingleEmployerPicker } from "@/components/projects/SingleEmployerPicker";
+import { SingleEmployerDialogPicker } from "@/components/projects/SingleEmployerDialogPicker";
 import { TradeContractorsManager, TradeAssignment } from "@/components/projects/TradeContractorsManager";
 
 type Project = {
@@ -69,8 +69,6 @@ const Projects = () => {
     trades: [] as TradeAssignment[],
   });
 
-  const [hcSameAsBuilder, setHcSameAsBuilder] = useState<"yes" | "no" | "unset">("unset");
-  const [hcOneOfBuilders, setHcOneOfBuilders] = useState<"yes" | "no" | "unset">("unset");
 
   const queryClient = useQueryClient();
 
@@ -112,6 +110,16 @@ const Projects = () => {
       return data as { id: string; name: string }[];
     },
   });
+
+  // Default head contractor to the first builder when not a JV
+  useEffect(() => {
+    if (formData.jv_status === "no") {
+      const first = formData.builder_ids[0];
+      if (first && !formData.head_contractor_id) {
+        setFormData((p) => ({ ...p, head_contractor_id: first }));
+      }
+    }
+  }, [formData.jv_status, formData.builder_ids, formData.head_contractor_id]);
 
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: typeof formData) => {
@@ -294,11 +302,23 @@ const Projects = () => {
                 triggerText="Add builder"
               />
 
-              <SingleEmployerPicker
+              <SingleEmployerDialogPicker
                 label="Head contractor (optional)"
                 selectedId={formData.head_contractor_id}
-                onChange={(id) => setFormData((p) => ({ ...p, head_contractor_id: id }))}
+                onChange={(id) => {
+                  if (
+                    formData.jv_status === "no" &&
+                    formData.builder_ids[0] &&
+                    id &&
+                    id !== formData.builder_ids[0]
+                  ) {
+                    const ok = window.confirm("Head contractor differs from builder. Continue?");
+                    if (!ok) return;
+                  }
+                  setFormData((p) => ({ ...p, head_contractor_id: id }));
+                }}
                 prioritizedTag="head_contractor"
+                triggerText={formData.head_contractor_id ? "Change head contractor" : "Add head contractor"}
               />
 
               <TradeContractorsManager
