@@ -74,7 +74,6 @@ const Projects = () => {
         .select(`
           *,
           main_job_site:job_sites!main_job_site_id(name, location),
-          -- Legacy builder join kept to gracefully fallback if no roles exist yet
           builder:employers!builder_id(name),
           project_employer_roles(
             role,
@@ -89,7 +88,7 @@ const Projects = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as Project[];
+      return data as unknown as Project[];
     },
   });
 
@@ -126,7 +125,7 @@ const Projects = () => {
 
       // 2) Insert corresponding project role for builder (project-scoped)
       if (projectData.builder_id) {
-        const { error: roleError } = await supabase
+        const { error: roleError } = await (supabase as any)
           .from("project_employer_roles")
           .insert({
             project_id: newProject.id,
@@ -138,7 +137,7 @@ const Projects = () => {
 
       // 3) Upsert optional JV label
       if (projectData.builder_jv_label?.trim()) {
-        const { error: jvError } = await supabase
+        const { error: jvError } = await (supabase as any)
           .from("project_builder_jv")
           .upsert(
             { project_id: newProject.id, label: projectData.builder_jv_label.trim() },
