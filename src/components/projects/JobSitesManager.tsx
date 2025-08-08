@@ -226,8 +226,14 @@ const payload: any = { project_id: projectId, name: newSite.name, is_main_site: 
                     </TableCell>
                     <TableCell className="align-top w-[420px]">
                       <GoogleAddressInput
-                        value={s.full_address || s.location || ""}
-                        onChange={(addr) => setEditStates((prev) => ({ ...prev, [s.id]: { ...edit, address: addr } }))}
+                        value={edit.address?.formatted ?? s.full_address ?? s.location ?? ""}
+                        onChange={(addr) => {
+                          setEditStates((prev) => ({ ...prev, [s.id]: { ...edit, address: addr } }));
+                          // If this was selected from Google (has place details), auto-save immediately
+                          if (addr.place_id || (typeof addr.lat === 'number' && typeof addr.lng === 'number')) {
+                            saveSiteMutation.mutate({ id: s.id, name: edit.name, address: addr });
+                          }
+                        }}
                       />
                     </TableCell>
                     <TableCell className="align-top">

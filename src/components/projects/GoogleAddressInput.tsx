@@ -126,7 +126,15 @@ export function GoogleAddressInput({
           ref={inputRef}
           value={text}
           placeholder={placeholder}
-          onChange={(e) => setText(e.target.value)}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={(e) => {
+            const val = e.target.value;
+            setText(val);
+            // Emit on every keystroke so parents always have the latest manual text
+            onChange({ formatted: val });
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
