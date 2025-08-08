@@ -68,11 +68,19 @@ export function GoogleAddressInput({
   const [text, setText] = useState<string>(value || "");
   const lastFromAutocomplete = useRef(false);
   const selectingFromList = useRef(false);
+  const onChangeRef = useRef(onChange);
+  const autocompleteRef = useRef<any>(null);
+  const placeListenerRef = useRef<any>(null);
 
   useEffect(() => {
     setText(value || "");
     if (inputRef.current) inputRef.current.value = value || "";
   }, [value]);
+
+  // Keep latest onChange in a ref so Autocomplete listener stays stable
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,31 +106,43 @@ export function GoogleAddressInput({
 
   useEffect(() => {
     if (!loaded || !inputRef.current || !window.google) return;
-    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      fields: ["formatted_address", "address_components", "geometry", "place_id"],
-    });
-    const listener = autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      const formatted = place.formatted_address || inputRef.current?.value || "";
-      const components: Record<string, string> = {};
-      (place.address_components || []).forEach((c: any) => {
-        components[c.types[0]] = c.long_name;
+
+    if (!autocompleteRef.current) {
+      autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
+        types: ["address"],
+        fields: ["formatted_address", "address_components", "geometry", "place_id"],
       });
-      const lat = place.geometry?.location?.lat?.();
-      const lng = place.geometry?.location?.lng?.();
-      lastFromAutocomplete.current = true;
-      // Ensure the visible input updates immediately
-      if (inputRef.current && typeof formatted === "string") {
-        inputRef.current.value = formatted;
-      }
-      setText(formatted);
-      onChange({ formatted, components, place_id: place.place_id, lat, lng });
-    });
+
+      placeListenerRef.current = autocompleteRef.current.addListener("place_changed", () => {
+        const ac = autocompleteRef.current;
+        if (!ac) return;
+        const place = ac.getPlace();
+        const formatted = place.formatted_address || inputRef.current?.value || "";
+        const components: Record<string, string> = {};
+        (place.address_components || []).forEach((c: any) => {
+          components[c.types[0]] = c.long_name;
+        });
+        const lat = place.geometry?.location?.lat?.();
+        const lng = place.geometry?.location?.lng?.();
+        lastFromAutocomplete.current = true;
+        // Ensure the visible input updates immediately
+        if (inputRef.current && typeof formatted === "string") {
+          inputRef.current.value = formatted;
+        }
+        setText(formatted);
+        console.debug?.("GoogleAddressInput place_changed", { formatted, place_id: place.place_id });
+        onChangeRef.current?.({ formatted, components, place_id: place.place_id, lat, lng });
+      });
+    }
+
     return () => {
-      if (listener && listener.remove) listener.remove();
+      if (placeListenerRef.current?.remove) {
+        placeListenerRef.current.remove();
+        placeListenerRef.current = null;
+      }
+      autocompleteRef.current = null;
     };
-  }, [loaded, onChange]);
+  }, [loaded]);
 
   useEffect(() => {
     if (!loaded) return;
