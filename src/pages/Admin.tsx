@@ -195,14 +195,17 @@ const [syncing, setSyncing] = useState(false);
       if (error) throw error;
       
       if (data && data.length > 0) {
-        const result = data[0];
+        const result = data[0] as { synced_count: number; message: string };
+        const noNewUsers = !result.synced_count || result.synced_count === 0;
         toast({
-          title: "Success",
-          description: result.message
+          title: noNewUsers ? "No new users synced" : "Success",
+          description: noNewUsers
+            ? "All users are already synced. Invited users appear after they sign in via their magic link. Manage invites in the Pending Users section below."
+            : result.message,
         });
         
-        // Refresh user data
-        if (result.synced_count > 0) {
+        // Refresh user data only when new profiles were created
+        if (!noNewUsers) {
           window.location.reload();
         }
       }
