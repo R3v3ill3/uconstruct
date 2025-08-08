@@ -32,16 +32,32 @@ export const InviteUserDialog = ({ open, onOpenChange, onSuccess }: InviteUserDi
 
     setLoading(true);
     try {
-      // Use Supabase admin API to invite user
-      const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-        data: {
-          role: role,
-          full_name: email.split('@')[0] // Use email username as default name
+      // Send Magic Link (no service role required)
+      const redirectUrl = `${window.location.origin}/`;
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectUrl,
+          shouldCreateUser: true,
+          data: { role },
         },
-        redirectTo: `${window.location.origin}/auth`
       });
 
-      if (error) throw error;
+      if (otpError) throw otpError;
+
+      // Mark or create pending user as invited
+      await supabase
+        .from("pending_users")
+        .upsert(
+          {
+            email,
+            full_name: email.split('@')[0],
+            role,
+            status: "invited",
+            invited_at: new Date().toISOString(),
+          },
+          { onConflict: "email" }
+        );
 
       toast({
         title: "Success",

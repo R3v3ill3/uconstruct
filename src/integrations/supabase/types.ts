@@ -1749,6 +1749,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_pending_user_on_login: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string

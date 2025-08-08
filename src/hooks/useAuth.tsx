@@ -23,6 +23,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (session?.user) {
+          setTimeout(() => {
+            supabase.rpc('apply_pending_user_on_login');
+          }, 0);
+        }
       }
     );
 

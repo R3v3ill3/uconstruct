@@ -48,27 +48,17 @@ export const PendingUsersTable = () => {
   const sendInvite = async (row: PendingUser) => {
     setInvitingId(row.id);
     try {
-      // Send invite via admin API
-      const { data, error } = await supabase.auth.admin.inviteUserByEmail(row.email, {
-        data: {
-          role: row.role,
-          full_name: row.full_name || row.email.split("@")[0],
+      // Send Magic Link to the user's email
+      const redirectUrl = `${window.location.origin}/`;
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: row.email,
+        options: {
+          emailRedirectTo: redirectUrl,
+          shouldCreateUser: true,
+          data: { role: row.role, full_name: row.full_name || row.email.split("@")[0] },
         },
-        redirectTo: `${window.location.origin}/auth`,
       });
-      if (error) throw error;
-
-      const invitedUserId = (data?.user as any)?.id as string | undefined;
-
-      // Mirror role into assignments when available
-      if (invitedUserId) {
-        await supabase.from("user_role_assignments").insert({
-          user_id: invitedUserId,
-          role: row.role,
-          is_active: true,
-          start_date: new Date().toISOString().slice(0, 10),
-        });
-      }
+      if (otpError) throw otpError;
 
       // Mark pending user as invited
       await supabase
