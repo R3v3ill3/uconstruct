@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +16,8 @@ import { JVSelector } from "@/components/projects/JVSelector";
 import { MultiEmployerPicker } from "@/components/projects/MultiEmployerPicker";
 import { SingleEmployerDialogPicker } from "@/components/projects/SingleEmployerDialogPicker";
 import { TradeContractorsManager, TradeAssignment } from "@/components/projects/TradeContractorsManager";
+import EditProjectDialog from "@/components/projects/EditProjectDialog";
+import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
 
 type Project = {
   id: string;
@@ -68,7 +69,6 @@ const Projects = () => {
     head_contractor_id: "",
     trades: [] as TradeAssignment[],
   });
-
 
   const queryClient = useQueryClient();
 
@@ -414,12 +414,30 @@ const Projects = () => {
                         {builderDisplay}
                       </CardDescription>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col items-end gap-2">
                       <div className="text-sm text-muted-foreground">EBA Status</div>
                       {project.project_eba_details ? 
                         getEBAStatusBadge(project.project_eba_details.status) : 
                         <Badge variant="secondary">NOT SET</Badge>
                       }
+                      <div className="mt-2 flex gap-2">
+                        <EditProjectDialog
+                          project={{
+                            id: project.id,
+                            name: project.name,
+                            value: project.value,
+                            proposed_start_date: project.proposed_start_date,
+                            proposed_finish_date: project.proposed_finish_date,
+                            roe_email: project.roe_email,
+                          }}
+                          triggerText="Edit"
+                        />
+                        <DeleteProjectDialog
+                          projectId={project.id}
+                          projectName={project.name}
+                          triggerText="Delete"
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>

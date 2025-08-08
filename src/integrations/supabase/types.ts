@@ -1983,6 +1983,26 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      delete_project_cascade: {
+        Args: { p_project_id: string }
+        Returns: undefined
+      }
+      get_project_delete_impact: {
+        Args: { p_project_id: string }
+        Returns: {
+          site_count: number
+          site_contractor_trades_count: number
+          site_contacts_count: number
+          site_employers_count: number
+          union_activities_count: number
+          worker_placements_count: number
+          project_contractor_trades_count: number
+          project_employer_roles_count: number
+          project_organisers_count: number
+          project_builder_jv_count: number
+          project_eba_details_count: number
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string
