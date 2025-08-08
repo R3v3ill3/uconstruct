@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building, Phone, Mail, FileText, ExternalLink, MapPin, Users, Briefcase } from "lucide-react";
 import { getEbaStatusInfo } from "./ebaHelpers";
 import { EmployerWorkersList } from "../workers/EmployerWorkersList";
-
+import EmployerEditForm from "./EmployerEditForm";
 type EmployerWithEba = {
   id: string;
   name: string;
@@ -50,12 +50,13 @@ interface EmployerDetailModalProps {
 
 export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDetailModalProps) => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: employer, isLoading } = useQuery({
     queryKey: ["employer-detail", employerId],
     queryFn: async () => {
       if (!employerId) return null;
-      
       const { data, error } = await supabase
         .from("employers")
         .select(`
@@ -79,276 +80,296 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDet
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-3">
-            <Building className="h-6 w-6" />
-            <div>
-              <DialogTitle className="text-xl">{employer?.name || "Loading..."}</DialogTitle>
-              {employer?.abn && (
-                <p className="text-sm text-muted-foreground">ABN: {employer.abn}</p>
-              )}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Building className="h-6 w-6" />
+              <div>
+                <DialogTitle className="text-xl">{employer?.name || "Loading..."}</DialogTitle>
+                {employer?.abn && (
+                  <p className="text-sm text-muted-foreground">ABN: {employer.abn}</p>
+                )}
+              </div>
             </div>
+            {employer && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                Edit
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
         {isLoading ? (
           <div className="p-8 text-center">Loading employer details...</div>
         ) : employer ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="eba">EBA Details</TabsTrigger>
-              <TabsTrigger value="sites">Worksites</TabsTrigger>
-              <TabsTrigger value="workers">Workers</TabsTrigger>
-            </TabsList>
+          isEditing ? (
+            <div className="space-y-6">
+              <EmployerEditForm
+                employer={{ id: employer.id, name: employer.name, employer_type: employer.employer_type }}
+                onCancel={() => setIsEditing(false)}
+                onSaved={() => {
+                  setIsEditing(false);
+                  queryClient.invalidateQueries({ queryKey: ["employers"] });
+                }}
+              />
+            </div>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="eba">EBA Details</TabsTrigger>
+                <TabsTrigger value="sites">Worksites</TabsTrigger>
+                <TabsTrigger value="workers">Workers</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="overview" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Building className="h-5 w-5" />
-                      Company Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Employer Type</label>
-                      <p className="capitalize">{employer.employer_type.replace(/_/g, ' ')}</p>
-                    </div>
-                    
-                    {(employer.address_line_1 || employer.suburb) && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          Address
-                        </label>
-                        <div className="text-sm">
-                          {employer.address_line_1 && <p>{employer.address_line_1}</p>}
-                          {employer.address_line_2 && <p>{employer.address_line_2}</p>}
-                          {(employer.suburb || employer.state || employer.postcode) && (
-                            <p>
-                              {[employer.suburb, employer.state, employer.postcode].filter(Boolean).join(', ')}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {employer.website && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Website</label>
-                        <a 
-                          href={employer.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1"
-                        >
-                          {employer.website}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Phone className="h-5 w-5" />
-                      Contact Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {employer.primary_contact_name && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Primary Contact</label>
-                        <p>{employer.primary_contact_name}</p>
-                      </div>
-                    )}
-                    
-                    {employer.phone && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                        <a href={`tel:${employer.phone}`} className="text-primary hover:underline">
-                          {employer.phone}
-                        </a>
-                      </div>
-                    )}
-                    
-                    {employer.email && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Email</label>
-                        <a href={`mailto:${employer.email}`} className="text-primary hover:underline">
-                          {employer.email}
-                        </a>
-                      </div>
-                    )}
-
-                    {employer.company_eba_records?.[0] && (
-                      <>
-                        {employer.company_eba_records[0].contact_name && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">EBA Contact</label>
-                            <p>{employer.company_eba_records[0].contact_name}</p>
-                          </div>
-                        )}
-                        
-                        {employer.company_eba_records[0].contact_phone && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">EBA Phone</label>
-                            <a href={`tel:${employer.company_eba_records[0].contact_phone}`} className="text-primary hover:underline">
-                              {employer.company_eba_records[0].contact_phone}
-                            </a>
-                          </div>
-                        )}
-                        
-                        {employer.company_eba_records[0].contact_email && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">EBA Email</label>
-                            <a href={`mailto:${employer.company_eba_records[0].contact_email}`} className="text-primary hover:underline">
-                              {employer.company_eba_records[0].contact_email}
-                            </a>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {ebaStatus && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      EBA Status Overview
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4">
-                      <Badge variant={ebaStatus.variant} className="text-sm px-3 py-1">
-                        {ebaStatus.label}
-                      </Badge>
-                      {employer.company_eba_records?.[0]?.sector && (
-                        <Badge variant="outline">
-                          {employer.company_eba_records[0].sector}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="eba" className="space-y-4">
-              {employer.company_eba_records?.[0] ? (
-                <div className="space-y-4">
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        EBA Information
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Building className="h-5 w-5" />
+                        Company Information
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {employer.company_eba_records[0].eba_file_number && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">EBA File Number</label>
-                            <p className="font-mono text-sm">{employer.company_eba_records[0].eba_file_number}</p>
-                          </div>
-                        )}
-                        
-                        {employer.company_eba_records[0].fwc_lodgement_number && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">FWC Lodgement Number</label>
-                            <p className="font-mono text-sm">{employer.company_eba_records[0].fwc_lodgement_number}</p>
-                          </div>
-                        )}
-                        
-                        {employer.company_eba_records[0].fwc_matter_number && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">FWC Matter Number</label>
-                            <p className="font-mono text-sm">{employer.company_eba_records[0].fwc_matter_number}</p>
-                          </div>
-                        )}
-                        
-                        {employer.company_eba_records[0].eba_lodged_fwc && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">Lodged with FWC</label>
-                            <p>{new Date(employer.company_eba_records[0].eba_lodged_fwc).toLocaleDateString()}</p>
-                          </div>
-                        )}
-                        
-                        {employer.company_eba_records[0].date_eba_signed && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">EBA Signed</label>
-                            <p>{new Date(employer.company_eba_records[0].date_eba_signed).toLocaleDateString()}</p>
-                          </div>
-                        )}
-                        
-                        {employer.company_eba_records[0].fwc_certified_date && (
-                          <div>
-                            <label className="text-sm font-medium text-muted-foreground">FWC Certified</label>
-                            <p>{new Date(employer.company_eba_records[0].fwc_certified_date).toLocaleDateString()}</p>
-                          </div>
-                        )}
+                    <CardContent className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Employer Type</label>
+                        <p className="capitalize">{employer.employer_type.replace(/_/g, ' ')}</p>
                       </div>
-
-                      {employer.company_eba_records[0].fwc_document_url && (
+                      
+                      {(employer.address_line_1 || employer.suburb) && (
                         <div>
-                          <Button asChild variant="outline" size="sm">
-                            <a 
-                              href={employer.company_eba_records[0].fwc_document_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                              View FWC Document
-                            </a>
-                          </Button>
+                          <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            Address
+                          </label>
+                          <div className="text-sm">
+                            {employer.address_line_1 && <p>{employer.address_line_1}</p>}
+                            {employer.address_line_2 && <p>{employer.address_line_2}</p>}
+                            {(employer.suburb || employer.state || employer.postcode) && (
+                              <p>
+                                {[employer.suburb, employer.state, employer.postcode].filter(Boolean).join(', ')}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       )}
 
-                      {employer.company_eba_records[0].comments && (
+                      {employer.website && (
                         <div>
-                          <label className="text-sm font-medium text-muted-foreground">Comments</label>
-                          <p className="text-sm bg-muted p-3 rounded-md">{employer.company_eba_records[0].comments}</p>
+                          <label className="text-sm font-medium text-muted-foreground">Website</label>
+                          <a 
+                            href={employer.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            {employer.website}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
                         </div>
                       )}
                     </CardContent>
                   </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Phone className="h-5 w-5" />
+                        Contact Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {employer.primary_contact_name && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Primary Contact</label>
+                          <p>{employer.primary_contact_name}</p>
+                        </div>
+                      )}
+                      
+                      {employer.phone && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                          <a href={`tel:${employer.phone}`} className="text-primary hover:underline">
+                            {employer.phone}
+                          </a>
+                        </div>
+                      )}
+                      
+                      {employer.email && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Email</label>
+                          <a href={`mailto:${employer.email}`} className="text-primary hover:underline">
+                            {employer.email}
+                          </a>
+                        </div>
+                      )}
+
+                      {employer.company_eba_records?.[0] && (
+                        <>
+                          {employer.company_eba_records[0].contact_name && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">EBA Contact</label>
+                              <p>{employer.company_eba_records[0].contact_name}</p>
+                            </div>
+                          )}
+                          
+                          {employer.company_eba_records[0].contact_phone && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">EBA Phone</label>
+                              <a href={`tel:${employer.company_eba_records[0].contact_phone}`} className="text-primary hover:underline">
+                                {employer.company_eba_records[0].contact_phone}
+                              </a>
+                            </div>
+                          )}
+                          
+                          {employer.company_eba_records[0].contact_email && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">EBA Email</label>
+                              <a href={`mailto:${employer.company_eba_records[0].contact_email}`} className="text-primary hover:underline">
+                                {employer.company_eba_records[0].contact_email}
+                              </a>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
-              ) : (
+
+                {ebaStatus && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        EBA Status Overview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-4">
+                        <Badge variant={ebaStatus.variant} className="text-sm px-3 py-1">
+                          {ebaStatus.label}
+                        </Badge>
+                        {employer.company_eba_records?.[0]?.sector && (
+                          <Badge variant="outline">
+                            {employer.company_eba_records[0].sector}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              <TabsContent value="eba" className="space-y-4">
+                {employer.company_eba_records?.[0] ? (
+                  <div className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          EBA Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {employer.company_eba_records[0].eba_file_number && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">EBA File Number</label>
+                              <p className="font-mono text-sm">{employer.company_eba_records[0].eba_file_number}</p>
+                            </div>
+                          )}
+                          
+                          {employer.company_eba_records[0].fwc_lodgement_number && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">FWC Lodgement Number</label>
+                              <p className="font-mono text-sm">{employer.company_eba_records[0].fwc_lodgement_number}</p>
+                            </div>
+                          )}
+                          
+                          {employer.company_eba_records[0].fwc_matter_number && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">FWC Matter Number</label>
+                              <p className="font-mono text-sm">{employer.company_eba_records[0].fwc_matter_number}</p>
+                            </div>
+                          )}
+                          
+                          {employer.company_eba_records[0].eba_lodged_fwc && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Lodged with FWC</label>
+                              <p>{new Date(employer.company_eba_records[0].eba_lodged_fwc).toLocaleDateString()}</p>
+                            </div>
+                          )}
+                          
+                          {employer.company_eba_records[0].date_eba_signed && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">EBA Signed</label>
+                              <p>{new Date(employer.company_eba_records[0].date_eba_signed).toLocaleDateString()}</p>
+                            </div>
+                          )}
+                          
+                          {employer.company_eba_records[0].fwc_certified_date && (
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">FWC Certified</label>
+                              <p>{new Date(employer.company_eba_records[0].fwc_certified_date).toLocaleDateString()}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {employer.company_eba_records[0].fwc_document_url && (
+                          <div>
+                            <Button asChild variant="outline" size="sm">
+                              <a 
+                                href={employer.company_eba_records[0].fwc_document_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                View FWC Document
+                              </a>
+                            </Button>
+                          </div>
+                        )}
+
+                        {employer.company_eba_records[0].comments && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Comments</label>
+                            <p className="text-sm bg-muted p-3 rounded-md">{employer.company_eba_records[0].comments}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No EBA Information</h3>
+                      <p className="text-muted-foreground text-center">
+                        No Enterprise Bargaining Agreement information is available for this employer.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              <TabsContent value="sites" className="space-y-4">
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12">
-                    <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No EBA Information</h3>
+                    <Briefcase className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Worksites</h3>
                     <p className="text-muted-foreground text-center">
-                      No Enterprise Bargaining Agreement information is available for this employer.
+                      No worksite information is currently available for this employer.
                     </p>
                   </CardContent>
                 </Card>
-              )}
-            </TabsContent>
+              </TabsContent>
 
-            <TabsContent value="sites" className="space-y-4">
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Briefcase className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Worksites</h3>
-                  <p className="text-muted-foreground text-center">
-                    No worksite information is currently available for this employer.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="workers" className="space-y-4">
-              <EmployerWorkersList employerId={employerId!} />
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="workers" className="space-y-4">
+                <EmployerWorkersList employerId={employerId!} />
+              </TabsContent>
+            </Tabs>
+          )
         ) : (
           <div className="p-8 text-center">
             <p className="text-muted-foreground">Employer not found</p>
