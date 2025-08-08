@@ -11,6 +11,7 @@ import { TradeContractorsManager, TradeAssignment } from "@/components/projects/
 import { toast } from "sonner";
 import EditProjectDialog from "@/components/projects/EditProjectDialog";
 import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
+import JobSitesManager from "@/components/projects/JobSitesManager";
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -104,6 +105,7 @@ const ProjectDetail = () => {
   });
 
   const [addOpen, setAddOpen] = useState(false);
+  const [manageSitesOpen, setManageSitesOpen] = useState(false);
   const [newAssignments, setNewAssignments] = useState<TradeAssignment[]>([]);
   const queryClient = useQueryClient();
 
@@ -152,6 +154,7 @@ const ProjectDetail = () => {
               }}
               triggerText="Edit"
             />
+            <Button variant="outline" onClick={() => setManageSitesOpen(true)}>Manage Job Sites</Button>
             <DeleteProjectDialog
               projectId={project.id}
               projectName={project.name}
@@ -347,6 +350,18 @@ const ProjectDetail = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Job Sites Dialog */}
+      <Dialog open={manageSitesOpen} onOpenChange={setManageSitesOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Manage Job Sites</DialogTitle>
+          </DialogHeader>
+          {project && (
+            <JobSitesManager projectId={project.id} projectName={project.name} />
+          )}
         </DialogContent>
       </Dialog>
     </main>
