@@ -15,14 +15,15 @@ import { EmployerCard } from "@/components/employers/EmployerCard";
 import { TRADE_OPTIONS } from "@/constants/trades";
 import { useSearchParams, Link } from "react-router-dom";
 
-type EmployerWithEba = {
+// Types
+interface EmployerWithEba {
   id: string;
   name: string;
   abn: string | null;
   employer_type: "individual" | "small_contractor" | "large_contractor" | "principal_contractor" | "builder";
   enterprise_agreement_status: boolean | null;
   created_at: string;
-  company_eba_records: {
+  company_eba_records: Array<{
     id: string;
     contact_name: string | null;
     contact_phone: string | null;
@@ -34,13 +35,14 @@ type EmployerWithEba = {
     fwc_certified_date: string | null;
     nominal_expiry_date: string | null;
     sector: string | null;
-  }[];
-};
-type ProjectRoleRow = {
+  }>;
+}
+
+interface ProjectRoleRow {
   project_id: string;
   employer_id: string;
-  role: "head_contractor" | "contractor" | "trade_subcontractor";
-};
+  role: "head_contractor" | "contractor" | "trade_subcontractor" | "builder";
+}
 
 const Employers = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -57,18 +59,19 @@ const Employers = () => {
     trade_capabilities: [] as string[],
   });
 
-  // New state for project-role filtering
+  // Project filter state
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedProjectRole, setSelectedProjectRole] = useState<"all" | "head_contractor" | "contractor" | "trade_subcontractor">("all");
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
-    const p = searchParams.get('project');
+    const p = searchParams.get("project");
     if (p) setSelectedProjectId(p);
   }, [searchParams]);
 
   const queryClient = useQueryClient();
 
+  // Employers
   const { data: employers = [], isLoading } = useQuery({
     queryKey: ["employers"],
     queryFn: async () => {
@@ -91,13 +94,12 @@ const Employers = () => {
           )
         `)
         .order("name");
-
       if (error) throw error;
-      return data as EmployerWithEba[];
+      return (data ?? []) as EmployerWithEba[];
     },
   });
 
-  // Fetch projects for the Project filter
+  // Projects (for filter)
   const { data: projects = [] } = useQuery({
     queryKey: ["projects", "filter-list"],
     queryFn: async () => {
@@ -110,24 +112,25 @@ const Employers = () => {
     },
   });
 
-  // Fetch current project roles when a project is selected
-  const { data: projectRoles = [], isLoading: isProjectRolesLoading } = useQuery<ProjectRoleRow[]>({
+  // Project roles view
+  const { data: projectRoles = [], isLoading: isProjectRolesLoading } = useQuery({
     queryKey: ["project_roles", selectedProjectId],
-    queryFn: async (): Promise<ProjectRoleRow[]> => {
-      if (!selectedProjectId) return [];
+    enabled: !!selectedProjectId,
+    queryFn: async () => {
+      if (!selectedProjectId) return [] as ProjectRoleRow[];
       const { data, error } = await (supabase as any)
         .from("v_project_current_roles")
         .select("project_id, employer_id, role")
         .eq("project_id", selectedProjectId);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as ProjectRoleRow[];
     },
-    enabled: !!selectedProjectId,
   });
 
-  // Also include employers linked via site contractor trades on this project's sites
-  const { data: projectSiteContractors = [] } = useQuery<{ employer_id: string }[]>({
+  // Project site contractors view
+  const { data: projectSiteContractors = [] } = useQuery({
     queryKey: ["project_site_contractors", selectedProjectId],
+    enabled: !!selectedProjectId,
     queryFn: async () => {
       if (!selectedProjectId) return [] as { employer_id: string }[];
       const { data, error } = await (supabase as any)
@@ -137,9 +140,9 @@ const Employers = () => {
       if (error) throw error;
       return (data ?? []) as { employer_id: string }[];
     },
-    enabled: !!selectedProjectId,
   });
 
+  // Create employer
   const createEmployerMutation = useMutation({
     mutationFn: async (employerData: typeof formData) => {
       const { data, error } = await supabase
@@ -147,23 +150,17 @@ const Employers = () => {
         .insert({
           name: employerData.name,
           abn: employerData.abn || null,
-          employer_type: employerData.employer_type as "individual" | "small_contractor" | "large_contractor" | "principal_contractor" | "builder",
+          employer_type: employerData.employer_type as EmployerWithEba["employer_type"],
         })
         .select()
         .single();
-
       if (error) throw error;
-
       const created = data as { id: string };
 
-      // Add contractor type tags if selected
+      // Role tags
       const tagRows: any[] = [];
-      if (employerData.is_builder_tag) {
-        tagRows.push({ employer_id: created.id, tag: "builder" });
-      }
-      if (employerData.is_head_contractor_tag) {
-        tagRows.push({ employer_id: created.id, tag: "head_contractor" });
-      }
+      if (employerData.is_builder_tag) tagRows.push({ employer_id: created.id, tag: "builder" });
+      if (employerData.is_head_contractor_tag) tagRows.push({ employer_id: created.id, tag: "head_contractor" });
       if (tagRows.length > 0) {
         const { error: tagErr } = await (supabase as any)
           .from("employer_role_tags")
@@ -171,7 +168,7 @@ const Employers = () => {
         if (tagErr) throw tagErr;
       }
 
-      // Add trade capabilities if provided
+      // Trade capabilities
       if (employerData.trade_capabilities.length > 0) {
         const rows = employerData.trade_capabilities.map((t, idx) => ({
           employer_id: created.id,
@@ -208,15 +205,14 @@ const Employers = () => {
   const getEbaStatusForFilter = (employer: EmployerWithEba) => {
     const ebaRecord = employer.company_eba_records?.[0];
     if (!ebaRecord) return "no_eba";
-    
     if (ebaRecord.fwc_certified_date) return "certified";
     if (ebaRecord.date_eba_signed) return "signed";
     if (ebaRecord.eba_lodged_fwc) return "lodged";
     return "in_progress";
   };
 
-  // Build a quick lookup for employer roles within the selected project (from roles and site contractors)
-  const roleByEmployerId = new Map<string, ("head_contractor" | "contractor" | "trade_subcontractor")[]>();
+  // Build map of roles per employer within selected project
+  const roleByEmployerId = new Map<string, Array<ProjectRoleRow["role"]>>();
   if (selectedProjectId) {
     for (const row of projectRoles) {
       const arr = roleByEmployerId.get(row.employer_id) ?? [];
@@ -230,34 +226,30 @@ const Employers = () => {
     }
   }
 
-  const filteredEmployers = employers.filter(employer => {
-    // Filter by tab
+  // Final filtered list
+  const filteredEmployers = employers.filter((employer) => {
     let tabMatch = true;
     if (activeTab === "builders") tabMatch = employer.employer_type === "builder";
     else if (activeTab === "contractors") tabMatch = ["principal_contractor", "large_contractor", "small_contractor"].includes(employer.employer_type);
     else if (activeTab === "other") tabMatch = ["individual"].includes(employer.employer_type);
-    
-    // Filter by search term
-    const searchMatch = searchTerm === "" || 
-      employer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employer.abn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employer.company_eba_records?.[0]?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employer.company_eba_records?.[0]?.eba_file_number?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Filter by EBA status
+
+    const q = searchTerm.toLowerCase();
+    const searchMatch =
+      q === "" ||
+      employer.name.toLowerCase().includes(q) ||
+      (employer.abn || "").toLowerCase().includes(q) ||
+      (employer.company_eba_records?.[0]?.contact_name || "").toLowerCase().includes(q) ||
+      (employer.company_eba_records?.[0]?.eba_file_number || "").toLowerCase().includes(q);
+
     const ebaStatusMatch = ebaStatusFilter === "all" || getEbaStatusForFilter(employer) === ebaStatusFilter;
 
-    // Optional: Filter by selected project and role (using the new view)
     let projectRoleMatch = true;
     if (selectedProjectId) {
       const roles = roleByEmployerId.get(employer.id) ?? [];
-      if (roles.length === 0) {
-        projectRoleMatch = false;
-      } else if (selectedProjectRole !== "all") {
-        projectRoleMatch = roles.includes(selectedProjectRole);
-      }
+      if (roles.length === 0) projectRoleMatch = false;
+      else if (selectedProjectRole !== "all") projectRoleMatch = roles.includes(selectedProjectRole);
     }
-    
+
     return tabMatch && searchMatch && ebaStatusMatch && projectRoleMatch;
   });
 
@@ -272,124 +264,125 @@ const Employers = () => {
           <h1 className="text-3xl font-bold">Employers</h1>
           <p className="text-muted-foreground">Manage builders, contractors, and other employers</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button asChild variant="outline">
-            <Link to="/upload?table=employers"><UploadIcon className="h-4 w-4 mr-2" />Upload Employers</Link>
+            <Link to="/upload?table=employers">
+              <UploadIcon className="h-4 w-4 mr-2" />Upload Employers
+            </Link>
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Employer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Employer</DialogTitle>
-              <DialogDescription>
-                Add a new employer to the system
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Employer Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., ABC Construction Pty Ltd"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="abn">ABN</Label>
-                <Input
-                  id="abn"
-                  value={formData.abn}
-                  onChange={(e) => setFormData(prev => ({ ...prev, abn: e.target.value }))}
-                  placeholder="e.g., 12 345 678 901"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="employer_type">Employer Type *</Label>
-                <Select value={formData.employer_type} onValueChange={(value) => setFormData(prev => ({ ...prev, employer_type: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employer type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="builder">Builder</SelectItem>
-                    <SelectItem value="principal_contractor">Principal Contractor</SelectItem>
-                    <SelectItem value="large_contractor">Large Contractor</SelectItem>
-                    <SelectItem value="small_contractor">Small Contractor</SelectItem>
-                    <SelectItem value="individual">Individual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* New: contractor type tags */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2">
-                  <input
-                    id="is_builder_tag"
-                    type="checkbox"
-                    checked={formData.is_builder_tag}
-                    onChange={(e) => setFormData((p) => ({ ...p, is_builder_tag: e.target.checked }))}
-                  />
-                  <Label htmlFor="is_builder_tag">Tag as Builder</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="is_head_contractor_tag"
-                    type="checkbox"
-                    checked={formData.is_head_contractor_tag}
-                    onChange={(e) => setFormData((p) => ({ ...p, is_head_contractor_tag: e.target.checked }))}
-                  />
-                  <Label htmlFor="is_head_contractor_tag">Tag as Head Contractor</Label>
-                </div>
-              </div>
-
-              {/* New: trade capabilities on create */}
-              <div>
-                <Label>Trade capabilities (optional)</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2">
-                  {TRADE_OPTIONS.map((t) => {
-                    const checked = formData.trade_capabilities.includes(t.value);
-                    return (
-                      <label key={t.value} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            setFormData((p) => {
-                              const set = new Set(p.trade_capabilities);
-                              if (e.target.checked) set.add(t.value);
-                              else set.delete(t.value);
-                              return { ...p, trade_capabilities: Array.from(set) };
-                            });
-                          }}
-                        />
-                        {t.label}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <Button 
-                onClick={() => createEmployerMutation.mutate(formData)}
-                disabled={!formData.name || !formData.employer_type || createEmployerMutation.isPending}
-                className="w-full"
-              >
-                {createEmployerMutation.isPending ? "Creating..." : "Create Employer"}
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Employer
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New Employer</DialogTitle>
+                <DialogDescription>Add a new employer to the system</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Employer Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., ABC Construction Pty Ltd"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="abn">ABN</Label>
+                  <Input
+                    id="abn"
+                    value={formData.abn}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, abn: e.target.value }))}
+                    placeholder="e.g., 12 345 678 901"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="employer_type">Employer Type *</Label>
+                  <Select
+                    value={formData.employer_type}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, employer_type: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employer type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="builder">Builder</SelectItem>
+                      <SelectItem value="principal_contractor">Principal Contractor</SelectItem>
+                      <SelectItem value="large_contractor">Large Contractor</SelectItem>
+                      <SelectItem value="small_contractor">Small Contractor</SelectItem>
+                      <SelectItem value="individual">Individual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="is_builder_tag"
+                      type="checkbox"
+                      checked={formData.is_builder_tag}
+                      onChange={(e) => setFormData((p) => ({ ...p, is_builder_tag: e.target.checked }))}
+                    />
+                    <Label htmlFor="is_builder_tag">Tag as Builder</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="is_head_contractor_tag"
+                      type="checkbox"
+                      checked={formData.is_head_contractor_tag}
+                      onChange={(e) => setFormData((p) => ({ ...p, is_head_contractor_tag: e.target.checked }))}
+                    />
+                    <Label htmlFor="is_head_contractor_tag">Tag as Head Contractor</Label>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Trade capabilities (optional)</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2">
+                    {TRADE_OPTIONS.map((t) => {
+                      const checked = formData.trade_capabilities.includes(t.value);
+                      return (
+                        <label key={t.value} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setFormData((p) => {
+                                const set = new Set(p.trade_capabilities);
+                                if (e.target.checked) set.add(t.value);
+                                else set.delete(t.value);
+                                return { ...p, trade_capabilities: Array.from(set) };
+                              });
+                            }}
+                          />
+                          {t.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => createEmployerMutation.mutate(formData)}
+                  disabled={!formData.name || !formData.employer_type || createEmployerMutation.isPending}
+                  className="w-full"
+                >
+                  {createEmployerMutation.isPending ? "Creating..." : "Create Employer"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Search and Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -400,7 +393,7 @@ const Employers = () => {
             className="pl-10"
           />
         </div>
-        
+
         <Select value={ebaStatusFilter} onValueChange={setEbaStatusFilter}>
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Filter by EBA status" />
@@ -415,11 +408,7 @@ const Employers = () => {
           </SelectContent>
         </Select>
 
-        {/* New: filter by Project */}
-        <Select
-          value={selectedProjectId || "all"}
-          onValueChange={(v) => setSelectedProjectId(v === "all" ? "" : v)}
-        >
+        <Select value={selectedProjectId || "all"} onValueChange={(v) => setSelectedProjectId(v === "all" ? "" : v)}>
           <SelectTrigger className="w-full sm:w-60">
             <SelectValue placeholder="Filter by Project (optional)" />
           </SelectTrigger>
@@ -433,7 +422,6 @@ const Employers = () => {
           </SelectContent>
         </Select>
 
-        {/* New: filter by Project Role */}
         <Select
           value={selectedProjectRole}
           onValueChange={(v) => setSelectedProjectRole(v as "all" | "head_contractor" | "contractor" | "trade_subcontractor")}
@@ -454,9 +442,11 @@ const Employers = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all">All ({employers.length})</TabsTrigger>
-          <TabsTrigger value="builders">Builders ({employers.filter(e => e.employer_type === "builder").length})</TabsTrigger>
-          <TabsTrigger value="contractors">Contractors ({employers.filter(e => ["principal_contractor", "large_contractor", "small_contractor"].includes(e.employer_type)).length})</TabsTrigger>
-          <TabsTrigger value="other">Individual ({employers.filter(e => ["individual"].includes(e.employer_type)).length})</TabsTrigger>
+          <TabsTrigger value="builders">Builders ({employers.filter((e) => e.employer_type === "builder").length})</TabsTrigger>
+          <TabsTrigger value="contractors">
+            Contractors ({employers.filter((e) => ["principal_contractor", "large_contractor", "small_contractor"].includes(e.employer_type)).length})
+          </TabsTrigger>
+          <TabsTrigger value="other">Individual ({employers.filter((e) => ["individual"].includes(e.employer_type)).length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
@@ -477,22 +467,14 @@ const Employers = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredEmployers.map((employer) => (
-                <EmployerCard
-                  key={employer.id}
-                  employer={employer}
-                  onClick={() => setSelectedEmployerId(employer.id)}
-                />
+                <EmployerCard key={employer.id} employer={employer} onClick={() => setSelectedEmployerId(employer.id)} />
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
 
-      <EmployerDetailModal
-        employerId={selectedEmployerId}
-        isOpen={!!selectedEmployerId}
-        onClose={() => setSelectedEmployerId(null)}
-      />
+      <EmployerDetailModal employerId={selectedEmployerId} isOpen={!!selectedEmployerId} onClose={() => setSelectedEmployerId(null)} />
     </div>
   );
 };
