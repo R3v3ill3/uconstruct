@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, X } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
 
 type Employer = { id: string; name: string };
 type RoleTag = "builder" | "head_contractor";
+ type EmployerType = Database["public"]["Enums"]["employer_type"];
 
 export function MultiEmployerPicker({
   label,
@@ -30,7 +32,7 @@ export function MultiEmployerPicker({
   const [tags, setTags] = useState<Record<string, RoleTag[]>>({});
   const [search, setSearch] = useState("");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [newEmployer, setNewEmployer] = useState({ name: "", employer_type: "" });
+  const [newEmployer, setNewEmployer] = useState<{ name: string; employer_type: EmployerType | "" }>({ name: "", employer_type: "" });
 
   useEffect(() => {
     const load = async () => {
@@ -182,7 +184,7 @@ export function MultiEmployerPicker({
                     <Label htmlFor="new_emp_type">Employer type</Label>
                     <Select
                       value={newEmployer.employer_type}
-                      onValueChange={(v) => setNewEmployer((p) => ({ ...p, employer_type: v }))}
+                      onValueChange={(v) => setNewEmployer((p) => ({ ...p, employer_type: v as EmployerType }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select employer type" />

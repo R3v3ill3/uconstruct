@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { Database } from "@/integrations/supabase/types";
 
 type Employer = { id: string; name: string };
 type RoleTag = "builder" | "head_contractor";
+ type EmployerType = Database["public"]["Enums"]["employer_type"];
 
 export function SingleEmployerPicker({
   label,
@@ -24,7 +26,7 @@ export function SingleEmployerPicker({
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [tags, setTags] = useState<Record<string, RoleTag[]>>({});
   const [openAdd, setOpenAdd] = useState(false);
-  const [newEmployer, setNewEmployer] = useState({ name: "", employer_type: "" });
+  const [newEmployer, setNewEmployer] = useState<{ name: string; employer_type: EmployerType | "" }>({ name: "", employer_type: "" });
 
   useEffect(() => {
     const load = async () => {
@@ -115,7 +117,7 @@ export function SingleEmployerPicker({
               <Label htmlFor="ne_type">Employer type</Label>
               <Select
                 value={newEmployer.employer_type}
-                onValueChange={(v) => setNewEmployer((p) => ({ ...p, employer_type: v }))}
+                onValueChange={(v) => setNewEmployer((p) => ({ ...p, employer_type: v as EmployerType }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select employer type" />
