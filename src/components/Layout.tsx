@@ -46,6 +46,10 @@ const Layout = ({ children }: LayoutProps) => {
 
   const getVisibleNavItems = () => {
     const items = [...navItems];
+    // Insert organiser-focused workspace
+    if (userRole === "organiser" || userRole === "lead_organiser" || userRole === "admin") {
+      items.splice(1, 0, { path: "/patch", label: "My Patch", icon: Users });
+    }
     if (userRole === "admin") {
       items.push({ path: "/admin", label: "Administration", icon: Shield });
     }

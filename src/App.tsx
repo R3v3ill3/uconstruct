@@ -17,7 +17,8 @@ import Admin from "@/pages/Admin";
 import Activities from "@/pages/Activities";
 import { UnallocatedWorkspace } from "@/pages/UnallocatedWorkspace";
 import NotFound from "./pages/NotFound";
-
+import MyPatch from "@/pages/MyPatch";
+ 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -86,6 +87,11 @@ const App = () => (
             <Route path="/workspace/unallocated" element={
               <ProtectedRoute>
                 <UnallocatedWorkspace />
+              </ProtectedRoute>
+            } />
+            <Route path="/patch" element={
+              <ProtectedRoute>
+                <MyPatch />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
