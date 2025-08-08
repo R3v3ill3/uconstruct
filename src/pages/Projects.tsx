@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Building2, MapPin, Calendar, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 type Project = {
   id: string;
@@ -277,7 +278,11 @@ const Projects = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-xl">{project.name}</CardTitle>
+                    <CardTitle className="text-xl">
+                      <Link to={`/projects/${project.id}`} className="hover:underline">
+                        {project.name}
+                      </Link>
+                    </CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-2">
                       <Building2 className="h-4 w-4" />
                       {project.builder?.name || "No builder assigned"}

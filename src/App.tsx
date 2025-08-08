@@ -18,6 +18,9 @@ import Activities from "@/pages/Activities";
 import { UnallocatedWorkspace } from "@/pages/UnallocatedWorkspace";
 import NotFound from "./pages/NotFound";
 import MyPatch from "@/pages/MyPatch";
+import ProjectDetail from "@/pages/ProjectDetail";
+import Delegations from "@/pages/Delegations";
+import PatchWall from "@/pages/PatchWall";
  
 const queryClient = new QueryClient();
 
@@ -92,6 +95,21 @@ const App = () => (
             <Route path="/patch" element={
               <ProtectedRoute>
                 <MyPatch />
+              </ProtectedRoute>
+            } />
+            <Route path="/projects/:id" element={
+              <ProtectedRoute>
+                <ProjectDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/delegations" element={
+              <ProtectedRoute>
+                <Delegations />
+              </ProtectedRoute>
+            } />
+            <Route path="/patch/walls" element={
+              <ProtectedRoute>
+                <PatchWall />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={

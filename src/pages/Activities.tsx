@@ -59,24 +59,23 @@ const Activities = () => {
     },
   });
 
-  const handleActivitySubmit = async (activityData: any) => {
+  const handleActivitySubmit = async ({ formData, selectedWorkers, delegations }: any) => {
     try {
-      // Create the activity
       const { data: activity, error: activityError } = await supabase
         .from("union_activities")
         .insert({
-          activity_type: activityData.activity_type,
-          custom_activity_type: activityData.custom_activity_type,
-          template_id: activityData.template_id,
-          date: activityData.date,
-          job_site_id: activityData.job_site_id,
-          topic: activityData.topic,
-          notes: activityData.notes,
-          total_participants: activityData.participants?.length || 0,
-          total_delegates: activityData.delegations?.length || 0,
+          activity_type: formData.activity_type,
+          custom_activity_type: formData.custom_activity_type,
+          template_id: formData.template_id,
+          date: formData.date,
+          job_site_id: formData.job_site_id,
+          topic: formData.topic,
+          notes: formData.notes,
+          total_participants: selectedWorkers?.length || 0,
+          total_delegates: delegations?.length || 0,
           assignment_metadata: {
-            participants: activityData.participants,
-            delegations: activityData.delegations,
+            participants: selectedWorkers,
+            delegations,
           },
         })
         .select()
@@ -84,9 +83,8 @@ const Activities = () => {
 
       if (activityError) throw activityError;
 
-      // Create activity participants
-      if (activityData.participants && activityData.participants.length > 0) {
-        const participantInserts = activityData.participants.map((participant: any) => ({
+      if (selectedWorkers && selectedWorkers.length > 0) {
+        const participantInserts = selectedWorkers.map((participant: any) => ({
           activity_id: activity.id,
           worker_id: participant.workerId,
           assignment_method: participant.method,
@@ -100,21 +98,24 @@ const Activities = () => {
         if (participantsError) throw participantsError;
       }
 
-      // Create activity delegations
-      if (activityData.delegations && activityData.delegations.length > 0) {
-        const delegationInserts = activityData.delegations.map((delegation: any) => ({
-          activity_id: activity.id,
-          delegate_worker_id: delegation.delegateId,
-          assigned_worker_id: delegation.assignedWorkerId,
-          assignment_type: delegation.assignmentType,
-          source_activity_id: delegation.sourceActivityId,
-        }));
+      if (delegations && delegations.length > 0) {
+        const delegationInserts = delegations.flatMap((delegation: any) =>
+          delegation.assignedWorkerIds.map((assignedWorkerId: string) => ({
+            activity_id: activity.id,
+            delegate_worker_id: delegation.delegateWorkerId,
+            assigned_worker_id: assignedWorkerId,
+            assignment_type: delegation.assignmentType,
+            source_activity_id: delegation.sourceActivityId,
+          }))
+        );
 
-        const { error: delegationsError } = await supabase
-          .from("activity_delegations")
-          .insert(delegationInserts);
+        if (delegationInserts.length > 0) {
+          const { error: delegationsError } = await supabase
+            .from("activity_delegations")
+            .insert(delegationInserts);
 
-        if (delegationsError) throw delegationsError;
+          if (delegationsError) throw delegationsError;
+        }
       }
 
       toast.success("Activity created successfully!");
