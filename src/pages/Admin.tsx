@@ -15,6 +15,7 @@ import { RoleHierarchyManager } from "@/components/admin/RoleHierarchyManager";
 import { AddDraftUserDialog } from "@/components/admin/AddDraftUserDialog";
 import { PendingUsersTable } from "@/components/admin/PendingUsersTable";
 import EditUserDialog from "@/components/admin/EditUserDialog";
+import ScopeUserDialog from "@/components/admin/ScopeUserDialog";
 
 interface UserProfile {
   id: string;
@@ -28,8 +29,6 @@ interface UserProfile {
   phone?: string | null;
   is_active?: boolean;
 }
-
-
 interface Employer {
   id: string;
   name: string;
@@ -55,6 +54,8 @@ const [addDraftDialogOpen, setAddDraftDialogOpen] = useState(false);
 const [syncing, setSyncing] = useState(false);
 const [editOpen, setEditOpen] = useState(false);
 const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+const [scopeOpen, setScopeOpen] = useState(false);
+const [scopingUser, setScopingUser] = useState<UserProfile | null>(null);
 
   // Check if current user is admin
   useEffect(() => {
@@ -162,13 +163,11 @@ const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const updateUserScoping = async (userId: string, scopedSites: string[], scopedEmployers: string[]) => {
     try {
       const { error } = await supabase
-        .from("profiles")
-        .update({ 
-          scoped_sites: scopedSites,
-          scoped_employers: scopedEmployers
-        })
-        .eq("id", userId);
-
+        .rpc('admin_update_user_scoping', {
+          _user_id: userId,
+          _scoped_employers: scopedEmployers,
+          _scoped_sites: scopedSites,
+        });
       if (error) throw error;
 
       setUsers(users.map(user => 
@@ -458,11 +457,8 @@ const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            // For now, just show a toast - could open a dialog for scoping
-                            toast({
-                              title: "Scoping",
-                              description: "Detailed permission scoping coming soon"
-                            });
+                            setScopingUser(user);
+                            setScopeOpen(true);
                           }}
                         >
                           Scope
@@ -514,6 +510,32 @@ const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
                   : u
               )
             );
+          }}
+        />
+      )}
+
+      {scopingUser && (
+        <ScopeUserDialog
+          open={scopeOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setScopeOpen(false);
+              setScopingUser(null);
+            } else {
+              setScopeOpen(true);
+            }
+          }}
+          user={{
+            id: scopingUser.id,
+            full_name: scopingUser.full_name,
+            email: scopingUser.email,
+            scoped_employers: scopingUser.scoped_employers ?? [],
+            scoped_sites: scopingUser.scoped_sites ?? [],
+          }}
+          employers={employers}
+          jobSites={jobSites}
+          onSave={async ({ userId, scopedSites, scopedEmployers }) => {
+            await updateUserScoping(userId, scopedSites, scopedEmployers);
           }}
         />
       )}
