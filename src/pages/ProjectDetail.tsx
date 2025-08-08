@@ -1,14 +1,16 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TradeContractorsManager, TradeAssignment } from "@/components/projects/TradeContractorsManager";
+import { toast } from "sonner";
 import EditProjectDialog from "@/components/projects/EditProjectDialog";
 import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
-
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -86,9 +88,50 @@ const ProjectDetail = () => {
       return data || [];
     },
   });
+  
+  // Project-level trade contractors (not site-specific)
+  const { data: projectTradeContractors = [] } = useQuery({
+    queryKey: ["project-trade-contractors", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("project_contractor_trades")
+        .select("id, employer_id, trade_type, eba_signatory, employers(id, name)")
+        .eq("project_id", id as string);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [newAssignments, setNewAssignments] = useState<TradeAssignment[]>([]);
+  const queryClient = useQueryClient();
+
+  const addContractorsMutation = useMutation({
+    mutationFn: async () => {
+      if (!id || newAssignments.length === 0) return;
+      const rows = newAssignments.map(a => ({
+        project_id: id,
+        employer_id: a.employer_id,
+        trade_type: a.trade_type,
+      }));
+      const { error } = await (supabase as any)
+        .from("project_contractor_trades")
+        .insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Contractors added");
+      setAddOpen(false);
+      setNewAssignments([]);
+      queryClient.invalidateQueries({ queryKey: ["project-trade-contractors", id] });
+    },
+    onError: (err) => {
+      toast.error("Failed to add contractors: " + (err as Error).message);
+    },
+  });
 
   const builder = project?.builder ? project.builder : null;
-
   return (
     <main>
       <header className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -190,10 +233,52 @@ const ProjectDetail = () => {
         </Card>
       </section>
 
+      <section className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-medium">Project Trade Contractors</h2>
+        </div>
+        <Card>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employer</TableHead>
+                  <TableHead>Trade</TableHead>
+                  <TableHead>EBA Signatory</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(projectTradeContractors || []).map((row: any) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">{row.employers?.name}</TableCell>
+                    <TableCell>{row.trade_type}</TableCell>
+                    <TableCell>
+                      {row.eba_signatory ? (
+                        <Badge variant="default">{row.eba_signatory}</Badge>
+                      ) : (
+                        <Badge variant="secondary">not_specified</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!projectTradeContractors || projectTradeContractors.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                      No project-level trade contractors yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </section>
+
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Contractors by Site</h2>
           <div className="flex gap-2">
+            <Button onClick={() => setAddOpen(true)}>Add Contractors</Button>
             <Button variant="outline" asChild>
               <Link to="/delegations">Manage Delegations</Link>
             </Button>
@@ -244,6 +329,26 @@ const ProjectDetail = () => {
           </CardContent>
         </Card>
       </section>
+      {/* Add Contractors Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Project Trade Contractors</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <TradeContractorsManager
+              assignments={newAssignments}
+              onChange={setNewAssignments}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button onClick={() => addContractorsMutation.mutate()} disabled={addContractorsMutation.isPending || newAssignments.length === 0}>
+                {addContractorsMutation.isPending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };

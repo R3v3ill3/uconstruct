@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Building2, MapPin, Calendar, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { JVSelector } from "@/components/projects/JVSelector";
 import { MultiEmployerPicker } from "@/components/projects/MultiEmployerPicker";
 import { SingleEmployerDialogPicker } from "@/components/projects/SingleEmployerDialogPicker";
@@ -55,6 +55,7 @@ type Project = {
 };
 
 const Projects = () => {
+  const navigate = useNavigate();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -400,7 +401,14 @@ const Projects = () => {
                 : project.builder?.name || "No builder assigned";
 
             return (
-              <Card key={project.id}>
+              <Card
+                key={project.id}
+                onClick={() => navigate(`/projects/${project.id}`)}
+                className="cursor-pointer hover:bg-accent/30"
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/projects/${project.id}`); }}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>

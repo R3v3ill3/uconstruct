@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { path: "/projects", label: "Projects", icon: FolderOpen },
+  { path: "/employers", label: "Employers", icon: Building },
+  { path: "/workers", label: "Workers", icon: Users },
 ];
 
 interface LayoutProps {
