@@ -71,3 +71,10 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Email verification branding (uConstruct)
+
+1. Configure SMTP in Supabase: Auth > Email (SMTP) with your domain (e.g., no-reply@uconstruct.com). Ensure SPF/DKIM are set on your DNS.
+2. Customize the "Confirm signup" template in Auth > Templates. Keep the {{ .ConfirmationURL }} placeholder and brand the subject/body (e.g., "Confirm your email for uConstruct").
+3. Set Auth > URL Configuration: Site URL and Redirect URLs to your app URL so confirmations redirect to uConstruct.
+4. If a user didn’t receive it, use the "Resend verification email" link now available on the Auth page.

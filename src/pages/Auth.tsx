@@ -13,6 +13,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,6 +25,11 @@ const Auth = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // SEO: set page title
+  useEffect(() => {
+    document.title = "uConstruct — Sign In / Sign Up";
+  }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,8 +55,9 @@ const Auth = () => {
         });
       } else {
         toast({
-          title: "Check your email",
-          description: "We've sent you a confirmation link.",
+          title: "Confirm your email",
+          description:
+            "We’ve sent a verification email from uConstruct. Click the link to confirm and you’ll be redirected back to uConstruct.",
         });
       }
     } catch (error) {
@@ -90,6 +97,45 @@ const Auth = () => {
     }
 
     setLoading(false);
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast({
+        title: "Enter your email",
+        description: "Please enter your email address first.",
+      });
+      return;
+    }
+    try {
+      setResending(true);
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Couldn’t resend email",
+          description: error.message,
+        });
+      } else {
+        toast({
+          title: "Verification email sent",
+          description:
+            "We’ve sent a new verification email from uConstruct. Please check your inbox or spam folder.",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred",
+      });
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -137,6 +183,15 @@ const Auth = () => {
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full justify-center"
+                  onClick={handleResendVerification}
+                  disabled={resending || !email}
+                >
+                  {resending ? "Resending..." : "Resend verification email"}
+                </Button>
               </form>
             </TabsContent>
             
@@ -178,6 +233,15 @@ const Auth = () => {
                   disabled={loading}
                 >
                   {loading ? "Creating account..." : "Sign Up"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full justify-center"
+                  onClick={handleResendVerification}
+                  disabled={resending || !email}
+                >
+                  {resending ? "Resending..." : "Resend verification email"}
                 </Button>
               </form>
             </TabsContent>
