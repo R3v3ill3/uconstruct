@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { GoogleAddressInput, GoogleAddress } from "./GoogleAddressInput";
 
-export default function JobSitesManager({ projectId, projectName }: { projectId: string; projectName: string; }) {
+export default function JobSitesManager({ projectId, projectName, focusSiteId }: { projectId: string; projectName: string; focusSiteId?: string; }) {
   const queryClient = useQueryClient();
 
   const { data: project } = useQuery({
@@ -169,6 +169,16 @@ const payload: any = { project_id: projectId, name: newSite.name, is_main_site: 
     onError: (e) => toast.error((e as Error).message),
   });
 
+  useEffect(() => {
+    if (!focusSiteId) return;
+    const el = document.getElementById(`site-${focusSiteId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-ring");
+      setTimeout(() => el.classList.remove("ring-2", "ring-ring"), 1200);
+    }
+  }, [focusSiteId, sites]);
+
   return (
     <div className="space-y-6">
       {!hasMain && (
@@ -204,7 +214,7 @@ const payload: any = { project_id: projectId, name: newSite.name, is_main_site: 
               {sites.map((s: any) => {
                 const edit = (editStates[s.id] || ({ name: s.name } as { name: string; address?: GoogleAddress }));
                 return (
-                  <TableRow key={s.id}>
+                  <TableRow key={s.id} id={`site-${s.id}`}>
                     <TableCell className="align-top">
                       <div className="space-y-2">
                         <Input

@@ -63,73 +63,94 @@ export function GoogleAddressInput({
   placeholder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-const [loaded, setLoaded] = useState(false);
-const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [text, setText] = useState<string>(value || "");
+  const lastFromAutocomplete = useRef(false);
 
-useEffect(() => {
-  let cancelled = false;
-  (async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("get-google-maps-key");
-      if (error) throw error;
-      const key = (data as any)?.key as string | undefined;
-      if (!key) {
+  useEffect(() => {
+    setText(value || "");
+  }, [value]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("get-google-maps-key");
+        if (error) throw error;
+        const key = (data as any)?.key as string | undefined;
+        if (!key) {
+          setError("Autocomplete unavailable");
+          return;
+        }
+        await loadGoogleMaps(key);
+        if (!cancelled) setLoaded(true);
+      } catch (e) {
+        console.error(e);
         setError("Autocomplete unavailable");
-        return;
+        toast.error("Google Maps failed to load. Autocomplete disabled.");
       }
-      await loadGoogleMaps(key);
-      if (!cancelled) setLoaded(true);
-    } catch (e) {
-      console.error(e);
-      setError("Autocomplete unavailable");
-      toast.error("Google Maps failed to load. Autocomplete disabled.");
-    }
-  })();
-  return () => { cancelled = true; };
-}, []);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-useEffect(() => {
-  if (!loaded || !inputRef.current || !window.google) return;
-  const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-    types: ["geocode"],
-    fields: ["formatted_address", "address_components", "geometry", "place_id"],
-  });
-  const listener = autocomplete.addListener("place_changed", () => {
-    const place = autocomplete.getPlace();
-    const formatted = place.formatted_address || inputRef.current?.value || "";
-    const components: Record<string, string> = {};
-    (place.address_components || []).forEach((c: any) => {
-      components[c.types[0]] = c.long_name;
+  useEffect(() => {
+    if (!loaded || !inputRef.current || !window.google) return;
+    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+      types: ["geocode"],
+      fields: ["formatted_address", "address_components", "geometry", "place_id"],
     });
-    const lat = place.geometry?.location?.lat?.();
-    const lng = place.geometry?.location?.lng?.();
-    onChange({ formatted, components, place_id: place.place_id, lat, lng });
-  });
-  return () => {
-    if (listener && listener.remove) listener.remove();
-  };
-}, [loaded, onChange]);
+    const listener = autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      const formatted = place.formatted_address || inputRef.current?.value || "";
+      const components: Record<string, string> = {};
+      (place.address_components || []).forEach((c: any) => {
+        components[c.types[0]] = c.long_name;
+      });
+      const lat = place.geometry?.location?.lat?.();
+      const lng = place.geometry?.location?.lng?.();
+      lastFromAutocomplete.current = true;
+      setText(formatted);
+      onChange({ formatted, components, place_id: place.place_id, lat, lng });
+    });
+    return () => {
+      if (listener && listener.remove) listener.remove();
+    };
+  }, [loaded, onChange]);
 
-
-return (
-  <div className="space-y-2">
-    <div className="space-y-1">
-      <Label>Address</Label>
-      <Input
-        ref={inputRef}
-        defaultValue={value}
-        placeholder={placeholder}
-        onBlur={(e) => {
-          // allow manual entry fallback
-          if (e.currentTarget.value && !loaded) {
-            onChange({ formatted: e.currentTarget.value });
-          }
-        }}
-      />
-      <div className="text-xs text-muted-foreground">
-        {loaded ? <span>Autocomplete enabled.</span> : <span>{error || "Autocomplete unavailable; manual entry works."}</span>}
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <Label>Address</Label>
+        <Input
+          ref={inputRef}
+          value={text}
+          placeholder={placeholder}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              lastFromAutocomplete.current = false;
+              if (text?.trim()) {
+                onChange({ formatted: text.trim() });
+              }
+            }
+          }}
+          onBlur={() => {
+            // commit manual entry on blur (avoid double-fire after autocomplete)
+            if (lastFromAutocomplete.current) {
+              lastFromAutocomplete.current = false;
+              return;
+            }
+            if (text?.trim()) {
+              onChange({ formatted: text.trim() });
+            }
+          }}
+        />
+        <div className="text-xs text-muted-foreground">
+          {loaded ? <span>Autocomplete enabled.</span> : <span>{error || "Autocomplete unavailable; manual entry works."}</span>}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }

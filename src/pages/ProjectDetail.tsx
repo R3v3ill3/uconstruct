@@ -65,7 +65,7 @@ const ProjectDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_sites")
-        .select("id, name, location")
+        .select("id, name, location, full_address")
         .eq("project_id", project?.id);
       if (error) throw error;
       return data || [];
@@ -106,6 +106,7 @@ const ProjectDetail = () => {
 
   const [addOpen, setAddOpen] = useState(false);
   const [manageSitesOpen, setManageSitesOpen] = useState(false);
+  const [focusSiteId, setFocusSiteId] = useState<string | null>(null);
   const [newAssignments, setNewAssignments] = useState<TradeAssignment[]>([]);
   const queryClient = useQueryClient();
 
@@ -216,9 +217,9 @@ const ProjectDetail = () => {
                 {(jobSites || []).map((s: any) => {
                   const count = (contractors || []).filter((c: any) => c.job_site_id === s.id).length;
                   return (
-                    <TableRow key={s.id}>
+                    <TableRow key={s.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setFocusSiteId(s.id); setManageSitesOpen(true); }}>
                       <TableCell className="font-medium">{s.name}</TableCell>
-                      <TableCell>{s.location}</TableCell>
+                      <TableCell>{s.full_address || s.location}</TableCell>
                       <TableCell>{count}</TableCell>
                     </TableRow>
                   );
@@ -360,7 +361,7 @@ const ProjectDetail = () => {
             <DialogTitle>Manage Job Sites</DialogTitle>
           </DialogHeader>
           {project && (
-            <JobSitesManager projectId={project.id} projectName={project.name} />
+            <JobSitesManager projectId={project.id} projectName={project.name} focusSiteId={focusSiteId || undefined} />
           )}
         </DialogContent>
       </Dialog>
