@@ -27,6 +27,7 @@ export function SingleEmployerPicker({
   const [tags, setTags] = useState<Record<string, RoleTag[]>>({});
   const [openAdd, setOpenAdd] = useState(false);
   const [newEmployer, setNewEmployer] = useState<{ name: string; employer_type: EmployerType | "" }>({ name: "", employer_type: "" });
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -49,7 +50,7 @@ export function SingleEmployerPicker({
 
   const sorted = useMemo(() => {
     const list = [...employers];
-    if (!prioritizedTag) return list;
+    if (!prioritizedTag) return list.sort((a, b) => a.name.localeCompare(b.name));
     return list.sort((a, b) => {
       const aHas = (tags[a.id] ?? []).includes(prioritizedTag);
       const bHas = (tags[b.id] ?? []).includes(prioritizedTag);
@@ -58,6 +59,12 @@ export function SingleEmployerPicker({
       return a.name.localeCompare(b.name);
     });
   }, [employers, tags, prioritizedTag]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((e) => e.name.toLowerCase().includes(q));
+  }, [sorted, search]);
 
   const createEmployer = async () => {
     if (!newEmployer.name || !newEmployer.employer_type) return;
@@ -81,13 +88,18 @@ export function SingleEmployerPicker({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
+      <Input
+        placeholder="Search employers..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
       <div className="flex gap-2">
         <Select value={selectedId} onValueChange={onChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select employer" />
           </SelectTrigger>
           <SelectContent>
-            {sorted.map((e) => (
+            {filtered.map((e) => (
               <SelectItem key={e.id} value={e.id}>
                 {e.name}
               </SelectItem>

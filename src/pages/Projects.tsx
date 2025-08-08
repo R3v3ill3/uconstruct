@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,9 @@ const Projects = () => {
     head_contractor_id: "",
     trades: [] as TradeAssignment[],
   });
+
+  const [hcSameAsBuilder, setHcSameAsBuilder] = useState<"yes" | "no" | "unset">("unset");
+  const [hcOneOfBuilders, setHcOneOfBuilders] = useState<"yes" | "no" | "unset">("unset");
 
   const queryClient = useQueryClient();
 

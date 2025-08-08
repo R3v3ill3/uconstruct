@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 
 type Employer = { id: string; name: string };
@@ -27,11 +28,24 @@ export function TradeContractorsManager({
   const [open, setOpen] = useState(false);
   const [chosenEmployer, setChosenEmployer] = useState("");
   const [chosenTrade, setChosenTrade] = useState("");
+  const [search, setSearch] = useState("");
+  const [tradeEmployers, setTradeEmployers] = useState<Record<string, Set<string>>>({});
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from("employers").select("id, name").order("name");
       setEmployers((data ?? []) as Employer[]);
+
+      const { data: caps } = await (supabase as any)
+        .from("contractor_trade_capabilities")
+        .select("employer_id, trade_type");
+      const map: Record<string, Set<string>> = {};
+      (caps ?? []).forEach((row: any) => {
+        const t = row.trade_type as string;
+        if (!map[t]) map[t] = new Set();
+        if (row.employer_id) map[t].add(row.employer_id as string);
+      });
+      setTradeEmployers(map);
     };
     load();
   }, []);
@@ -40,6 +54,25 @@ export function TradeContractorsManager({
     const map = new Map(employers.map((e) => [e.id, e.name]));
     return (id: string) => map.get(id) ?? id;
   }, [employers]);
+
+  const prioritizedEmployers = useMemo(() => {
+    const list = [...employers];
+    if (!chosenTrade) return list;
+    const set = tradeEmployers[chosenTrade] || new Set<string>();
+    return list.sort((a, b) => {
+      const aHas = set.has(a.id);
+      const bHas = set.has(b.id);
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [employers, chosenTrade, tradeEmployers]);
+
+  const filteredEmployers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return prioritizedEmployers;
+    return prioritizedEmployers.filter((e) => e.name.toLowerCase().includes(q));
+  }, [prioritizedEmployers, search]);
 
   const addAssignment = () => {
     if (!chosenEmployer || !chosenTrade) return;
@@ -85,24 +118,8 @@ export function TradeContractorsManager({
             </DialogHeader>
             <div className="grid gap-3">
               <div>
-                <Label>Employer</Label>
-                <Select value={chosenEmployer} onValueChange={setChosenEmployer}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employer" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {employers.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
                 <Label>Trade type</Label>
-                <Select value={chosenTrade} onValueChange={setChosenTrade}>
+                <Select value={chosenTrade} onValueChange={(v) => { setChosenTrade(v); setChosenEmployer(""); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select trade" />
                   </SelectTrigger>
@@ -116,8 +133,34 @@ export function TradeContractorsManager({
                 </Select>
               </div>
 
+              <div>
+                <Label htmlFor="tc_search">Search employers</Label>
+                <Input
+                  id="tc_search"
+                  placeholder="Type to filter companies..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label>Employer</Label>
+                <Select value={chosenEmployer} onValueChange={setChosenEmployer}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={chosenTrade ? "Select employer" : "Select a trade first"} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {filteredEmployers.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="pt-1">
-                <Button onClick={addAssignment}>Add</Button>
+                <Button onClick={addAssignment} disabled={!chosenTrade || !chosenEmployer}>Add</Button>
               </div>
             </div>
           </DialogContent>
