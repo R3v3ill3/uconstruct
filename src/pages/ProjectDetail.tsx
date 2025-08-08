@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import EditProjectDialog from "@/components/projects/EditProjectDialog";
+import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
 
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
@@ -44,7 +46,7 @@ const ProjectDetail = () => {
       const { data, error } = await supabase
         .from("projects")
         .select(`
-          id, name, value, proposed_start_date, proposed_finish_date, builder_id,
+          id, name, value, proposed_start_date, proposed_finish_date, roe_email, builder_id,
           builder:employers!builder_id(id, name)
         `)
         .eq("id", id as string)
@@ -89,9 +91,31 @@ const ProjectDetail = () => {
 
   return (
     <main>
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Project: {project?.name || "..."}</h1>
-        <p className="text-sm text-muted-foreground">Overview of builder, sites and contractors</p>
+      <header className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Project: {project?.name || "..."}</h1>
+          <p className="text-sm text-muted-foreground">Overview of builder, sites and contractors</p>
+        </div>
+        {project && (
+          <div className="flex gap-2">
+            <EditProjectDialog
+              project={{
+                id: project.id,
+                name: project.name,
+                value: project.value,
+                proposed_start_date: project.proposed_start_date,
+                proposed_finish_date: project.proposed_finish_date,
+                roe_email: project.roe_email,
+              }}
+              triggerText="Edit"
+            />
+            <DeleteProjectDialog
+              projectId={project.id}
+              projectName={project.name}
+              triggerText="Delete"
+            />
+          </div>
+        )}
       </header>
 
       <section className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
