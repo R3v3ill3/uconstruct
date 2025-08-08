@@ -771,6 +771,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_login_at: string | null
+          phone: string | null
           role: string | null
           scoped_employers: string[] | null
           scoped_sites: string[] | null
@@ -783,6 +784,7 @@ export type Database = {
           id: string
           is_active?: boolean
           last_login_at?: string | null
+          phone?: string | null
           role?: string | null
           scoped_employers?: string[] | null
           scoped_sites?: string[] | null
@@ -795,6 +797,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_login_at?: string | null
+          phone?: string | null
           role?: string | null
           scoped_employers?: string[] | null
           scoped_sites?: string[] | null
