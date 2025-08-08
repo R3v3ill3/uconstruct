@@ -67,9 +67,11 @@ export function GoogleAddressInput({
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState<string>(value || "");
   const lastFromAutocomplete = useRef(false);
+  const selectingFromList = useRef(false);
 
   useEffect(() => {
     setText(value || "");
+    if (inputRef.current) inputRef.current.value = value || "";
   }, [value]);
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export function GoogleAddressInput({
   useEffect(() => {
     if (!loaded || !inputRef.current || !window.google) return;
     const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      types: ["geocode"],
+      types: ["address"],
       fields: ["formatted_address", "address_components", "geometry", "place_id"],
     });
     const listener = autocomplete.addListener("place_changed", () => {
@@ -122,13 +124,28 @@ export function GoogleAddressInput({
     };
   }, [loaded, onChange]);
 
+  useEffect(() => {
+    if (!loaded) return;
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('.pac-container')) {
+        selectingFromList.current = true;
+        setTimeout(() => { selectingFromList.current = false; }, 300);
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown, true);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown, true);
+    };
+  }, [loaded]);
+
   return (
     <div className="space-y-2">
       <div className="space-y-1">
         <Label>Address</Label>
         <Input
           ref={inputRef}
-          value={text}
+          defaultValue={text}
           placeholder={placeholder}
           autoComplete="off"
           autoCorrect="off"
@@ -140,14 +157,13 @@ export function GoogleAddressInput({
             onChange({ formatted: val });
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" || e.key === "Tab") {
               const hasMenu = !!document.querySelector(".pac-container .pac-item");
-              const hasSelected = !!document.querySelector(".pac-container .pac-item-selected");
               if (hasMenu) {
-                // Let Google handle selection with Enter
+                // Let Google handle selection with Enter/Tab
                 return;
               }
-              e.preventDefault();
+              if (e.key === "Enter") e.preventDefault();
               lastFromAutocomplete.current = false;
               const val = (inputRef.current?.value ?? text).trim();
               if (val) {
@@ -162,11 +178,15 @@ export function GoogleAddressInput({
                 lastFromAutocomplete.current = false;
                 return;
               }
+              if (selectingFromList.current) {
+                // User clicked a prediction; place_changed will handle value
+                return;
+              }
               const val = (inputRef.current?.value ?? text).trim();
               if (val) {
                 onChange({ formatted: val });
               }
-            }, 150);
+            }, 180);
           }}
         />
         <div className="text-xs text-muted-foreground">
