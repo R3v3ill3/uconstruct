@@ -1969,6 +1969,103 @@ export type Database = {
           },
         ]
       }
+      v_project_site_contractors: {
+        Row: {
+          eba_signatory: string | null
+          eba_status: boolean | null
+          employer_id: string | null
+          end_date: string | null
+          job_site_id: string | null
+          project_id: string | null
+          start_date: string | null
+          trade_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_job_sites_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_contractor_trades_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "site_contractor_trades_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_contractor_trades_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_project_workers: {
+        Row: {
+          employer_id: string | null
+          employment_status: string | null
+          end_date: string | null
+          job_site_id: string | null
+          project_id: string | null
+          start_date: string | null
+          worker_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_job_sites_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "worker_placements_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "unallocated_workers_analysis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_placements_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_update_user_scoping: {

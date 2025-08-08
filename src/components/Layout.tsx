@@ -7,15 +7,7 @@ import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: BarChart3 },
   { path: "/projects", label: "Projects", icon: FolderOpen },
-  { path: "/workers", label: "Workers", icon: Users },
-  { path: "/employers", label: "Employers", icon: Building },
-  { path: "/eba", label: "EBA Tracking", icon: FileCheck },
-  { path: "/sites", label: "Job Sites", icon: MapPin },
-  { path: "/activities", label: "Activities", icon: Activity },
-  { path: "/upload", label: "Data Upload", icon: Upload },
-  { path: "/workspace/unallocated", label: "Unallocated", icon: AlertTriangle },
 ];
 
 interface LayoutProps {

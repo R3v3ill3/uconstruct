@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building, Search } from "lucide-react";
+import { Plus, Building, Search, Upload as UploadIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { EmployerDetailModal } from "@/components/employers/EmployerDetailModal";
 import { EmployerCard } from "@/components/employers/EmployerCard";
 import { TRADE_OPTIONS } from "@/constants/trades";
+import { useSearchParams, Link } from "react-router-dom";
 
 type EmployerWithEba = {
   id: string;
@@ -59,6 +60,12 @@ const Employers = () => {
   // New state for project-role filtering
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedProjectRole, setSelectedProjectRole] = useState<"all" | "head_contractor" | "contractor" | "trade_subcontractor">("all");
+
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const p = searchParams.get('project');
+    if (p) setSelectedProjectId(p);
+  }, [searchParams]);
 
   const queryClient = useQueryClient();
 
@@ -114,6 +121,21 @@ const Employers = () => {
         .eq("project_id", selectedProjectId);
       if (error) throw error;
       return data ?? [];
+    },
+    enabled: !!selectedProjectId,
+  });
+
+  // Also include employers linked via site contractor trades on this project's sites
+  const { data: projectSiteContractors = [] } = useQuery<{ employer_id: string }[]>({
+    queryKey: ["project_site_contractors", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [] as { employer_id: string }[];
+      const { data, error } = await (supabase as any)
+        .from("v_project_site_contractors")
+        .select("employer_id")
+        .eq("project_id", selectedProjectId);
+      if (error) throw error;
+      return (data ?? []) as { employer_id: string }[];
     },
     enabled: !!selectedProjectId,
   });
@@ -193,15 +215,18 @@ const Employers = () => {
     return "in_progress";
   };
 
-  // Build a quick lookup for employer roles within the selected project
+  // Build a quick lookup for employer roles within the selected project (from roles and site contractors)
   const roleByEmployerId = new Map<string, ("head_contractor" | "contractor" | "trade_subcontractor")[]>();
-  if (selectedProjectId && projectRoles.length > 0) {
+  if (selectedProjectId) {
     for (const row of projectRoles) {
       const arr = roleByEmployerId.get(row.employer_id) ?? [];
-      if (!arr.includes(row.role)) {
-        arr.push(row.role);
-      }
+      if (!arr.includes(row.role)) arr.push(row.role);
       roleByEmployerId.set(row.employer_id, arr);
+    }
+    for (const sc of projectSiteContractors) {
+      const arr = roleByEmployerId.get(sc.employer_id) ?? [];
+      if (!arr.includes("trade_subcontractor")) arr.push("trade_subcontractor");
+      roleByEmployerId.set(sc.employer_id, arr);
     }
   }
 
@@ -248,7 +273,11 @@ const Employers = () => {
           <p className="text-muted-foreground">Manage builders, contractors, and other employers</p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link to="/upload?table=employers"><UploadIcon className="h-4 w-4 mr-2" />Upload Employers</Link>
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
