@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +13,10 @@ import { Plus, Building2, MapPin, Calendar, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { JVSelector } from "@/components/projects/JVSelector";
+import { MultiEmployerPicker } from "@/components/projects/MultiEmployerPicker";
+import { SingleEmployerPicker } from "@/components/projects/SingleEmployerPicker";
+import { TradeContractorsManager, TradeAssignment } from "@/components/projects/TradeContractorsManager";
 
 type Project = {
   id: string;
@@ -25,7 +30,6 @@ type Project = {
     name: string;
     location: string;
   } | null;
-  // Legacy builder relation (kept for backward compatibility in UI fallback)
   builder?: {
     name: string;
   } | null;
@@ -42,13 +46,11 @@ type Project = {
       email: string;
     };
   }>;
-  // New: roles scoped to project
   project_employer_roles?: Array<{
     role: string;
     employer?: { id: string; name: string } | null;
   }>;
-  // New: optional JV label for builders on this project
-  project_builder_jv?: { label: string | null } | null;
+  project_builder_jv?: { label: string | null; status?: 'yes' | 'no' | 'unsure' } | null;
 };
 
 const Projects = () => {
@@ -56,12 +58,15 @@ const Projects = () => {
   const [formData, setFormData] = useState({
     name: "",
     value: "",
-    builder_id: "",
     proposed_start_date: "",
     proposed_finish_date: "",
     roe_email: "",
-    // New optional field for JV label
+    // JV and role selections
+    jv_status: "no" as "yes" | "no" | "unsure",
     builder_jv_label: "",
+    builder_ids: [] as string[],
+    head_contractor_id: "",
+    trades: [] as TradeAssignment[],
   });
 
   const queryClient = useQueryClient();
@@ -79,7 +84,7 @@ const Projects = () => {
             role,
             employer:employers(id, name)
           ),
-          project_builder_jv(label),
+          project_builder_jv(label, status),
           project_eba_details(*),
           project_organisers(
             organiser:organisers(first_name, last_name, email)
@@ -92,7 +97,7 @@ const Projects = () => {
     },
   });
 
-  // Fetch employers for selection (allow any employer to be selected as a builder)
+  // Fetch employers for selection (legacy list kept)
   const { data: builders = [] } = useQuery({
     queryKey: ["builders"],
     queryFn: async () => {
@@ -113,7 +118,7 @@ const Projects = () => {
         .insert({
           name: projectData.name,
           value: projectData.value ? parseFloat(projectData.value) : null,
-          builder_id: projectData.builder_id || null, // legacy column retained for now
+          builder_id: projectData.builder_ids[0] || null,
           proposed_start_date: projectData.proposed_start_date || null,
           proposed_finish_date: projectData.proposed_finish_date || null,
           roe_email: projectData.roe_email || null,
@@ -123,27 +128,57 @@ const Projects = () => {
 
       if (createError) throw createError;
 
-      // 2) Insert corresponding project role for builder (project-scoped)
-      if (projectData.builder_id) {
-        const { error: roleError } = await (supabase as any)
+      // 2) Insert builder roles (project-scoped, possibly multiple)
+      if (projectData.builder_ids.length > 0) {
+        const rows = projectData.builder_ids.map((id) => ({
+          project_id: newProject.id,
+          employer_id: id,
+          role: "builder",
+        }));
+        const { error: roleErrorBuilders } = await (supabase as any)
+          .from("project_employer_roles")
+          .insert(rows);
+        if (roleErrorBuilders) throw roleErrorBuilders;
+      }
+
+      // 3) Optional head contractor role
+      if (projectData.head_contractor_id) {
+        const { error: roleErrorHead } = await (supabase as any)
           .from("project_employer_roles")
           .insert({
             project_id: newProject.id,
-            employer_id: projectData.builder_id,
-            role: "builder",
+            employer_id: projectData.head_contractor_id,
+            role: "head_contractor",
           });
-        if (roleError) throw roleError;
+        if (roleErrorHead) throw roleErrorHead;
       }
 
-      // 3) Upsert optional JV label
-      if (projectData.builder_jv_label?.trim()) {
-        const { error: jvError } = await (supabase as any)
-          .from("project_builder_jv")
-          .upsert(
-            { project_id: newProject.id, label: projectData.builder_jv_label.trim() },
-            { onConflict: "project_id" }
-          );
-        if (jvError) throw jvError;
+      // 4) JV status and optional label
+      const payload: any = {
+        project_id: newProject.id,
+        status: projectData.jv_status,
+      };
+      if (projectData.jv_status === "yes") {
+        payload.label = projectData.builder_jv_label?.trim() || null;
+      } else {
+        payload.label = null;
+      }
+      const { error: jvError } = await (supabase as any)
+        .from("project_builder_jv")
+        .upsert(payload, { onConflict: "project_id" });
+      if (jvError) throw jvError;
+
+      // 5) Trade contractors
+      if (projectData.trades.length > 0) {
+        const rows = projectData.trades.map((t) => ({
+          project_id: newProject.id,
+          employer_id: t.employer_id,
+          trade_type: t.trade_type,
+        }));
+        const { error: tradeErr } = await (supabase as any)
+          .from("project_contractor_trades")
+          .insert(rows);
+        if (tradeErr) throw tradeErr;
       }
 
       return newProject;
@@ -154,11 +189,14 @@ const Projects = () => {
       setFormData({
         name: "",
         value: "",
-        builder_id: "",
         proposed_start_date: "",
         proposed_finish_date: "",
         roe_email: "",
+        jv_status: "no",
         builder_jv_label: "",
+        builder_ids: [],
+        head_contractor_id: "",
+        trades: [],
       });
       toast.success("Project created successfully");
     },
@@ -209,14 +247,14 @@ const Projects = () => {
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>
                 Add a new construction project to the system
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <Label htmlFor="name">Project Name *</Label>
                 <Input
@@ -238,31 +276,32 @@ const Projects = () => {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="builder">Builder</Label>
-                <Select value={formData.builder_id} onValueChange={(value) => setFormData(prev => ({ ...prev, builder_id: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select builder (any employer)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {builders.map((builder) => (
-                      <SelectItem key={builder.id} value={builder.id}>
-                        {builder.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <JVSelector
+                status={formData.jv_status}
+                label={formData.builder_jv_label}
+                onChangeStatus={(v) => setFormData((p) => ({ ...p, jv_status: v }))}
+                onChangeLabel={(v) => setFormData((p) => ({ ...p, builder_jv_label: v }))}
+              />
 
-              <div>
-                <Label htmlFor="builder_jv_label">JV Label (optional)</Label>
-                <Input
-                  id="builder_jv_label"
-                  value={formData.builder_jv_label}
-                  onChange={(e) => setFormData(prev => ({ ...prev, builder_jv_label: e.target.value }))}
-                  placeholder="e.g., Acme-Beta JV"
-                />
-              </div>
+              <MultiEmployerPicker
+                label="Builder(s)"
+                selectedIds={formData.builder_ids}
+                onChange={(ids) => setFormData((p) => ({ ...p, builder_ids: ids }))}
+                prioritizedTag="builder"
+                triggerText="Add builder"
+              />
+
+              <SingleEmployerPicker
+                label="Head contractor (optional)"
+                selectedId={formData.head_contractor_id}
+                onChange={(id) => setFormData((p) => ({ ...p, head_contractor_id: id }))}
+                prioritizedTag="head_contractor"
+              />
+
+              <TradeContractorsManager
+                assignments={formData.trades}
+                onChange={(list) => setFormData((p) => ({ ...p, trades: list }))}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

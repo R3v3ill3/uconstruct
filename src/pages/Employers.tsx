@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { toast } from "sonner";
 import { EmployerDetailModal } from "@/components/employers/EmployerDetailModal";
 import { EmployerCard } from "@/components/employers/EmployerCard";
+import { TRADE_OPTIONS } from "@/constants/trades";
 
 type EmployerWithEba = {
   id: string;
@@ -51,6 +51,9 @@ const Employers = () => {
     name: "",
     abn: "",
     employer_type: "",
+    is_builder_tag: false,
+    is_head_contractor_tag: false,
+    trade_capabilities: [] as string[],
   });
 
   // New state for project-role filtering
@@ -128,6 +131,37 @@ const Employers = () => {
         .single();
 
       if (error) throw error;
+
+      const created = data as { id: string };
+
+      // Add contractor type tags if selected
+      const tagRows: any[] = [];
+      if (employerData.is_builder_tag) {
+        tagRows.push({ employer_id: created.id, tag: "builder" });
+      }
+      if (employerData.is_head_contractor_tag) {
+        tagRows.push({ employer_id: created.id, tag: "head_contractor" });
+      }
+      if (tagRows.length > 0) {
+        const { error: tagErr } = await (supabase as any)
+          .from("employer_role_tags")
+          .insert(tagRows);
+        if (tagErr) throw tagErr;
+      }
+
+      // Add trade capabilities if provided
+      if (employerData.trade_capabilities.length > 0) {
+        const rows = employerData.trade_capabilities.map((t, idx) => ({
+          employer_id: created.id,
+          trade_type: t,
+          is_primary: idx === 0,
+        }));
+        const { error: capErr } = await (supabase as any)
+          .from("contractor_trade_capabilities")
+          .insert(rows);
+        if (capErr) throw capErr;
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -138,11 +172,14 @@ const Employers = () => {
         name: "",
         abn: "",
         employer_type: "",
+        is_builder_tag: false,
+        is_head_contractor_tag: false,
+        trade_capabilities: [],
       });
       toast.success("Employer created successfully");
     },
     onError: (error) => {
-      toast.error("Failed to create employer: " + error.message);
+      toast.error("Failed to create employer: " + (error as Error).message);
     },
   });
 
@@ -260,6 +297,55 @@ const Employers = () => {
                     <SelectItem value="individual">Individual</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* New: contractor type tags */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="is_builder_tag"
+                    type="checkbox"
+                    checked={formData.is_builder_tag}
+                    onChange={(e) => setFormData((p) => ({ ...p, is_builder_tag: e.target.checked }))}
+                  />
+                  <Label htmlFor="is_builder_tag">Tag as Builder</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="is_head_contractor_tag"
+                    type="checkbox"
+                    checked={formData.is_head_contractor_tag}
+                    onChange={(e) => setFormData((p) => ({ ...p, is_head_contractor_tag: e.target.checked }))}
+                  />
+                  <Label htmlFor="is_head_contractor_tag">Tag as Head Contractor</Label>
+                </div>
+              </div>
+
+              {/* New: trade capabilities on create */}
+              <div>
+                <Label>Trade capabilities (optional)</Label>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2">
+                  {TRADE_OPTIONS.map((t) => {
+                    const checked = formData.trade_capabilities.includes(t.value);
+                    return (
+                      <label key={t.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setFormData((p) => {
+                              const set = new Set(p.trade_capabilities);
+                              if (e.target.checked) set.add(t.value);
+                              else set.delete(t.value);
+                              return { ...p, trade_capabilities: Array.from(set) };
+                            });
+                          }}
+                        />
+                        {t.label}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               <Button 
