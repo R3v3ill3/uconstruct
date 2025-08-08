@@ -103,3 +103,8 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Google Places Autocomplete dropdown fix */
+.pac-container {
+  z-index: 9999 !important;
+}

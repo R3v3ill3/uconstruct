@@ -110,6 +110,10 @@ export function GoogleAddressInput({
       const lat = place.geometry?.location?.lat?.();
       const lng = place.geometry?.location?.lng?.();
       lastFromAutocomplete.current = true;
+      // Ensure the visible input updates immediately
+      if (inputRef.current && typeof formatted === "string") {
+        inputRef.current.value = formatted;
+      }
       setText(formatted);
       onChange({ formatted, components, place_id: place.place_id, lat, lng });
     });
@@ -137,22 +141,32 @@ export function GoogleAddressInput({
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
+              const hasMenu = !!document.querySelector(".pac-container .pac-item");
+              const hasSelected = !!document.querySelector(".pac-container .pac-item-selected");
+              if (hasMenu) {
+                // Let Google handle selection with Enter
+                return;
+              }
               e.preventDefault();
               lastFromAutocomplete.current = false;
-              if (text?.trim()) {
-                onChange({ formatted: text.trim() });
+              const val = (inputRef.current?.value ?? text).trim();
+              if (val) {
+                onChange({ formatted: val });
               }
             }
           }}
           onBlur={() => {
-            // commit manual entry on blur (avoid double-fire after autocomplete)
-            if (lastFromAutocomplete.current) {
-              lastFromAutocomplete.current = false;
-              return;
-            }
-            if (text?.trim()) {
-              onChange({ formatted: text.trim() });
-            }
+            // Defer commit slightly to allow place_changed to fire after click selection
+            setTimeout(() => {
+              if (lastFromAutocomplete.current) {
+                lastFromAutocomplete.current = false;
+                return;
+              }
+              const val = (inputRef.current?.value ?? text).trim();
+              if (val) {
+                onChange({ formatted: val });
+              }
+            }, 150);
           }}
         />
         <div className="text-xs text-muted-foreground">
