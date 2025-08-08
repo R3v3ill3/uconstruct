@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,10 @@ const Employers = () => {
     employer_type: "",
   });
 
+  // New state for project-role filtering
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedProjectRole, setSelectedProjectRole] = useState<"all" | "head_contractor" | "contractor" | "trade_subcontractor">("all");
+
   const queryClient = useQueryClient();
 
   const { data: employers = [], isLoading } = useQuery({
@@ -75,6 +80,34 @@ const Employers = () => {
       if (error) throw error;
       return data as EmployerWithEba[];
     },
+  });
+
+  // Fetch projects for the Project filter
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects", "filter-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  // Fetch current project roles when a project is selected
+  const { data: projectRoles = [], isLoading: isProjectRolesLoading } = useQuery({
+    queryKey: ["project_roles", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      const { data, error } = await supabase
+        .from("v_project_current_roles")
+        .select("project_id, employer_id, role")
+        .eq("project_id", selectedProjectId);
+      if (error) throw error;
+      return (data ?? []) as { project_id: string; employer_id: string; role: "head_contractor" | "contractor" | "trade_subcontractor" }[];
+    },
+    enabled: !!selectedProjectId,
   });
 
   const createEmployerMutation = useMutation({
@@ -118,6 +151,18 @@ const Employers = () => {
     return "in_progress";
   };
 
+  // Build a quick lookup for employer roles within the selected project
+  const roleByEmployerId = new Map<string, ("head_contractor" | "contractor" | "trade_subcontractor")[]>();
+  if (selectedProjectId && projectRoles.length > 0) {
+    for (const row of projectRoles) {
+      const arr = roleByEmployerId.get(row.employer_id) ?? [];
+      if (!arr.includes(row.role)) {
+        arr.push(row.role);
+      }
+      roleByEmployerId.set(row.employer_id, arr);
+    }
+  }
+
   const filteredEmployers = employers.filter(employer => {
     // Filter by tab
     let tabMatch = true;
@@ -134,8 +179,19 @@ const Employers = () => {
     
     // Filter by EBA status
     const ebaStatusMatch = ebaStatusFilter === "all" || getEbaStatusForFilter(employer) === ebaStatusFilter;
+
+    // Optional: Filter by selected project and role (using the new view)
+    let projectRoleMatch = true;
+    if (selectedProjectId) {
+      const roles = roleByEmployerId.get(employer.id) ?? [];
+      if (roles.length === 0) {
+        projectRoleMatch = false;
+      } else if (selectedProjectRole !== "all") {
+        projectRoleMatch = roles.includes(selectedProjectRole);
+      }
+    }
     
-    return tabMatch && searchMatch && ebaStatusMatch;
+    return tabMatch && searchMatch && ebaStatusMatch && projectRoleMatch;
   });
 
   if (isLoading) {
@@ -236,6 +292,41 @@ const Employers = () => {
             <SelectItem value="lodged">Lodged with FWC</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="no_eba">No EBA</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* New: filter by Project */}
+        <Select
+          value={selectedProjectId || ""}
+          onValueChange={(v) => setSelectedProjectId(v)}
+        >
+          <SelectTrigger className="w-full sm:w-60">
+            <SelectValue placeholder="Filter by Project (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Projects</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* New: filter by Project Role */}
+        <Select
+          value={selectedProjectRole}
+          onValueChange={(v) => setSelectedProjectRole(v as "all" | "head_contractor" | "contractor" | "trade_subcontractor")}
+          disabled={!selectedProjectId || isProjectRolesLoading}
+        >
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue placeholder="Filter by Project Role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="head_contractor">Head Contractor</SelectItem>
+            <SelectItem value="contractor">Contractor</SelectItem>
+            <SelectItem value="trade_subcontractor">Trade Sub-contractor</SelectItem>
           </SelectContent>
         </Select>
       </div>
