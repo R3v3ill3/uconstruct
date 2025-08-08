@@ -35,6 +35,11 @@ type EmployerWithEba = {
     sector: string | null;
   }[];
 };
+type ProjectRoleRow = {
+  project_id: string;
+  employer_id: string;
+  role: "head_contractor" | "contractor" | "trade_subcontractor";
+};
 
 const Employers = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -96,16 +101,16 @@ const Employers = () => {
   });
 
   // Fetch current project roles when a project is selected
-  const { data: projectRoles = [], isLoading: isProjectRolesLoading } = useQuery({
+  const { data: projectRoles = [], isLoading: isProjectRolesLoading } = useQuery<ProjectRoleRow[]>({
     queryKey: ["project_roles", selectedProjectId],
-    queryFn: async () => {
+    queryFn: async (): Promise<ProjectRoleRow[]> => {
       if (!selectedProjectId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("v_project_current_roles")
         .select("project_id, employer_id, role")
         .eq("project_id", selectedProjectId);
       if (error) throw error;
-      return (data ?? []) as { project_id: string; employer_id: string; role: "head_contractor" | "contractor" | "trade_subcontractor" }[];
+      return data ?? [];
     },
     enabled: !!selectedProjectId,
   });

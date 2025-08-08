@@ -846,6 +846,61 @@ export type Database = {
           },
         ]
       }
+      project_employer_roles: {
+        Row: {
+          created_at: string
+          employer_id: string
+          end_date: string | null
+          id: string
+          project_id: string
+          role: Database["public"]["Enums"]["project_role"]
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employer_id: string
+          end_date?: string | null
+          id?: string
+          project_id: string
+          role: Database["public"]["Enums"]["project_role"]
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employer_id?: string
+          end_date?: string | null
+          id?: string
+          project_id?: string
+          role?: Database["public"]["Enums"]["project_role"]
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_employer_roles_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "project_employer_roles_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_employer_roles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_organisers: {
         Row: {
           created_at: string
@@ -1742,6 +1797,46 @@ export type Database = {
           },
         ]
       }
+      v_project_current_roles: {
+        Row: {
+          employer_id: string | null
+          project_id: string | null
+          role: Database["public"]["Enums"]["project_role"] | null
+        }
+        Insert: {
+          employer_id?: string | null
+          project_id?: string | null
+          role?: Database["public"]["Enums"]["project_role"] | null
+        }
+        Update: {
+          employer_id?: string | null
+          project_id?: string | null
+          role?: Database["public"]["Enums"]["project_role"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_employer_roles_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "project_employer_roles_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_employer_roles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_update_user_scoping: {
@@ -1805,6 +1900,7 @@ export type Database = {
         | "subcontractor"
         | "apprentice"
         | "trainee"
+      project_role: "head_contractor" | "contractor" | "trade_subcontractor"
       rating_type:
         | "support_level"
         | "leadership"
@@ -2015,6 +2111,7 @@ export const Constants = {
         "apprentice",
         "trainee",
       ],
+      project_role: ["head_contractor", "contractor", "trade_subcontractor"],
       rating_type: [
         "support_level",
         "leadership",
