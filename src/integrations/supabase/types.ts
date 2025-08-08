@@ -351,6 +351,45 @@ export type Database = {
           },
         ]
       }
+      employer_role_tags: {
+        Row: {
+          created_at: string
+          employer_id: string
+          id: string
+          tag: Database["public"]["Enums"]["employer_role_tag"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employer_id: string
+          id?: string
+          tag: Database["public"]["Enums"]["employer_role_tag"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employer_id?: string
+          id?: string
+          tag?: Database["public"]["Enums"]["employer_role_tag"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_role_tags_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "employer_role_tags_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employers: {
         Row: {
           abn: string | null
@@ -804,6 +843,99 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      project_builder_jv: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["jv_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          project_id: string
+          status?: Database["public"]["Enums"]["jv_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["jv_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_builder_jv_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_contractor_trades: {
+        Row: {
+          created_at: string
+          eba_signatory: Database["public"]["Enums"]["eba_status_type"]
+          employer_id: string
+          end_date: string | null
+          id: string
+          project_id: string
+          start_date: string | null
+          trade_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          eba_signatory?: Database["public"]["Enums"]["eba_status_type"]
+          employer_id: string
+          end_date?: string | null
+          id?: string
+          project_id: string
+          start_date?: string | null
+          trade_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          eba_signatory?: Database["public"]["Enums"]["eba_status_type"]
+          employer_id?: string
+          end_date?: string | null
+          id?: string
+          project_id?: string
+          start_date?: string | null
+          trade_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_contractor_trades_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_analytics"
+            referencedColumns: ["employer_id"]
+          },
+          {
+            foreignKeyName: "project_contractor_trades_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contractor_trades_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_eba_details: {
         Row: {
@@ -1888,6 +2020,7 @@ export type Database = {
         | "meeting"
       eba_status: "yes" | "no" | "pending"
       eba_status_type: "yes" | "no" | "not_specified"
+      employer_role_tag: "builder" | "head_contractor"
       employer_type:
         | "individual"
         | "small_contractor"
@@ -1900,7 +2033,12 @@ export type Database = {
         | "subcontractor"
         | "apprentice"
         | "trainee"
-      project_role: "head_contractor" | "contractor" | "trade_subcontractor"
+      jv_status: "yes" | "no" | "unsure"
+      project_role:
+        | "head_contractor"
+        | "contractor"
+        | "trade_subcontractor"
+        | "builder"
       rating_type:
         | "support_level"
         | "leadership"
@@ -2097,6 +2235,7 @@ export const Constants = {
       ],
       eba_status: ["yes", "no", "pending"],
       eba_status_type: ["yes", "no", "not_specified"],
+      employer_role_tag: ["builder", "head_contractor"],
       employer_type: [
         "individual",
         "small_contractor",
@@ -2111,7 +2250,13 @@ export const Constants = {
         "apprentice",
         "trainee",
       ],
-      project_role: ["head_contractor", "contractor", "trade_subcontractor"],
+      jv_status: ["yes", "no", "unsure"],
+      project_role: [
+        "head_contractor",
+        "contractor",
+        "trade_subcontractor",
+        "builder",
+      ],
       rating_type: [
         "support_level",
         "leadership",
