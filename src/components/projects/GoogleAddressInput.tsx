@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 declare global {
   interface Window {
@@ -47,6 +48,9 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
 export type GoogleAddress = {
   formatted: string;
   components?: Record<string, string>;
+  place_id?: string;
+  lat?: number;
+  lng?: number;
 };
 
 export function GoogleAddressInput({
@@ -59,91 +63,73 @@ export function GoogleAddressInput({
   placeholder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(() => localStorage.getItem("google_maps_api_key"));
-  const [loaded, setLoaded] = useState(false);
-  const [editingKey, setEditingKey] = useState(!apiKey);
+const [loaded, setLoaded] = useState(false);
+const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!apiKey) return;
-    loadGoogleMaps(apiKey)
-      .then(() => setLoaded(true))
-      .catch((e) => {
-        console.error(e);
-        toast.error("Google Maps failed to load. Check API key.");
-      });
-  }, [apiKey]);
-
-  useEffect(() => {
-    if (!loaded || !inputRef.current || !window.google) return;
-    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      types: ["geocode"],
-      fields: ["formatted_address", "address_components"],
-    });
-    const listener = autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      const formatted = place.formatted_address || inputRef.current?.value || "";
-      const components: Record<string, string> = {};
-      (place.address_components || []).forEach((c: any) => {
-        components[c.types[0]] = c.long_name;
-      });
-      onChange({ formatted, components });
-    });
-    return () => {
-      if (listener && listener.remove) listener.remove();
-    };
-  }, [loaded, onChange]);
-
-  const saveKey = () => {
-    const input = (document.getElementById("gmaps-key-input") as HTMLInputElement) || null;
-    const keyVal = input?.value?.trim();
-    if (!keyVal) {
-      toast.error("Please enter a Google Maps browser API key");
-      return;
+useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-google-maps-key");
+      if (error) throw error;
+      const key = (data as any)?.key as string | undefined;
+      if (!key) {
+        setError("Autocomplete unavailable");
+        return;
+      }
+      await loadGoogleMaps(key);
+      if (!cancelled) setLoaded(true);
+    } catch (e) {
+      console.error(e);
+      setError("Autocomplete unavailable");
+      toast.error("Google Maps failed to load. Autocomplete disabled.");
     }
-    localStorage.setItem("google_maps_api_key", keyVal);
-    setApiKey(keyVal);
-    setEditingKey(false);
-    toast.success("API key saved");
+  })();
+  return () => { cancelled = true; };
+}, []);
+
+useEffect(() => {
+  if (!loaded || !inputRef.current || !window.google) return;
+  const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+    types: ["geocode"],
+    fields: ["formatted_address", "address_components", "geometry", "place_id"],
+  });
+  const listener = autocomplete.addListener("place_changed", () => {
+    const place = autocomplete.getPlace();
+    const formatted = place.formatted_address || inputRef.current?.value || "";
+    const components: Record<string, string> = {};
+    (place.address_components || []).forEach((c: any) => {
+      components[c.types[0]] = c.long_name;
+    });
+    const lat = place.geometry?.location?.lat?.();
+    const lng = place.geometry?.location?.lng?.();
+    onChange({ formatted, components, place_id: place.place_id, lat, lng });
+  });
+  return () => {
+    if (listener && listener.remove) listener.remove();
   };
+}, [loaded, onChange]);
 
-  return (
-    <div className="space-y-2">
-      {!apiKey || editingKey ? (
-        <div className="rounded-md border p-3 space-y-2">
-          <div className="space-y-1">
-            <Label htmlFor="gmaps-key-input">Google Maps API Key</Label>
-            <Input id="gmaps-key-input" defaultValue={apiKey || ""} placeholder="Enter browser API key" />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={saveKey}>Save</Button>
-            {apiKey && (
-              <Button variant="outline" onClick={() => setEditingKey(false)}>Cancel</Button>
-            )}
-          </div>
-        </div>
-      ) : null}
 
-      <div className="space-y-1">
-        <Label>Address</Label>
-        <Input
-          ref={inputRef}
-          defaultValue={value}
-          placeholder={placeholder}
-          onBlur={(e) => {
-            // allow manual entry fallback
-            if (e.currentTarget.value && !loaded) {
-              onChange({ formatted: e.currentTarget.value });
-            }
-          }}
-        />
-        <div className="text-xs text-muted-foreground">
-          {loaded ? (
-            <button className="underline" type="button" onClick={() => setEditingKey(true)}>Change API key</button>
-          ) : (
-            <span>Autocomplete loads after saving API key. Manual entry works too.</span>
-          )}
-        </div>
+return (
+  <div className="space-y-2">
+    <div className="space-y-1">
+      <Label>Address</Label>
+      <Input
+        ref={inputRef}
+        defaultValue={value}
+        placeholder={placeholder}
+        onBlur={(e) => {
+          // allow manual entry fallback
+          if (e.currentTarget.value && !loaded) {
+            onChange({ formatted: e.currentTarget.value });
+          }
+        }}
+      />
+      <div className="text-xs text-muted-foreground">
+        {loaded ? <span>Autocomplete enabled.</span> : <span>{error || "Autocomplete unavailable; manual entry works."}</span>}
       </div>
     </div>
-  );
+  </div>
+);
 }

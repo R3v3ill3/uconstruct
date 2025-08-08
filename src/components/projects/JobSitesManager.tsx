@@ -95,10 +95,15 @@ export default function JobSitesManager({ projectId, projectName }: { projectId:
 
   const saveSiteMutation = useMutation({
     mutationFn: async ({ id, name, address }: { id: string; name: string; address?: GoogleAddress }) => {
-      const updates: any = { name };
+const updates: any = { name };
       if (address?.formatted) {
         updates.location = address.formatted;
         updates.full_address = address.formatted;
+      }
+      if (address?.place_id) updates.place_id = address.place_id;
+      if (typeof address?.lat === 'number' && typeof address?.lng === 'number') {
+        updates.latitude = address.lat;
+        updates.longitude = address.lng;
       }
       const { error } = await supabase
         .from("job_sites")
@@ -143,10 +148,15 @@ export default function JobSitesManager({ projectId, projectName }: { projectId:
   const addSiteMutation = useMutation({
     mutationFn: async () => {
       if (!newSite.name) throw new Error("Site name is required");
-      const payload: any = { project_id: projectId, name: newSite.name, is_main_site: false };
+const payload: any = { project_id: projectId, name: newSite.name, is_main_site: false };
       payload.location = newSite.address?.formatted || newSite.name;
       if (newSite.address?.formatted) {
         payload.full_address = newSite.address.formatted;
+      }
+      if (newSite.address?.place_id) payload.place_id = newSite.address.place_id;
+      if (typeof newSite.address?.lat === 'number' && typeof newSite.address?.lng === 'number') {
+        payload.latitude = newSite.address.lat;
+        payload.longitude = newSite.address.lng;
       }
       const { error } = await supabase.from("job_sites").insert(payload);
       if (error) throw error;
