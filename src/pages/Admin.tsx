@@ -14,6 +14,7 @@ import { InviteUserDialog } from "@/components/admin/InviteUserDialog";
 import { RoleHierarchyManager } from "@/components/admin/RoleHierarchyManager";
 import { AddDraftUserDialog } from "@/components/admin/AddDraftUserDialog";
 import { PendingUsersTable } from "@/components/admin/PendingUsersTable";
+import EditUserDialog from "@/components/admin/EditUserDialog";
 
 interface UserProfile {
   id: string;
@@ -24,7 +25,10 @@ interface UserProfile {
   updated_at: string;
   scoped_sites: string[];
   scoped_employers: string[];
+  phone?: string | null;
+  is_active?: boolean;
 }
+
 
 interface Employer {
   id: string;
@@ -49,6 +53,8 @@ const Admin = () => {
 const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 const [addDraftDialogOpen, setAddDraftDialogOpen] = useState(false);
 const [syncing, setSyncing] = useState(false);
+const [editOpen, setEditOpen] = useState(false);
+const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
 
   // Check if current user is admin
   useEffect(() => {
@@ -422,6 +428,16 @@ const [syncing, setSyncing] = useState(false);
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingUser(user);
+                          setEditOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
                       <Select
                         value={user.role}
                         onValueChange={(value) => updateUserRole(user.id, value)}
@@ -464,6 +480,43 @@ const [syncing, setSyncing] = useState(false);
       <PendingUsersTable />
 
       <RoleHierarchyManager users={users} />
+
+      {editingUser && (
+        <EditUserDialog
+          user={{
+            id: editingUser.id,
+            email: editingUser.email,
+            full_name: editingUser.full_name,
+            phone: editingUser.phone ?? null,
+            role: editingUser.role,
+            is_active: editingUser.is_active ?? true,
+          }}
+          open={editOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditOpen(false);
+              setEditingUser(null);
+            } else {
+              setEditOpen(true);
+            }
+          }}
+          onSaved={(updated) => {
+            setUsers((prev) =>
+              prev.map((u) =>
+                u.id === updated.id
+                  ? {
+                      ...u,
+                      full_name: (updated.full_name as string) ?? u.full_name,
+                      role: (updated.role as string) ?? u.role,
+                      phone: (updated.phone as string | null) ?? (u as any).phone,
+                      is_active: (updated.is_active as boolean | undefined) ?? (u as any).is_active,
+                    }
+                  : u
+              )
+            );
+          }}
+        />
+      )}
 
       <AddDraftUserDialog
         open={addDraftDialogOpen}
