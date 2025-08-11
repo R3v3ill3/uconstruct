@@ -453,30 +453,30 @@ const ProjectDetail = () => {
         <Card>
           <CardContent className="py-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button
-                type="button"
-                className="text-left rounded-md p-3 hover:bg-muted/50 transition"
-                onClick={() => (window.location.href = `/patch/walls?projectId=${project?.id}`)}
-              >
+              <Link
+                to={`/patch/walls?projectId=${project?.id}`}
+                className="block text-left rounded-md p-3 hover:bg-muted/50 transition"
+                aria-label="Open Patch Wall for project workers"
+             >
                 <div className="text-xs text-muted-foreground">Workers</div>
                 <div className="text-2xl font-bold">{workerIds.length}</div>
-              </button>
-              <button
-                type="button"
-                className="text-left rounded-md p-3 hover:bg-muted/50 transition"
-                onClick={() => (window.location.href = `/patch/walls?projectId=${project?.id}`)}
-              >
+              </Link>
+              <Link
+                to={`/patch/walls?projectId=${project?.id}`}
+                className="block text-left rounded-md p-3 hover:bg-muted/50 transition"
+                aria-label="Open Patch Wall for project members"
+             >
                 <div className="text-xs text-muted-foreground">Members</div>
                 <div className="text-2xl font-bold">{memberCount}</div>
-              </button>
-              <button
-                type="button"
-                className="text-left rounded-md p-3 hover:bg-muted/50 transition"
-                onClick={() => (window.location.href = `/patch/walls?projectId=${project?.id}`)}
-              >
+              </Link>
+              <Link
+                to={`/patch/walls?projectId=${project?.id}`}
+                className="block text-left rounded-md p-3 hover:bg-muted/50 transition"
+                aria-label="Open Patch Wall for project delegates"
+             >
                 <div className="text-xs text-muted-foreground">Delegates</div>
                 <div className="text-2xl font-bold">{delegateCount}</div>
-              </button>
+              </Link>
             </div>
           </CardContent>
         </Card>
