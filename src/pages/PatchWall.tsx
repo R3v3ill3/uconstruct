@@ -262,6 +262,7 @@ const PatchWall = () => {
         projectIds={projectIds}
         siteIds={siteIds}
         contextSiteId={contextSiteId}
+        siteOptions={(sites as any[]).map((s: any) => ({ id: s.id, name: s.name }))}
       />
     </main>
   );
