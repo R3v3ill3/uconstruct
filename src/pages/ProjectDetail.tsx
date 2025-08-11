@@ -14,6 +14,7 @@ import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
 import JobSitesManager from "@/components/projects/JobSitesManager";
 import ContractorSiteAssignmentModal from "@/components/projects/ContractorSiteAssignmentModal";
 import { TRADE_OPTIONS } from "@/constants/trades";
+import ContractorsSummary from "@/components/projects/ContractorsSummary";
 import { EmployerDetailModal } from "@/components/employers/EmployerDetailModal";
 import { EbaAssignmentModal } from "@/components/employers/EbaAssignmentModal";
 import { EbaEditDatesModal } from "@/components/employers/EbaEditDatesModal";
@@ -167,10 +168,13 @@ const ProjectDetail = () => {
     queryKey: ["v-project-workers", id],
     enabled: !!id,
     queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
       const { data, error } = await supabase
         .from("v_project_workers")
         .select("worker_id")
-        .eq("project_id", id as string);
+        .eq("project_id", id as string)
+        .lte("start_date", today)
+        .or(`end_date.is.null,end_date.gte.${today}`);
       if (error) throw error;
       return data || [];
     },
@@ -195,7 +199,7 @@ const ProjectDetail = () => {
   });
 
   const memberCount = useMemo(
-    () => (memberWorkers as any[]).filter((w: any) => w.union_membership_status && w.union_membership_status !== 'non_member').length,
+    () => (memberWorkers as any[]).filter((w: any) => w.union_membership_status === 'member').length,
     [memberWorkers]
   );
 
@@ -244,7 +248,7 @@ const ProjectDetail = () => {
 
   // Compose contractors list: roles (builder, head contractor) first, then site contractors
   const roleRows = useMemo(() => {
-    const rows: { id: string; employerId: string; employerName: string; siteName?: string | null; tradeLabel: string; ebaRecordId?: string | null }[] = [];
+    const rows: { id: string; employerId: string; employerName: string; siteName?: string | null; siteId?: string | null; tradeLabel: string; ebaRecordId?: string | null }[] = [];
     (projectRoles as any[]).forEach((r) => {
       const employerId = r.employers?.id as string | undefined;
       const employerName = r.employers?.name as string | undefined;
@@ -257,6 +261,7 @@ const ProjectDetail = () => {
           employerId,
           employerName,
           siteName: null,
+          siteId: null,
           tradeLabel,
           ebaRecordId: rec?.id || null,
         });
@@ -273,14 +278,15 @@ const ProjectDetail = () => {
       const tradeLabel = friendlyTrade(String(ct.trade_type));
       const ebaRecordId = (ct.employers?.company_eba_records?.[0]?.id as string | undefined) ||
         (ebaRecords as any[]).find((er) => er.employer_id === employerId)?.id || null;
-      return {
-        id: ct.id as string,
-        employerId: employerId || "",
-        employerName: employerName || "",
-        siteName,
-        tradeLabel,
-        ebaRecordId,
-      };
+        return {
+          id: ct.id as string,
+          employerId: employerId || "",
+          employerName: employerName || "",
+          siteName,
+          siteId: ct.job_site_id as string,
+          tradeLabel,
+          ebaRecordId,
+        };
     });
   }, [contractors, jobSites, ebaRecords]);
 
@@ -492,56 +498,14 @@ const ProjectDetail = () => {
         </div>
         <Card>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employer</TableHead>
-                  {showSiteColumn && <TableHead>Site</TableHead>}
-                  <TableHead>Trade</TableHead>
-                  <TableHead>EBA</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {combinedContractorRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">
-                      <button
-                        type="button"
-                        className="text-primary hover:underline"
-                        onClick={() => openEmployerModal(row.employerId)}
-                      >
-                        {row.employerName}
-                      </button>
-                    </TableCell>
-                    {showSiteColumn && (
-                      <TableCell>{row.siteName || '-'}</TableCell>
-                    )}
-                    <TableCell>{row.tradeLabel}</TableCell>
-                    <TableCell>
-                      <button
-                        type="button"
-                        className="cursor-pointer"
-                        onClick={() => handleEbaClick(row.employerId)}
-                        aria-label="View EBA details"
-                      >
-                        {ebaEmployers.has(row.employerId) ? (
-                          <Badge variant="default">EBA</Badge>
-                        ) : (
-                          <Badge variant="destructive">No EBA</Badge>
-                        )}
-                      </button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {combinedContractorRows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={showSiteColumn ? 4 : 3} className="text-center text-sm text-muted-foreground">
-                      No contractors recorded for this project yet.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <ContractorsSummary
+              rows={combinedContractorRows as any}
+              showSiteColumn={showSiteColumn}
+              ebaEmployers={ebaEmployers}
+              onEmployerClick={openEmployerModal}
+              onEbaClick={handleEbaClick}
+              projectId={project?.id || ""}
+            />
           </CardContent>
         </Card>
       </section>
