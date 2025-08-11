@@ -48,6 +48,7 @@ const Employers = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [ebaStatusFilter, setEbaStatusFilter] = useState("all");
   const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -308,6 +309,10 @@ const Employers = () => {
 
     return tabMatch && searchMatch && ebaStatusMatch && projectRoleMatch && contractorTypeMatch;
   });
+  const searchQ = searchTerm.trim().toLowerCase();
+  const searchSuggestions = searchQ
+    ? employers.filter((e) => e.name.toLowerCase().includes(searchQ)).slice(0, 8)
+    : [];
 
   if (isLoading) {
     return <div className="p-6">Loading employers...</div>;
@@ -440,15 +445,45 @@ const Employers = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search employers by name, ABN, contact, or EBA number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <Input
+          placeholder="Search employers by name, ABN, contact, or EBA number..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsSearchOpen(true);
+          }}
+          onFocus={() => setIsSearchOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsSearchOpen(false);
+          }}
+          onBlur={() => setTimeout(() => setIsSearchOpen(false), 100)}
+          className="pl-10 h-12 text-base"
+        />
+        {isSearchOpen && searchQ && searchSuggestions.length > 0 && (
+          <div className="absolute z-50 left-0 right-0 mt-2 rounded-md border bg-popover shadow-md">
+            <ul className="max-h-64 overflow-auto py-1">
+              {searchSuggestions.map((e) => (
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
+                    onMouseDown={(ev) => ev.preventDefault()}
+                    onClick={() => {
+                      setSelectedEmployerId(e.id);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    <div className="font-medium">{e.name}</div>
+                    {e.abn ? <div className="text-xs text-muted-foreground">ABN: {e.abn}</div> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
         <Select value={ebaStatusFilter} onValueChange={setEbaStatusFilter}>
           <SelectTrigger className="w-full sm:w-48">
