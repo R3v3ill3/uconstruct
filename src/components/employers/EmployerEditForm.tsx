@@ -22,6 +22,8 @@ const employerTypeOptions = [
 
 type EmployerType = typeof employerTypeOptions[number]["value"];
 
+type RoleTag = "builder" | "head_contractor";
+
 const FormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   employer_type: z.enum([
@@ -95,8 +97,8 @@ export default function EmployerEditForm({ employer, onCancel, onSaved }: Employ
     setSelectedTrades(tradeCaps.map((c) => c.trade_type));
   }, [tradeCaps]);
 
-  const desiredTags = useMemo(() => {
-    const s = new Set<string>();
+const desiredTags = useMemo(() => {
+    const s = new Set<RoleTag>();
     if (isBuilder) s.add("builder");
     if (isHeadContractor) s.add("head_contractor");
     return s;
