@@ -15,6 +15,8 @@ import JobSitesManager from "@/components/projects/JobSitesManager";
 import ContractorSiteAssignmentModal from "@/components/projects/ContractorSiteAssignmentModal";
 import { TRADE_OPTIONS } from "@/constants/trades";
 import { EmployerDetailModal } from "@/components/employers/EmployerDetailModal";
+import { EbaAssignmentModal } from "@/components/employers/EbaAssignmentModal";
+import { EbaEditDatesModal } from "@/components/employers/EbaEditDatesModal";
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -224,6 +226,80 @@ const ProjectDetail = () => {
   const [assignOpen, setAssignOpen] = useState(false);
   const queryClient = useQueryClient();
 
+  // Modals and interactions
+  const [employerModalId, setEmployerModalId] = useState<string | null>(null);
+  const [employerModalOpen, setEmployerModalOpen] = useState(false);
+  const [ebaAssignFor, setEbaAssignFor] = useState<{ id: string; name: string } | null>(null);
+  const [ebaEditRecord, setEbaEditRecord] = useState<{ id: string } | null>(null);
+
+  // Helpers
+  const friendlyTrade = (value: string) => {
+    const found = TRADE_OPTIONS.find((t) => t.value === value);
+    if (found) return found.label;
+    return value ? value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "";
+  };
+
+  const showSiteColumn = (jobSites?.length || 0) > 1;
+
+  // Compose contractors list: roles (builder, head contractor) first, then site contractors
+  const roleRows = useMemo(() => {
+    const rows: { id: string; employerId: string; employerName: string; siteName?: string | null; tradeLabel: string; ebaRecordId?: string | null }[] = [];
+    (projectRoles as any[]).forEach((r) => {
+      const employerId = r.employers?.id as string | undefined;
+      const employerName = r.employers?.name as string | undefined;
+      if (!employerId || !employerName) return;
+      if (r.role === "builder" || r.role === "head_contractor") {
+        const tradeLabel = r.role === "builder" ? "Builder" : "Head Contractor";
+        const rec = (ebaRecords as any[]).find((er) => er.employer_id === employerId);
+        rows.push({
+          id: `role-${employerId}-${r.role}`,
+          employerId,
+          employerName,
+          siteName: null,
+          tradeLabel,
+          ebaRecordId: rec?.id || null,
+        });
+      }
+    });
+    return rows;
+  }, [projectRoles, ebaRecords]);
+
+  const siteContractorRows = useMemo(() => {
+    return (contractors || []).map((ct: any) => {
+      const employerId = ct.employers?.id as string | undefined;
+      const employerName = ct.employers?.name as string | undefined;
+      const siteName = (jobSites || []).find((s: any) => s.id === ct.job_site_id)?.name || null;
+      const tradeLabel = friendlyTrade(String(ct.trade_type));
+      const ebaRecordId = (ct.employers?.company_eba_records?.[0]?.id as string | undefined) ||
+        (ebaRecords as any[]).find((er) => er.employer_id === employerId)?.id || null;
+      return {
+        id: ct.id as string,
+        employerId: employerId || "",
+        employerName: employerName || "",
+        siteName,
+        tradeLabel,
+        ebaRecordId,
+      };
+    });
+  }, [contractors, jobSites, ebaRecords]);
+
+  const combinedContractorRows = useMemo(() => {
+    return [...roleRows, ...siteContractorRows];
+  }, [roleRows, siteContractorRows]);
+
+  const openEmployerModal = (employerId: string) => {
+    setEmployerModalId(employerId);
+    setEmployerModalOpen(true);
+  };
+
+  const handleEbaClick = (employerId: string, employerName: string, ebaRecordId?: string | null) => {
+    if (ebaRecordId) {
+      setEbaEditRecord({ id: ebaRecordId });
+    } else {
+      setEbaAssignFor({ id: employerId, name: employerName });
+    }
+  };
+
   const addContractorsMutation = useMutation({
     mutationFn: async () => {
       if (!id || newAssignments.length === 0) return;
@@ -363,49 +439,46 @@ const ProjectDetail = () => {
 
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium">Project Trade Contractors</h2>
-          <Button size="sm" onClick={() => setAddOpen(true)}>Add</Button>
+          <h2 className="text-lg font-medium">Workforce</h2>
+          <Button asChild size="sm">
+            <Link to={`/patch/walls?projectId=${project?.id}`}>Open Wall Charts</Link>
+          </Button>
         </div>
         <Card>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employer</TableHead>
-                  <TableHead>Trade</TableHead>
-                  <TableHead>EBA Signatory</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(projectTradeContractors || []).map((row: any) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.employers?.name}</TableCell>
-                    <TableCell>{row.trade_type}</TableCell>
-                    <TableCell>
-                      {ebaEmployers.has(row.employers?.id as string) ? (
-                        <Badge variant="default">EBA</Badge>
-                      ) : (
-                        <Badge variant="destructive">No EBA</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(!projectTradeContractors || projectTradeContractors.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                      No project-level trade contractors yet.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+          <CardContent className="py-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                type="button"
+                className="text-left rounded-md p-3 hover:bg-muted/50 transition"
+                onClick={() => (window.location.href = `/patch/walls?projectId=${project?.id}`)}
+              >
+                <div className="text-xs text-muted-foreground">Workers</div>
+                <div className="text-2xl font-bold">{workerIds.length}</div>
+              </button>
+              <button
+                type="button"
+                className="text-left rounded-md p-3 hover:bg-muted/50 transition"
+                onClick={() => (window.location.href = `/patch/walls?projectId=${project?.id}`)}
+              >
+                <div className="text-xs text-muted-foreground">Members</div>
+                <div className="text-2xl font-bold">{memberCount}</div>
+              </button>
+              <button
+                type="button"
+                className="text-left rounded-md p-3 hover:bg-muted/50 transition"
+                onClick={() => (window.location.href = `/patch/walls?projectId=${project?.id}`)}
+              >
+                <div className="text-xs text-muted-foreground">Delegates</div>
+                <div className="text-2xl font-bold">{delegateCount}</div>
+              </button>
+            </div>
           </CardContent>
         </Card>
       </section>
 
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium">Contractors by Site</h2>
+          <h2 className="text-lg font-medium">Contractors</h2>
           <div className="flex gap-2">
             <Button onClick={() => setAddOpen(true)}>Add Contractors</Button>
             <Button variant="secondary" onClick={() => setAssignOpen(true)}>Assign to Sites</Button>
@@ -422,34 +495,47 @@ const ProjectDetail = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Site</TableHead>
                   <TableHead>Employer</TableHead>
-                  <TableHead>Type</TableHead>
+                  {showSiteColumn && <TableHead>Site</TableHead>}
                   <TableHead>Trade</TableHead>
                   <TableHead>EBA</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(contractors || []).map((ct: any) => (
-                  <TableRow key={ct.id}>
-                    <TableCell>{(jobSites || []).find((s: any) => s.id === ct.job_site_id)?.name}</TableCell>
-                    <TableCell className="font-medium">{ct.employers?.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{ct.employers?.employer_type || 'contractor'}</Badge>
+                {combinedContractorRows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">
+                      <button
+                        type="button"
+                        className="text-primary hover:underline"
+                        onClick={() => openEmployerModal(row.employerId)}
+                      >
+                        {row.employerName}
+                      </button>
                     </TableCell>
-                    <TableCell>{ct.trade_type}</TableCell>
+                    {showSiteColumn && (
+                      <TableCell>{row.siteName || '-'}</TableCell>
+                    )}
+                    <TableCell>{row.tradeLabel}</TableCell>
                     <TableCell>
-                      {ct.eba_status ? (
-                        <Badge variant="default">EBA</Badge>
-                      ) : (
-                        <Badge variant="destructive">No EBA</Badge>
-                      )}
+                      <button
+                        type="button"
+                        className="cursor-pointer"
+                        onClick={() => handleEbaClick(row.employerId, row.employerName, row.ebaRecordId)}
+                        aria-label="View EBA details"
+                      >
+                        {ebaEmployers.has(row.employerId) ? (
+                          <Badge variant="default">EBA</Badge>
+                        ) : (
+                          <Badge variant="destructive">No EBA</Badge>
+                        )}
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))}
-                {(!contractors || contractors.length === 0) && (
+                {combinedContractorRows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={showSiteColumn ? 4 : 3} className="text-center text-sm text-muted-foreground">
                       No contractors recorded for this project yet.
                     </TableCell>
                   </TableRow>
@@ -517,6 +603,29 @@ const ProjectDetail = () => {
           {project && <ContractorSiteAssignmentModal projectId={project.id} />}
         </DialogContent>
       </Dialog>
+
+      {/* Employer & EBA Modals */}
+      <EmployerDetailModal
+        employerId={employerModalId}
+        isOpen={employerModalOpen}
+        onClose={() => setEmployerModalOpen(false)}
+      />
+
+      {ebaAssignFor && (
+        <EbaAssignmentModal
+          isOpen={!!ebaAssignFor}
+          onClose={() => setEbaAssignFor(null)}
+          employer={ebaAssignFor}
+        />
+      )}
+
+      {ebaEditRecord && (
+        <EbaEditDatesModal
+          isOpen={!!ebaEditRecord}
+          onClose={() => setEbaEditRecord(null)}
+          ebaRecord={{ id: ebaEditRecord.id }}
+        />
+      )}
     </main>
   );
 };
