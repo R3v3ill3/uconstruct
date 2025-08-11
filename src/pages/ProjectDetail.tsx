@@ -229,6 +229,7 @@ const ProjectDetail = () => {
   // Modals and interactions
   const [employerModalId, setEmployerModalId] = useState<string | null>(null);
   const [employerModalOpen, setEmployerModalOpen] = useState(false);
+  const [employerModalInitialTab, setEmployerModalInitialTab] = useState<"overview" | "eba" | "sites" | "workers">("overview");
   const [ebaAssignFor, setEbaAssignFor] = useState<{ id: string; name: string } | null>(null);
   const [ebaEditRecord, setEbaEditRecord] = useState<{ id: string } | null>(null);
 
@@ -289,15 +290,14 @@ const ProjectDetail = () => {
 
   const openEmployerModal = (employerId: string) => {
     setEmployerModalId(employerId);
+    setEmployerModalInitialTab("overview");
     setEmployerModalOpen(true);
   };
 
-  const handleEbaClick = (employerId: string, employerName: string, ebaRecordId?: string | null) => {
-    if (ebaRecordId) {
-      setEbaEditRecord({ id: ebaRecordId });
-    } else {
-      setEbaAssignFor({ id: employerId, name: employerName });
-    }
+  const handleEbaClick = (employerId: string) => {
+    setEmployerModalId(employerId);
+    setEmployerModalInitialTab("eba");
+    setEmployerModalOpen(true);
   };
 
   const addContractorsMutation = useMutation({
@@ -521,7 +521,7 @@ const ProjectDetail = () => {
                       <button
                         type="button"
                         className="cursor-pointer"
-                        onClick={() => handleEbaClick(row.employerId, row.employerName, row.ebaRecordId)}
+                        onClick={() => handleEbaClick(row.employerId)}
                         aria-label="View EBA details"
                       >
                         {ebaEmployers.has(row.employerId) ? (
@@ -609,6 +609,7 @@ const ProjectDetail = () => {
         employerId={employerModalId}
         isOpen={employerModalOpen}
         onClose={() => setEmployerModalOpen(false)}
+        initialTab={employerModalInitialTab}
       />
 
       {ebaAssignFor && (

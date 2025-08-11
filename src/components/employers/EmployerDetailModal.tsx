@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -47,13 +47,20 @@ interface EmployerDetailModalProps {
   employerId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: "overview" | "eba" | "sites" | "workers";
 }
 
-export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDetailModalProps) => {
-  const [activeTab, setActiveTab] = useState("overview");
+export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = "overview" }: EmployerDetailModalProps) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen, employerId]);
 
   const { data: myRole } = useQuery({
     queryKey: ["my-role", user?.id],
@@ -132,7 +139,7 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDet
               />
             </div>
           ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "overview" | "eba" | "sites" | "workers")} className="space-y-6">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="eba">EBA Details</TabsTrigger>
