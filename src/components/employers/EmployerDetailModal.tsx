@@ -10,6 +10,7 @@ import { Building, Phone, Mail, FileText, ExternalLink, MapPin, Users, Briefcase
 import { getEbaStatusInfo } from "./ebaHelpers";
 import { EmployerWorkersList } from "../workers/EmployerWorkersList";
 import EmployerEditForm from "./EmployerEditForm";
+import { useAuth } from "@/hooks/useAuth";
 type EmployerWithEba = {
   id: string;
   name: string;
@@ -52,6 +53,24 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDet
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const { data: myRole } = useQuery({
+    queryKey: ["my-role", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.role as string) ?? null;
+    },
+    enabled: !!user?.id,
+  });
+
+  const canEdit = myRole === "admin" || myRole === "organiser";
 
   const { data: employer, isLoading } = useQuery({
     queryKey: ["employer-detail", employerId],
@@ -90,7 +109,7 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDet
                 )}
               </div>
             </div>
-            {employer && (
+            {employer && canEdit && (
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 Edit
               </Button>
@@ -104,7 +123,7 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose }: EmployerDet
           isEditing ? (
             <div className="space-y-6">
               <EmployerEditForm
-                employer={{ id: employer.id, name: employer.name, employer_type: employer.employer_type }}
+                employer={employer}
                 onCancel={() => setIsEditing(false)}
                 onSaved={() => {
                   setIsEditing(false);

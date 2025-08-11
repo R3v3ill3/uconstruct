@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,6 +35,19 @@ const FormSchema = z.object({
     "small_contractor",
     "individual",
   ] as [EmployerType, ...EmployerType[]]),
+  abn: z.string().optional().nullable(),
+  primary_contact_name: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email("Invalid email").optional().nullable(),
+  website: z.string().url("Invalid URL").optional().nullable(),
+  address_line_1: z.string().optional().nullable(),
+  address_line_2: z.string().optional().nullable(),
+  suburb: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+  postcode: z.string().optional().nullable(),
+  contact_notes: z.string().optional().nullable(),
+  estimated_worker_count: z.coerce.number().min(0).optional().nullable(),
+  enterprise_agreement_status: z.boolean().optional().nullable(),
 });
 
 export type EmployerEditFormProps = {
@@ -40,6 +55,19 @@ export type EmployerEditFormProps = {
     id: string;
     name: string;
     employer_type: string;
+    abn?: string | null;
+    primary_contact_name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    website?: string | null;
+    address_line_1?: string | null;
+    address_line_2?: string | null;
+    suburb?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    contact_notes?: string | null;
+    estimated_worker_count?: number | null;
+    enterprise_agreement_status?: boolean | null;
   };
   onCancel: () => void;
   onSaved: (updated: { id: string; name: string; employer_type: string }) => void;
@@ -49,13 +77,26 @@ export default function EmployerEditForm({ employer, onCancel, onSaved }: Employ
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: {
-      name: employer.name,
-      employer_type: employer.employer_type as EmployerType,
-    },
-  });
+const form = useForm<z.infer<typeof FormSchema>>({
+  resolver: zodResolver(FormSchema),
+  defaultValues: {
+    name: employer.name ?? "",
+    employer_type: employer.employer_type as EmployerType,
+    abn: employer.abn ?? null,
+    primary_contact_name: employer.primary_contact_name ?? null,
+    phone: employer.phone ?? null,
+    email: employer.email ?? null,
+    website: employer.website ?? null,
+    address_line_1: employer.address_line_1 ?? null,
+    address_line_2: employer.address_line_2 ?? null,
+    suburb: employer.suburb ?? null,
+    state: employer.state ?? null,
+    postcode: employer.postcode ?? null,
+    contact_notes: employer.contact_notes ?? null,
+    estimated_worker_count: employer.estimated_worker_count ?? null,
+    enterprise_agreement_status: employer.enterprise_agreement_status ?? null,
+  },
+});
 
   // Load existing durable classification tags and trade capabilities
   const { data: roleTags = [] } = useQuery({
@@ -108,17 +149,33 @@ const desiredTags = useMemo(() => {
   const currentTrades = useMemo(() => new Set(tradeCaps.map((t) => t.trade_type)), [tradeCaps]);
   const desiredTrades = useMemo(() => new Set(selectedTrades), [selectedTrades]);
 
-  const onSubmit = async (values: z.infer<typeof FormSchema>) => {
-    // Update employer core fields
-    const { error, data } = await supabase
-      .from("employers")
-      .update({
-        name: values.name.trim(),
-        employer_type: values.employer_type,
-      })
-      .eq("id", employer.id)
-      .select("id, name, employer_type")
-      .single();
+const onSubmit = async (values: z.infer<typeof FormSchema>) => {
+const toNull = (v: any) => (v === "" ? null : v);
+// Update employer core fields and contact/address data
+const updatePayload = {
+  name: values.name.trim(),
+  employer_type: values.employer_type,
+  abn: toNull(values.abn),
+  primary_contact_name: toNull(values.primary_contact_name),
+  phone: toNull(values.phone),
+  email: toNull(values.email),
+  website: toNull(values.website),
+  address_line_1: toNull(values.address_line_1),
+  address_line_2: toNull(values.address_line_2),
+  suburb: toNull(values.suburb),
+  state: toNull(values.state),
+  postcode: toNull(values.postcode),
+  contact_notes: toNull(values.contact_notes),
+  estimated_worker_count: values.estimated_worker_count ?? null,
+  enterprise_agreement_status: values.enterprise_agreement_status ?? null,
+};
+
+const { error, data } = await supabase
+  .from("employers")
+  .update(updatePayload)
+  .eq("id", employer.id)
+  .select("id, name, employer_type")
+  .single();
 
     if (error) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
@@ -194,49 +251,244 @@ const desiredTags = useMemo(() => {
   return (
     <div className="space-y-6">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter company name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <FormField
+      control={form.control}
+      name="name"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Company Name</FormLabel>
+          <FormControl>
+            <Input placeholder="Enter company name" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
 
-            <FormField
-              control={form.control}
-              name="employer_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Employer Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {employerTypeOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+    <FormField
+      control={form.control}
+      name="employer_type"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Employer Type</FormLabel>
+          <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {employerTypeOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  </div>
 
-          {/* Durable classification tags */}
+  {/* Company Details */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <FormField
+      control={form.control}
+      name="abn"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>ABN</FormLabel>
+          <FormControl>
+            <Input placeholder="ABN" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="website"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Website</FormLabel>
+          <FormControl>
+            <Input placeholder="https://example.com" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="estimated_worker_count"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Estimated Worker Count</FormLabel>
+          <FormControl>
+            <Input type="number" placeholder="0" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="enterprise_agreement_status"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Enterprise Agreement</FormLabel>
+          <FormControl>
+            <div className="flex items-center gap-3">
+              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+              <span className="text-sm text-muted-foreground">Has EBA</span>
+            </div>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  </div>
+
+  {/* Contact Information */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <FormField
+      control={form.control}
+      name="primary_contact_name"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Primary Contact</FormLabel>
+          <FormControl>
+            <Input placeholder="Full name" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="phone"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Phone</FormLabel>
+          <FormControl>
+            <Input placeholder="Phone number" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="email"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Email</FormLabel>
+          <FormControl>
+            <Input type="email" placeholder="name@example.com" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  </div>
+
+  {/* Address */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <FormField
+      control={form.control}
+      name="address_line_1"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Address Line 1</FormLabel>
+          <FormControl>
+            <Input placeholder="Street address" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="address_line_2"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Address Line 2</FormLabel>
+          <FormControl>
+            <Input placeholder="Suite, unit, etc." {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="suburb"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Suburb</FormLabel>
+          <FormControl>
+            <Input placeholder="Suburb" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="state"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>State</FormLabel>
+          <FormControl>
+            <Input placeholder="State" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    <FormField
+      control={form.control}
+      name="postcode"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Postcode</FormLabel>
+          <FormControl>
+            <Input placeholder="Postcode" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  </div>
+
+  {/* Notes */}
+  <FormField
+    control={form.control}
+    name="contact_notes"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Contact Notes</FormLabel>
+        <FormControl>
+          <Textarea placeholder="Internal notes about contacts, preferences, etc." {...field} />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+
+  {/* Durable classification tags */}
           <div className="space-y-2">
             <div className="text-sm font-medium">Classification Tags</div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
