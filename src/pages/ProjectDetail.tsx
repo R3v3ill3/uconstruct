@@ -13,6 +13,8 @@ import EditProjectDialog from "@/components/projects/EditProjectDialog";
 import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
 import JobSitesManager from "@/components/projects/JobSitesManager";
 import ContractorSiteAssignmentModal from "@/components/projects/ContractorSiteAssignmentModal";
+import { TRADE_OPTIONS } from "@/constants/trades";
+import { EmployerDetailModal } from "@/components/employers/EmployerDetailModal";
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -83,24 +85,67 @@ const ProjectDetail = () => {
         .from("site_contractor_trades")
         .select(`
           id, job_site_id, trade_type, eba_status, eba_signatory,
-          employers(id, name, employer_type)
+          employers(id, name, employer_type, enterprise_agreement_status, company_eba_records ( id ))
         `)
         .in("job_site_id", siteIds);
       if (error) throw error;
       return data || [];
     },
   });
+  // Project roles (builder, head contractor)
+  const { data: projectRoles = [] } = useQuery({
+    queryKey: ["project-roles", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_employer_roles")
+        .select("role, employers(id, name)")
+        .eq("project_id", id as string);
+      if (error) throw error;
+      return data || [];
+    },
+  });
   
-  // Derived set of employers with EBA at any site
+  // Employer IDs involved in this project (roles + site contractors)
+  const employerIds = useMemo(() => {
+    const ids = new Set<string>();
+    (projectRoles as any[]).forEach((r) => r.employers?.id && ids.add(r.employers.id));
+    (contractors || []).forEach((c: any) => c.employers?.id && ids.add(c.employers.id));
+    return Array.from(ids);
+  }, [projectRoles, contractors]);
+
+  // Company EBA records for involved employers
+  const { data: ebaRecords = [] } = useQuery({
+    queryKey: ["company-eba-records", employerIds],
+    enabled: employerIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_eba_records")
+        .select("id, employer_id")
+        .in("employer_id", employerIds as string[]);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Derived set of employers with any EBA indicator
   const ebaEmployers = useMemo(() => {
     const set = new Set<string>();
+    const fromCompany = new Set<string>((ebaRecords as any[]).map((r) => r.employer_id));
     (contractors || []).forEach((c: any) => {
       const id = c.employers?.id as string | undefined;
-      if (id && c.eba_status) set.add(id);
+      const signatory = String(c.eba_signatory || "not_specified");
+      const has = !!c.eba_status || signatory !== "not_specified" || !!c.employers?.enterprise_agreement_status;
+      if (id && (has || fromCompany.has(id))) set.add(id);
+    });
+    // Also include role employers found in company records
+    (projectRoles as any[]).forEach((r) => {
+      const id = r.employers?.id as string | undefined;
+      if (id && (fromCompany.has(id))) set.add(id);
     });
     return set;
-  }, [contractors]);
-  
+  }, [contractors, ebaRecords, projectRoles]);
+
   // Project-level trade contractors (not site-specific)
   const { data: projectTradeContractors = [] } = useQuery({
     queryKey: ["project-trade-contractors", id],
@@ -114,6 +159,63 @@ const ProjectDetail = () => {
       return data || [];
     },
   });
+
+  // Workforce analytics
+  const { data: projectWorkers = [] } = useQuery({
+    queryKey: ["v-project-workers", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("v_project_workers")
+        .select("worker_id")
+        .eq("project_id", id as string);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const workerIds = useMemo(
+    () => Array.from(new Set((projectWorkers as any[]).map((w: any) => w.worker_id).filter(Boolean))),
+    [projectWorkers]
+  );
+
+  const { data: memberWorkers = [] } = useQuery({
+    queryKey: ["project-member-workers", workerIds],
+    enabled: workerIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("workers")
+        .select("id, union_membership_status")
+        .in("id", workerIds as string[]);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const memberCount = useMemo(
+    () => (memberWorkers as any[]).filter((w: any) => w.union_membership_status && w.union_membership_status !== 'non_member').length,
+    [memberWorkers]
+  );
+
+  const { data: delegateRoles = [] } = useQuery({
+    queryKey: ["project-delegate-roles", siteIds],
+    enabled: siteIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("union_roles")
+        .select("worker_id")
+        .in("job_site_id", siteIds as string[])
+        .in("name", ["site_delegate", "shift_delegate", "company_delegate"]) 
+        .is("end_date", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const delegateCount = useMemo(
+    () => Array.from(new Set((delegateRoles as any[]).map((r: any) => r.worker_id))).length,
+    [delegateRoles]
+  );
 
   const [addOpen, setAddOpen] = useState(false);
   const [manageSitesOpen, setManageSitesOpen] = useState(false);
@@ -177,44 +279,46 @@ const ProjectDetail = () => {
         )}
       </header>
 
-      <section className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
+      <section className="mb-6">
         <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm">Builder</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between py-3">
-            <div className="font-medium">{builder ? builder.name : <span className="text-sm text-muted-foreground">Not set</span>}</div>
-            {project && (
-              <EditProjectDialog
-                project={{
-                  id: project.id,
-                  name: project.name,
-                  value: project.value,
-                  proposed_start_date: project.proposed_start_date,
-                  proposed_finish_date: project.proposed_finish_date,
-                  roe_email: project.roe_email,
-                }}
-                triggerText={builder ? "Change" : "Set"}
-              />
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm">Job Sites</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between py-3">
-            <div className="text-2xl font-bold">{jobSites?.length || 0}</div>
-            <Button size="sm" variant="outline" onClick={() => setManageSitesOpen(true)}>Manage</Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm">Project Trade Contractors</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between py-3">
-            <div className="text-2xl font-bold">{projectTradeContractors?.length || 0}</div>
-            <Button size="sm" onClick={() => setAddOpen(true)}>Add</Button>
+          <CardContent className="py-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <div className="text-xs text-muted-foreground">Builder</div>
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">{builder ? builder.name : <span className="text-sm text-muted-foreground">Not set</span>}</div>
+                  {project && (
+                    <EditProjectDialog
+                      project={{
+                        id: project.id,
+                        name: project.name,
+                        value: project.value,
+                        proposed_start_date: project.proposed_start_date,
+                        proposed_finish_date: project.proposed_finish_date,
+                        roe_email: project.roe_email,
+                      }}
+                      triggerText="Manage"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline decoration-dotted hover:text-primary"
+                  onClick={() => setManageSitesOpen(true)}
+                >
+                  Job Sites
+                </button>
+                <div className="text-2xl font-bold">{jobSites?.length || 0}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground">Project Value</div>
+                <div className="font-medium">{project?.value ? new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 }).format(Number(project.value)) : '-'}</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </section>
