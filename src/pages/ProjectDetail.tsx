@@ -356,7 +356,21 @@ const ProjectDetail = () => {
 
       {/* Manage Job Sites Dialog */}
       <Dialog open={manageSitesOpen} onOpenChange={setManageSitesOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent
+          className="max-w-3xl"
+          onPointerDownOutside={(e) => {
+            const target = (e as any).originalEvent?.target as HTMLElement | null;
+            if (target && target.closest('.pac-container')) {
+              e.preventDefault();
+            }
+          }}
+          onInteractOutside={(e) => {
+            const target = (e as any).originalEvent?.target as HTMLElement | null;
+            if (target && target.closest('.pac-container')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Manage Job Sites</DialogTitle>
           </DialogHeader>
