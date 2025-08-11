@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building, Phone, Mail, FileText, ExternalLink, MapPin, Users, Briefcase } from "lucide-react";
+import { Building, Phone, Mail, FileText, ExternalLink, MapPin, Users, Briefcase, Upload as UploadIcon } from "lucide-react";
 import { getEbaStatusInfo } from "./ebaHelpers";
 import { EmployerWorkersList } from "../workers/EmployerWorkersList";
 import EmployerEditForm from "./EmployerEditForm";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 type EmployerWithEba = {
   id: string;
   name: string;
@@ -391,9 +392,19 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = 
                 </Card>
               </TabsContent>
 
-              <TabsContent value="workers" className="space-y-4">
-                <EmployerWorkersList employerId={employerId!} />
-              </TabsContent>
+<TabsContent value="workers" className="space-y-4">
+  {employer && canEdit && (
+    <div className="flex justify-end">
+      <Button asChild size="sm">
+        <Link to={`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`}>
+          <UploadIcon className="h-4 w-4 mr-2" />
+          Upload workers
+        </Link>
+      </Button>
+    </div>
+  )}
+  <EmployerWorkersList employerId={employerId!} />
+</TabsContent>
             </Tabs>
           )
         ) : (
