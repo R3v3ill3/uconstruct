@@ -66,6 +66,7 @@ const Employers = () => {
   // Project filter state
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedProjectRole, setSelectedProjectRole] = useState<"all" | "head_contractor" | "contractor" | "trade_subcontractor">("all");
+  const [sortOption, setSortOption] = useState<"none" | "workers_desc" | "members_desc" | "projects_desc" | "eba_expiry_asc">("none");
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -167,6 +168,40 @@ const Employers = () => {
         .eq("project_id", selectedProjectId);
       if (error) throw error;
       return (data ?? []) as { employer_id: string }[];
+    },
+  });
+
+  // Analytics for sorting
+  const { data: employerAnalytics = [] } = useQuery({
+    queryKey: ["employer_analytics"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("employer_analytics")
+        .select("employer_id, current_worker_count, member_count");
+      if (error) throw error;
+      return (data ?? []) as { employer_id: string; current_worker_count: number | null; member_count: number | null }[];
+    },
+  });
+
+  // Project involvement for sorting (distinct project counts per employer)
+  const { data: perAll = [] } = useQuery({
+    queryKey: ["project_employer_roles", "all-min"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_employer_roles")
+        .select("project_id, employer_id");
+      if (error) throw error;
+      return (data ?? []) as { project_id: string; employer_id: string }[];
+    },
+  });
+  const { data: pctAll = [] } = useQuery({
+    queryKey: ["project_contractor_trades", "all-min"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_contractor_trades")
+        .select("project_id, employer_id");
+      if (error) throw error;
+      return (data ?? []) as { project_id: string; employer_id: string }[];
     },
   });
 
@@ -273,6 +308,40 @@ const Employers = () => {
     return s;
   })();
   
+  // Precompute analytics maps for sorting
+  const analyticsByEmployer = new Map<string, { workers: number; members: number }>();
+  (employerAnalytics as Array<{ employer_id: string; current_worker_count: number | null; member_count: number | null }>).forEach((row) => {
+    analyticsByEmployer.set(row.employer_id, {
+      workers: Number(row.current_worker_count ?? 0),
+      members: Number(row.member_count ?? 0),
+    });
+  });
+
+  // Distinct project counts per employer
+  const projectIdsByEmployer = new Map<string, Set<string>>();
+  (perAll as Array<{ project_id: string; employer_id: string }>).forEach((r) => {
+    if (!projectIdsByEmployer.has(r.employer_id)) projectIdsByEmployer.set(r.employer_id, new Set<string>());
+    projectIdsByEmployer.get(r.employer_id)!.add(r.project_id);
+  });
+  (pctAll as Array<{ project_id: string; employer_id: string }>).forEach((r) => {
+    if (!projectIdsByEmployer.has(r.employer_id)) projectIdsByEmployer.set(r.employer_id, new Set<string>());
+    projectIdsByEmployer.get(r.employer_id)!.add(r.project_id);
+  });
+  const projectCountByEmployer = new Map<string, number>();
+  for (const [eid, set] of projectIdsByEmployer) {
+    projectCountByEmployer.set(eid, set.size);
+  }
+
+  // Earliest EBA expiry per employer (null if none)
+  const ebaExpiryByEmployer = new Map<string, Date | null>();
+  for (const emp of employers) {
+    const dates = (emp.company_eba_records ?? [])
+      .map((r) => (r.nominal_expiry_date ? new Date(r.nominal_expiry_date) : null))
+      .filter((d): d is Date => !!d && !isNaN(d.getTime()));
+    if (dates.length === 0) ebaExpiryByEmployer.set(emp.id, null);
+    else ebaExpiryByEmployer.set(emp.id, new Date(Math.min(...dates.map((d) => d.getTime()))));
+  }
+  
   // Final filtered list
   const filteredEmployers = employers.filter((employer) => {
     let tabMatch = true;
@@ -309,6 +378,41 @@ const Employers = () => {
 
     return tabMatch && searchMatch && ebaStatusMatch && projectRoleMatch && contractorTypeMatch;
   });
+  
+  const sortedEmployers = (() => {
+    if (sortOption === "none") return filteredEmployers;
+    const arr = [...filteredEmployers];
+    arr.sort((a, b) => {
+      switch (sortOption) {
+        case "workers_desc": {
+          const aw = analyticsByEmployer.get(a.id)?.workers ?? 0;
+          const bw = analyticsByEmployer.get(b.id)?.workers ?? 0;
+          return bw - aw;
+        }
+        case "members_desc": {
+          const am = analyticsByEmployer.get(a.id)?.members ?? 0;
+          const bm = analyticsByEmployer.get(b.id)?.members ?? 0;
+          return bm - am;
+        }
+        case "projects_desc": {
+          const ap = projectCountByEmployer.get(a.id) ?? 0;
+          const bp = projectCountByEmployer.get(b.id) ?? 0;
+          return bp - ap;
+        }
+        case "eba_expiry_asc": {
+          const ad = ebaExpiryByEmployer.get(a.id);
+          const bd = ebaExpiryByEmployer.get(b.id);
+          const at = ad ? ad.getTime() : Number.POSITIVE_INFINITY;
+          const bt = bd ? bd.getTime() : Number.POSITIVE_INFINITY;
+          return at - bt;
+        }
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  })();
+
   const searchQ = searchTerm.trim().toLowerCase();
   const searchSuggestions = searchQ
     ? employers.filter((e) => e.name.toLowerCase().includes(searchQ)).slice(0, 8)
@@ -486,6 +590,19 @@ const Employers = () => {
         </div>
 
         <div className="flex flex-wrap gap-4">
+          <Select value={sortOption} onValueChange={(v) => setSortOption(v as typeof sortOption)}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sort: Default (A–Z)</SelectItem>
+              <SelectItem value="workers_desc">Workers (high → low)</SelectItem>
+              <SelectItem value="members_desc">Members (high → low)</SelectItem>
+              <SelectItem value="projects_desc">Projects (high → low)</SelectItem>
+              <SelectItem value="eba_expiry_asc">EBA expiry (soonest)</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={ebaStatusFilter} onValueChange={setEbaStatusFilter}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by EBA status" />
@@ -576,7 +693,7 @@ const Employers = () => {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredEmployers.map((employer) => (
+              {sortedEmployers.map((employer) => (
                 <EmployerCard key={employer.id} employer={employer} onClick={() => setSelectedEmployerId(employer.id)} />
               ))}
             </div>
