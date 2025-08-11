@@ -359,14 +359,16 @@ const ProjectDetail = () => {
         <DialogContent
           className="max-w-3xl"
           onPointerDownOutside={(e) => {
-            const target = (e as any).originalEvent?.target as HTMLElement | null;
+            const target = (e as any).detail?.originalEvent?.target as HTMLElement | null;
             if (target && target.closest('.pac-container')) {
+              console.debug('[Dialog] prevent pointerDownOutside for pac-container');
               e.preventDefault();
             }
           }}
           onInteractOutside={(e) => {
-            const target = (e as any).originalEvent?.target as HTMLElement | null;
+            const target = (e as any).detail?.originalEvent?.target as HTMLElement | null;
             if (target && target.closest('.pac-container')) {
+              console.debug('[Dialog] prevent interactOutside for pac-container');
               e.preventDefault();
             }
           }}

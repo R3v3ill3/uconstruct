@@ -107,4 +107,5 @@ All colors MUST be HSL.
 /* Google Places Autocomplete dropdown fix */
 .pac-container {
   z-index: 2147483647 !important;
+  pointer-events: auto !important;
 }
