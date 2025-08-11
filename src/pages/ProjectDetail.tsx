@@ -309,7 +309,7 @@ const ProjectDetail = () => {
               <Link to="/delegations">Manage Delegations</Link>
             </Button>
             <Button asChild>
-              <Link to="/patch/walls">Open Wall Charts</Link>
+              <Link to={`/patch/walls?projectId=${project?.id}`}>Open Wall Charts</Link>
             </Button>
           </div>
         </div>

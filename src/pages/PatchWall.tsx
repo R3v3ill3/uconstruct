@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -34,20 +34,22 @@ const densityBadge = (pct?: number | null) => {
 
 const PatchWall = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const projectId = useMemo(() => new URLSearchParams(location.search).get("projectId"), [location.search]);
 
   useEffect(() => {
     setMeta(
       "Patch Wall Charts",
       "Colour-coded organisers' patch overview by site and employer.",
-      window.location.origin + "/patch/walls"
+      window.location.origin + "/patch/walls" + (projectId ? `?projectId=${projectId}` : "")
     );
-  }, []);
+  }, [projectId]);
 
   const organiserId = user?.id;
 
-  const { data: projects = [] } = useQuery({
+  const { data: organiserProjects = [] } = useQuery({
     queryKey: ["wall-projects", organiserId],
-    enabled: !!organiserId,
+    enabled: !projectId && !!organiserId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("project_organisers")
@@ -58,14 +60,16 @@ const PatchWall = () => {
     },
   });
 
+  const projectIds = projectId ? [projectId] : (organiserProjects as string[]);
+
   const { data: sites = [] } = useQuery({
-    queryKey: ["wall-sites", projects],
-    enabled: projects.length > 0,
+    queryKey: ["wall-sites", projectIds],
+    enabled: projectIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_sites")
-        .select("id, name, location")
-        .in("project_id", projects as string[]);
+        .select("id, name, location, full_address, main_builder_id")
+        .in("project_id", projectIds as string[]);
       if (error) throw error;
       return data || [];
     },
@@ -73,17 +77,36 @@ const PatchWall = () => {
 
   const siteIds = useMemo(() => (sites || []).map((s: any) => s.id), [sites]);
 
-  const { data: siteEmployers = [] } = useQuery({
-    queryKey: ["wall-site-employers", siteIds],
+  const { data: siteContractors = [] } = useQuery({
+    queryKey: ["wall-site-contractors", siteIds],
     enabled: siteIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("site_employers")
+        .from("site_contractor_trades")
         .select(`
           job_site_id,
+          trade_type,
           employers(id, name, employer_type)
         `)
         .in("job_site_id", siteIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: projectRoles = [] } = useQuery({
+    queryKey: ["wall-project-roles", projectIds],
+    enabled: projectIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_employer_roles")
+        .select(`
+          project_id,
+          employer_id,
+          role,
+          employers(id, name)
+        `)
+        .in("project_id", projectIds as string[]);
       if (error) throw error;
       return data || [];
     },
@@ -102,6 +125,9 @@ const PatchWall = () => {
 
   const getDensity = (employerId: string) =>
     (analytics as any[]).find((a) => a.employer_id === employerId)?.member_density_percent as number | undefined;
+
+  const builderEmployer = useMemo(() => (projectRoles as any[]).find((r) => r.role === 'builder')?.employers, [projectRoles]);
+  const headContractorEmployer = useMemo(() => (projectRoles as any[]).find((r) => r.role === 'head_contractor')?.employers, [projectRoles]);
 
   return (
     <main>
@@ -126,20 +152,36 @@ const PatchWall = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(sites as any[]).flatMap((s) =>
-                  (siteEmployers as any[])
-                    .filter((se) => se.job_site_id === s.id)
-                    .map((se, i) => (
-                      <TableRow key={`${s.id}-${se.employers?.id}-${i}`}>
-                        <TableCell className="font-medium">{s.name}</TableCell>
-                        <TableCell>{se.employers?.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{se.employers?.employer_type || 'contractor'}</Badge>
-                        </TableCell>
-                        <TableCell>{densityBadge(getDensity(se.employers?.id))}</TableCell>
-                      </TableRow>
-                    ))
-                )}
+                {(sites as any[]).flatMap((s) => {
+                  const rows: Array<{ employer: any; type: string; key: string }> = [];
+                  if (builderEmployer) {
+                    rows.push({ employer: builderEmployer, type: 'builder', key: `${s.id}-builder-${builderEmployer.id}` });
+                  }
+                  if (headContractorEmployer) {
+                    rows.push({ employer: headContractorEmployer, type: 'head_contractor', key: `${s.id}-head-${headContractorEmployer.id}` });
+                  }
+                  (siteContractors as any[])
+                    .filter((ct) => ct.job_site_id === s.id)
+                    .forEach((ct: any, i: number) => {
+                      if (ct.employers) {
+                        rows.push({
+                          employer: ct.employers,
+                          type: ct.employers.employer_type || 'contractor',
+                          key: `${s.id}-${ct.employers.id}-${i}`,
+                        });
+                      }
+                    });
+                  return rows.map((r) => (
+                    <TableRow key={r.key}>
+                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell>{r.employer?.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{r.type}</Badge>
+                      </TableCell>
+                      <TableCell>{densityBadge(getDensity(r.employer?.id))}</TableCell>
+                    </TableRow>
+                  ));
+                })}
                 {sites.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
@@ -161,9 +203,16 @@ const PatchWall = () => {
           <CardContent>
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {['builder', 'head_contractor', 'contractor', 'trade_subbie'].map((cat) => {
-                const employersInCat = (siteEmployers as any[])
-                  .map((se) => se.employers)
-                  .filter((e: any) => e && (e.employer_type || 'contractor') === cat);
+                let employersInCat: any[] = [];
+                if (cat === 'builder') {
+                  if (builderEmployer) employersInCat = [builderEmployer];
+                } else if (cat === 'head_contractor') {
+                  if (headContractorEmployer) employersInCat = [headContractorEmployer];
+                } else {
+                  employersInCat = (siteContractors as any[])
+                    .map((ct: any) => ct.employers)
+                    .filter((e: any) => e && (e.employer_type || 'contractor') === cat);
+                }
                 const unique = Array.from(new Map(employersInCat.map((e: any) => [e.id, e])).values());
                 return (
                   <Card key={cat} className="p-4">
