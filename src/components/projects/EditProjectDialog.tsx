@@ -164,6 +164,8 @@ export function EditProjectDialog({
     onSuccess: () => {
       toast.success("Project updated");
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-detail", project.id] });
+      queryClient.invalidateQueries({ queryKey: ["project-roles", project.id] });
       setOpen(false);
     },
     onError: (err) => {
