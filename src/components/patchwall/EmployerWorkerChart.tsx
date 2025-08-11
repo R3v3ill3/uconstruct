@@ -175,7 +175,7 @@ export const EmployerWorkerChart = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Workers at {employerName || "Employer"}</span>
@@ -183,7 +183,6 @@ export const EmployerWorkerChart = ({
               {siteOptions && siteOptions.length > 0 && (
                 <Button onClick={() => setShowAssign(true)}>Assign Workers</Button>
               )}
-              <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></Button>
             </div>
           </DialogTitle>
         </DialogHeader>
