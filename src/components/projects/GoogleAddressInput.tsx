@@ -146,16 +146,22 @@ export function GoogleAddressInput({
 
   useEffect(() => {
     if (!loaded) return;
-      const onMouseDown = (e: MouseEvent) => {
-        const target = e.target as HTMLElement | null;
-        if (target && target.closest('.pac-container')) {
-          selectingFromList.current = true;
-          setTimeout(() => { selectingFromList.current = false; }, 600);
-        }
-      };
-    document.addEventListener('mousedown', onMouseDown, true);
+    const markSelecting = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('.pac-container')) {
+        selectingFromList.current = true;
+        setTimeout(() => {
+          selectingFromList.current = false;
+        }, 1200);
+      }
+    };
+    document.addEventListener('pointerdown', markSelecting as EventListener, true);
+    document.addEventListener('mousedown', markSelecting as EventListener, true);
+    document.addEventListener('touchstart', markSelecting as EventListener, true);
     return () => {
-      document.removeEventListener('mousedown', onMouseDown, true);
+      document.removeEventListener('pointerdown', markSelecting as EventListener, true);
+      document.removeEventListener('mousedown', markSelecting as EventListener, true);
+      document.removeEventListener('touchstart', markSelecting as EventListener, true);
     };
   }, [loaded]);
 
@@ -194,7 +200,7 @@ export function GoogleAddressInput({
             }
           }}
           onBlur={() => {
-            // Defer commit slightly to allow place_changed to fire after click selection
+            // Defer commit to allow place_changed after click selection
             setTimeout(() => {
               if (lastFromAutocomplete.current) {
                 lastFromAutocomplete.current = false;
@@ -204,11 +210,16 @@ export function GoogleAddressInput({
                 // User clicked a prediction; place_changed will handle value
                 return;
               }
+              const menuOpen = !!document.querySelector(".pac-container .pac-item");
+              if (menuOpen) {
+                // Suggestions still open; skip committing manual value
+                return;
+              }
               const val = (inputRef.current?.value ?? text).trim();
               if (val) {
                 onChange({ formatted: val });
               }
-            }, 400);
+            }, 800);
           }}
         />
         <div className="text-xs text-muted-foreground">
