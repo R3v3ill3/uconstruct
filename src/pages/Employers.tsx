@@ -59,6 +59,9 @@ const Employers = () => {
     trade_capabilities: [] as string[],
   });
 
+  // Contractor type filter (uses durable tags & trade capabilities)
+  const [contractorTypeFilter, setContractorTypeFilter] = useState<string>("all");
+
   // Project filter state
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedProjectRole, setSelectedProjectRole] = useState<"all" | "head_contractor" | "contractor" | "trade_subcontractor">("all");
@@ -96,6 +99,30 @@ const Employers = () => {
         .order("name");
       if (error) throw error;
       return (data ?? []) as EmployerWithEba[];
+    },
+  });
+
+  // Durable employer role tags (builder/head_contractor)
+  const { data: roleTags = [] } = useQuery({
+    queryKey: ["employer_role_tags"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("employer_role_tags")
+        .select("employer_id, tag");
+      if (error) throw error;
+      return (data ?? []) as { employer_id: string; tag: "builder" | "head_contractor" }[];
+    },
+  });
+
+  // Durable trade capabilities
+  const { data: tradeCaps = [] } = useQuery({
+    queryKey: ["contractor_trade_capabilities"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("contractor_trade_capabilities")
+        .select("employer_id, trade_type");
+      if (error) throw error;
+      return (data ?? []) as { employer_id: string; trade_type: string }[];
     },
   });
 
@@ -186,6 +213,8 @@ const Employers = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employers"] });
       queryClient.invalidateQueries({ queryKey: ["builders"] });
+      queryClient.invalidateQueries({ queryKey: ["employer_role_tags"] });
+      queryClient.invalidateQueries({ queryKey: ["contractor_trade_capabilities"] });
       setIsAddDialogOpen(false);
       setFormData({
         name: "",
@@ -226,6 +255,16 @@ const Employers = () => {
     }
   }
 
+  // Precompute tag/capability sets
+  const builderIds = new Set(roleTags.filter((r) => r.tag === "builder").map((r) => r.employer_id));
+  const headContractorIds = new Set(roleTags.filter((r) => r.tag === "head_contractor").map((r) => r.employer_id));
+  const tradesByEmployer = new Map<string, Set<string>>();
+  for (const c of tradeCaps) {
+    const set = tradesByEmployer.get(c.employer_id) ?? new Set<string>();
+    set.add(c.trade_type);
+    tradesByEmployer.set(c.employer_id, set);
+  }
+
   // Final filtered list
   const filteredEmployers = employers.filter((employer) => {
     let tabMatch = true;
@@ -250,7 +289,17 @@ const Employers = () => {
       else if (selectedProjectRole !== "all") projectRoleMatch = roles.includes(selectedProjectRole);
     }
 
-    return tabMatch && searchMatch && ebaStatusMatch && projectRoleMatch;
+    // New contractor type filter using durable tags + trade capabilities
+    const contractorTypeMatch = (() => {
+      if (contractorTypeFilter === "all") return true;
+      if (contractorTypeFilter === "builder") return builderIds.has(employer.id);
+      if (contractorTypeFilter === "head_contractor") return headContractorIds.has(employer.id);
+      // Otherwise treat as trade enum
+      const tset = tradesByEmployer.get(employer.id);
+      return tset?.has(contractorTypeFilter) ?? false;
+    })();
+
+    return tabMatch && searchMatch && ebaStatusMatch && projectRoleMatch && contractorTypeMatch;
   });
 
   if (isLoading) {
@@ -405,6 +454,23 @@ const Employers = () => {
             <SelectItem value="lodged">Lodged with FWC</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="no_eba">No EBA</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* New contractor type filter using durable tags & trades */}
+        <Select value={contractorTypeFilter} onValueChange={setContractorTypeFilter}>
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue placeholder="Filter by Contractor Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Contractor Types</SelectItem>
+            <SelectItem value="builder">Builder</SelectItem>
+            <SelectItem value="head_contractor">Head Contractor</SelectItem>
+            {TRADE_OPTIONS.map((t) => (
+              <SelectItem key={t.value} value={t.value}>
+                Trade: {t.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
