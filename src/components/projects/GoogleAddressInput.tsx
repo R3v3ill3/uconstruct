@@ -146,13 +146,13 @@ export function GoogleAddressInput({
 
   useEffect(() => {
     if (!loaded) return;
-    const onMouseDown = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && target.closest('.pac-container')) {
-        selectingFromList.current = true;
-        setTimeout(() => { selectingFromList.current = false; }, 300);
-      }
-    };
+      const onMouseDown = (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (target && target.closest('.pac-container')) {
+          selectingFromList.current = true;
+          setTimeout(() => { selectingFromList.current = false; }, 600);
+        }
+      };
     document.addEventListener('mousedown', onMouseDown, true);
     return () => {
       document.removeEventListener('mousedown', onMouseDown, true);
@@ -180,7 +180,9 @@ export function GoogleAddressInput({
             if (e.key === "Enter" || e.key === "Tab") {
               const hasMenu = !!document.querySelector(".pac-container .pac-item");
               if (hasMenu) {
-                // Let Google handle selection with Enter/Tab
+                // Prevent form submission and let Google handle selection
+                e.preventDefault();
+                e.stopPropagation();
                 return;
               }
               if (e.key === "Enter") e.preventDefault();
@@ -206,7 +208,7 @@ export function GoogleAddressInput({
               if (val) {
                 onChange({ formatted: val });
               }
-            }, 180);
+            }, 400);
           }}
         />
         <div className="text-xs text-muted-foreground">
