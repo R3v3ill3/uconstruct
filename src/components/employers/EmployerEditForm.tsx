@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TRADE_OPTIONS } from "@/constants/trades";
+import { GoogleAddressInput, GoogleAddress } from "@/components/projects/GoogleAddressInput";
 
 const employerTypeOptions = [
   { value: "builder", label: "Builder" },
@@ -147,7 +148,38 @@ const desiredTags = useMemo(() => {
 
   const currentTags = useMemo(() => new Set(roleTags.map((r) => r.tag)), [roleTags]);
   const currentTrades = useMemo(() => new Set(tradeCaps.map((t) => t.trade_type)), [tradeCaps]);
-  const desiredTrades = useMemo(() => new Set(selectedTrades), [selectedTrades]);
+const desiredTrades = useMemo(() => new Set(selectedTrades), [selectedTrades]);
+
+  // Compose display address string from form values for the autocomplete input
+  const wl1 = form.watch("address_line_1");
+  const wsuburb = form.watch("suburb");
+  const wstate = form.watch("state");
+  const wpostcode = form.watch("postcode");
+  const displayAddress = useMemo(() => {
+    const parts: string[] = [];
+    if (wl1) parts.push(String(wl1));
+    const cityState = [wsuburb, wstate].filter(Boolean).join(" ");
+    if (cityState) parts.push(cityState);
+    if (wpostcode) parts.push(String(wpostcode));
+    return parts.join(", ");
+  }, [wl1, wsuburb, wstate, wpostcode]);
+
+  const handleAddressSelect = (addr: GoogleAddress) => {
+    const comps = addr.components || {};
+    const streetNumber = comps["street_number"]; // e.g., 123
+    const route = comps["route"]; // e.g., Main St
+    const line1 = [streetNumber, route].filter(Boolean).join(" ");
+    const suburb = comps["locality"] || comps["postal_town"] || comps["sublocality"] || null;
+    const state = comps["administrative_area_level_1"] || null;
+    const postcode = comps["postal_code"] || null;
+
+    // If Google didn't give granular street parts, fall back to formatted
+    const finalLine1 = line1 || addr.formatted || "";
+    form.setValue("address_line_1", finalLine1 || null, { shouldDirty: true });
+    form.setValue("suburb", suburb, { shouldDirty: true });
+    form.setValue("state", state, { shouldDirty: true });
+    form.setValue("postcode", postcode, { shouldDirty: true });
+  };
 
 const onSubmit = async (values: z.infer<typeof FormSchema>) => {
 const toNull = (v: any) => (v === "" ? null : v);
@@ -402,19 +434,9 @@ const { error, data } = await supabase
 
   {/* Address */}
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <FormField
-      control={form.control}
-      name="address_line_1"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Address Line 1</FormLabel>
-          <FormControl>
-            <Input placeholder="Street address" {...field} />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <div className="md:col-span-2">
+      <GoogleAddressInput value={displayAddress} onChange={handleAddressSelect} placeholder="Search address" />
+    </div>
 
     <FormField
       control={form.control}
