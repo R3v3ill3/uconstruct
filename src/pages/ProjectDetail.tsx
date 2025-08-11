@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import EditProjectDialog from "@/components/projects/EditProjectDialog";
 import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
 import JobSitesManager from "@/components/projects/JobSitesManager";
+import ContractorSiteAssignmentModal from "@/components/projects/ContractorSiteAssignmentModal";
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -118,6 +119,7 @@ const ProjectDetail = () => {
   const [manageSitesOpen, setManageSitesOpen] = useState(false);
   const [focusSiteId, setFocusSiteId] = useState<string | null>(null);
   const [newAssignments, setNewAssignments] = useState<TradeAssignment[]>([]);
+  const [assignOpen, setAssignOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const addContractorsMutation = useMutation({
@@ -302,6 +304,7 @@ const ProjectDetail = () => {
           <h2 className="text-lg font-medium">Contractors by Site</h2>
           <div className="flex gap-2">
             <Button onClick={() => setAddOpen(true)}>Add Contractors</Button>
+            <Button variant="secondary" onClick={() => setAssignOpen(true)}>Assign to Sites</Button>
             <Button variant="outline" asChild>
               <Link to="/delegations">Manage Delegations</Link>
             </Button>
@@ -398,6 +401,16 @@ const ProjectDetail = () => {
           {project && (
             <JobSitesManager projectId={project.id} projectName={project.name} focusSiteId={focusSiteId || undefined} />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Contractors to Sites */}
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Assign contractors to sites</DialogTitle>
+          </DialogHeader>
+          {project && <ContractorSiteAssignmentModal projectId={project.id} />}
         </DialogContent>
       </Dialog>
     </main>
