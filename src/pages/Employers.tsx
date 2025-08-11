@@ -444,107 +444,109 @@ const Employers = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Search employers by name, ABN, contact, or EBA number..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setIsSearchOpen(true);
-          }}
-          onFocus={() => setIsSearchOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setIsSearchOpen(false);
-          }}
-          onBlur={() => setTimeout(() => setIsSearchOpen(false), 100)}
-          className="pl-10 h-12 text-base"
-        />
-        {isSearchOpen && searchQ && searchSuggestions.length > 0 && (
-          <div className="absolute z-50 left-0 right-0 mt-2 rounded-md border bg-popover shadow-md">
-            <ul className="max-h-64 overflow-auto py-1">
-              {searchSuggestions.map((e) => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
-                    onMouseDown={(ev) => ev.preventDefault()}
-                    onClick={() => {
-                      setSelectedEmployerId(e.id);
-                      setIsSearchOpen(false);
-                    }}
-                  >
-                    <div className="font-medium">{e.name}</div>
-                    {e.abn ? <div className="text-xs text-muted-foreground">ABN: {e.abn}</div> : null}
-                  </button>
-                </li>
+      <div className="mb-6 space-y-4">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search employers by name, ABN, contact, or EBA number..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setIsSearchOpen(true);
+            }}
+            onFocus={() => setIsSearchOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setIsSearchOpen(false);
+            }}
+            onBlur={() => setTimeout(() => setIsSearchOpen(false), 100)}
+            className="pl-10 h-12 text-base"
+          />
+          {isSearchOpen && searchQ && searchSuggestions.length > 0 && (
+            <div className="absolute z-50 left-0 right-0 mt-2 rounded-md border bg-popover shadow-md">
+              <ul className="max-h-64 overflow-auto py-1">
+                {searchSuggestions.map((e) => (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
+                      onMouseDown={(ev) => ev.preventDefault()}
+                      onClick={() => {
+                        setSelectedEmployerId(e.id);
+                        setIsSearchOpen(false);
+                      }}
+                    >
+                      <div className="font-medium">{e.name}</div>
+                      {e.abn ? <div className="text-xs text-muted-foreground">ABN: {e.abn}</div> : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          <Select value={ebaStatusFilter} onValueChange={setEbaStatusFilter}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Filter by EBA status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All EBA Status</SelectItem>
+              <SelectItem value="certified">Certified</SelectItem>
+              <SelectItem value="signed">Signed</SelectItem>
+              <SelectItem value="lodged">Lodged with FWC</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="no_eba">No EBA</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* New contractor type filter using durable tags & trades */}
+          <Select value={contractorTypeFilter} onValueChange={setContractorTypeFilter}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Filter by Contractor Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Contractor Types</SelectItem>
+              <SelectItem value="builder">Builder</SelectItem>
+              <SelectItem value="head_contractor">Head Contractor</SelectItem>
+              {TRADE_OPTIONS.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  Trade: {t.label}
+                </SelectItem>
               ))}
-            </ul>
-          </div>
-        )}
-      </div>
+            </SelectContent>
+          </Select>
 
-        <Select value={ebaStatusFilter} onValueChange={setEbaStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by EBA status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All EBA Status</SelectItem>
-            <SelectItem value="certified">Certified</SelectItem>
-            <SelectItem value="signed">Signed</SelectItem>
-            <SelectItem value="lodged">Lodged with FWC</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="no_eba">No EBA</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select value={selectedProjectId || "all"} onValueChange={(v) => setSelectedProjectId(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-full sm:w-60">
+              <SelectValue placeholder="Filter by Project (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {/* New contractor type filter using durable tags & trades */}
-        <Select value={contractorTypeFilter} onValueChange={setContractorTypeFilter}>
-          <SelectTrigger className="w-full sm:w-56">
-            <SelectValue placeholder="Filter by Contractor Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Contractor Types</SelectItem>
-            <SelectItem value="builder">Builder</SelectItem>
-            <SelectItem value="head_contractor">Head Contractor</SelectItem>
-            {TRADE_OPTIONS.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                Trade: {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={selectedProjectId || "all"} onValueChange={(v) => setSelectedProjectId(v === "all" ? "" : v)}>
-          <SelectTrigger className="w-full sm:w-60">
-            <SelectValue placeholder="Filter by Project (optional)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Projects</SelectItem>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={selectedProjectRole}
-          onValueChange={(v) => setSelectedProjectRole(v as "all" | "head_contractor" | "contractor" | "trade_subcontractor")}
-          disabled={!selectedProjectId || isProjectRolesLoading}
-        >
-          <SelectTrigger className="w-full sm:w-56">
-            <SelectValue placeholder="Filter by Project Role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="head_contractor">Head Contractor</SelectItem>
-            <SelectItem value="contractor">Contractor</SelectItem>
-            <SelectItem value="trade_subcontractor">Trade Sub-contractor</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={selectedProjectRole}
+            onValueChange={(v) => setSelectedProjectRole(v as "all" | "head_contractor" | "contractor" | "trade_subcontractor")}
+            disabled={!selectedProjectId || isProjectRolesLoading}
+          >
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Filter by Project Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="head_contractor">Head Contractor</SelectItem>
+              <SelectItem value="contractor">Contractor</SelectItem>
+              <SelectItem value="trade_subcontractor">Trade Sub-contractor</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
