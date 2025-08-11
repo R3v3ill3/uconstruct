@@ -73,6 +73,26 @@ const Projects = () => {
 
   const queryClient = useQueryClient();
 
+  // SEO: title, description, canonical
+  useEffect(() => {
+    document.title = "Projects — Organiser Patch";
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute("content", "Browse and manage projects, builders, sites and contractors.");
+    else {
+      const m = document.createElement("meta");
+      m.name = "description";
+      m.content = "Browse and manage projects, builders, sites and contractors.";
+      document.head.appendChild(m);
+    }
+    let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
+    link.href = window.location.href;
+  }, []);
+
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
@@ -245,7 +265,7 @@ const Projects = () => {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <main className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold">Projects</h1>
@@ -372,7 +392,7 @@ const Projects = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {projects.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -506,7 +526,7 @@ const Projects = () => {
           })
         )}
       </div>
-    </div>
+    </main>
   );
 };
 

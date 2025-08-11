@@ -90,6 +90,16 @@ const ProjectDetail = () => {
     },
   });
   
+  // Derived set of employers with EBA at any site
+  const ebaEmployers = useMemo(() => {
+    const set = new Set<string>();
+    (contractors || []).forEach((c: any) => {
+      const id = c.employers?.id as string | undefined;
+      if (id && c.eba_status) set.add(id);
+    });
+    return set;
+  }, [contractors]);
+  
   // Project-level trade contractors (not site-specific)
   const { data: projectTradeContractors = [] } = useQuery({
     queryKey: ["project-trade-contractors", id],
@@ -167,34 +177,42 @@ const ProjectDetail = () => {
 
       <section className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Builder</CardTitle>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm">Builder</CardTitle>
           </CardHeader>
-          <CardContent>
-            {builder ? (
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{builder.name}</span>
-                <Badge variant="secondary">builder</Badge>
-              </div>
-            ) : (
-              <span className="text-sm text-muted-foreground">Not set</span>
+          <CardContent className="flex items-center justify-between py-3">
+            <div className="font-medium">{builder ? builder.name : <span className="text-sm text-muted-foreground">Not set</span>}</div>
+            {project && (
+              <EditProjectDialog
+                project={{
+                  id: project.id,
+                  name: project.name,
+                  value: project.value,
+                  proposed_start_date: project.proposed_start_date,
+                  proposed_finish_date: project.proposed_finish_date,
+                  roe_email: project.roe_email,
+                }}
+                triggerText={builder ? "Change" : "Set"}
+              />
             )}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Job Sites</CardTitle>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm">Job Sites</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{jobSites?.length || 0}</div>
+          <CardContent className="flex items-center justify-between py-3">
+            <div className="text-2xl font-bold">{jobSites?.length || 0}</div>
+            <Button size="sm" variant="outline" onClick={() => setManageSitesOpen(true)}>Manage</Button>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Contractors</CardTitle>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm">Project Trade Contractors</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{contractors?.length || 0}</div>
+          <CardContent className="flex items-center justify-between py-3">
+            <div className="text-2xl font-bold">{projectTradeContractors?.length || 0}</div>
+            <Button size="sm" onClick={() => setAddOpen(true)}>Add</Button>
           </CardContent>
         </Card>
       </section>
@@ -240,6 +258,7 @@ const ProjectDetail = () => {
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Project Trade Contractors</h2>
+          <Button size="sm" onClick={() => setAddOpen(true)}>Add</Button>
         </div>
         <Card>
           <CardContent>
@@ -257,10 +276,10 @@ const ProjectDetail = () => {
                     <TableCell className="font-medium">{row.employers?.name}</TableCell>
                     <TableCell>{row.trade_type}</TableCell>
                     <TableCell>
-                      {row.eba_signatory ? (
-                        <Badge variant="default">{row.eba_signatory}</Badge>
+                      {ebaEmployers.has(row.employers?.id as string) ? (
+                        <Badge variant="default">EBA</Badge>
                       ) : (
-                        <Badge variant="secondary">not_specified</Badge>
+                        <Badge variant="destructive">No EBA</Badge>
                       )}
                     </TableCell>
                   </TableRow>
