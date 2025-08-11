@@ -187,6 +187,8 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
       newEmployers: 0
     };
 
+    let placementsCreated = 0;
+
     try {
       for (const worker of previewData) {
         try {
@@ -229,6 +231,7 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
               .from('workers')
               .update({
                 mobile_phone: worker.mobile_phone,
+                email: worker.email ?? null,
                 union_membership_status: worker.union_membership_status as any,
                 member_number: worker.member_number
               })
@@ -247,6 +250,7 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
                 first_name: worker.first_name,
                 surname: worker.surname,
                 mobile_phone: worker.mobile_phone,
+                email: worker.email ?? null,
                 union_membership_status: worker.union_membership_status as any,
                 member_number: worker.member_number
               })
@@ -268,25 +272,36 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
             });
 
           if (placementError) throw placementError;
+          placementsCreated++;
 
           results.successful++;
         } catch (error: any) {
           results.failed++;
-          results.errors.push(`${worker.first_name} ${worker.surname}: ${error.message}`);
+          const msg = error?.message || 'Unknown error';
+          results.errors.push(`${worker.first_name} ${worker.surname}: ${msg}`);
         }
       }
 
-      toast({
-        title: "Import completed",
-        description: `Successfully imported ${results.successful} workers${selectedEmployer ? ` to ${selectedEmployer.name}` : ` with ${results.newEmployers} new employers`}`,
-      });
+      // Surface partial failures clearly
+      if (results.failed > 0) {
+        toast({
+          title: `Import completed with errors`,
+          description: `Imported ${results.successful} workers, ${results.duplicates} updated, ${placementsCreated} placements created. ${results.failed} failed.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Import completed',
+          description: `Imported ${results.successful} workers${selectedEmployer ? ` to ${selectedEmployer.name}` : ''}. ${results.duplicates} updated. ${placementsCreated} placements created.`,
+        });
+      }
 
       onImportComplete(results);
     } catch (error: any) {
       toast({
-        title: "Import failed",
+        title: 'Import failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsImporting(false);
