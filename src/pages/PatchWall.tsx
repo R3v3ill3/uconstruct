@@ -166,7 +166,7 @@ const PatchWall = () => {
                       if (ct.employers) {
                         rows.push({
                           employer: ct.employers,
-                          type: ct.employers.employer_type || 'contractor',
+                          type: 'trade_subbie',
                           key: `${s.id}-${ct.employers.id}-${i}`,
                         });
                       }
@@ -208,10 +208,15 @@ const PatchWall = () => {
                   if (builderEmployer) employersInCat = [builderEmployer];
                 } else if (cat === 'head_contractor') {
                   if (headContractorEmployer) employersInCat = [headContractorEmployer];
-                } else {
+                } else if (cat === 'contractor') {
+                  employersInCat = (projectRoles as any[])
+                    .filter((r: any) => r.role === 'contractor')
+                    .map((r: any) => r.employers)
+                    .filter(Boolean);
+                } else if (cat === 'trade_subbie') {
                   employersInCat = (siteContractors as any[])
                     .map((ct: any) => ct.employers)
-                    .filter((e: any) => e && (e.employer_type || 'contractor') === cat);
+                    .filter(Boolean);
                 }
                 const unique = Array.from(new Map(employersInCat.map((e: any) => [e.id, e])).values());
                 return (

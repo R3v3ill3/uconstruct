@@ -254,7 +254,6 @@ const Employers = () => {
       roleByEmployerId.set(sc.employer_id, arr);
     }
   }
-
   // Precompute tag/capability sets
   const builderIds = new Set(roleTags.filter((r) => r.tag === "builder").map((r) => r.employer_id));
   const headContractorIds = new Set(roleTags.filter((r) => r.tag === "head_contractor").map((r) => r.employer_id));
@@ -264,13 +263,21 @@ const Employers = () => {
     set.add(c.trade_type);
     tradesByEmployer.set(c.employer_id, set);
   }
-
+  
+  // Precompute contractor ids (head contractor tag OR any trade capability)
+  const contractorIds = (() => {
+    const s = new Set<string>();
+    for (const id of headContractorIds) s.add(id);
+    for (const id of tradesByEmployer.keys()) s.add(id);
+    return s;
+  })();
+  
   // Final filtered list
   const filteredEmployers = employers.filter((employer) => {
     let tabMatch = true;
-    if (activeTab === "builders") tabMatch = employer.employer_type === "builder";
-    else if (activeTab === "contractors") tabMatch = ["principal_contractor", "large_contractor", "small_contractor"].includes(employer.employer_type);
-    else if (activeTab === "other") tabMatch = ["individual"].includes(employer.employer_type);
+    if (activeTab === "builders") tabMatch = builderIds.has(employer.id);
+    else if (activeTab === "contractors") tabMatch = contractorIds.has(employer.id);
+    else if (activeTab === "other") tabMatch = employer.employer_type === "individual";
 
     const q = searchTerm.toLowerCase();
     const searchMatch =
@@ -508,9 +515,9 @@ const Employers = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all">All ({employers.length})</TabsTrigger>
-          <TabsTrigger value="builders">Builders ({employers.filter((e) => e.employer_type === "builder").length})</TabsTrigger>
+          <TabsTrigger value="builders">Builders ({employers.filter((e) => builderIds.has(e.id)).length})</TabsTrigger>
           <TabsTrigger value="contractors">
-            Contractors ({employers.filter((e) => ["principal_contractor", "large_contractor", "small_contractor"].includes(e.employer_type)).length})
+            Contractors ({employers.filter((e) => contractorIds.has(e.id)).length})
           </TabsTrigger>
           <TabsTrigger value="other">Individual ({employers.filter((e) => ["individual"].includes(e.employer_type)).length})</TabsTrigger>
         </TabsList>
