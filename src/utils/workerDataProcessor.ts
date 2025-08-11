@@ -195,21 +195,29 @@ export function cleanPhoneNumber(phone: string): string {
 }
 
 export function processWorkerRow(row: Record<string, string>): ProcessedWorkerData | null {
-  const companyName = row['CompanyName'] || row['Company Name'] || row['company_name'];
-  const memberSurname = row['MemberSurname'] || row['Member Surname'] || row['surname'];
-  const memberFirstName = row['MemberFirstName'] || row['Member First Name'] || row['first_name'];
-  const mobile = row['Mobile'] || row['mobile'] || row['mobile_phone'];
+  const companyName = row['CompanyName'] || row['Company Name'] || row['company_name'] || row['Company'] || row['Employer'] || row['EmployerName'] || row['Employer Name'];
+  const memberSurname = row['MemberSurname'] || row['Member Surname'] || row['surname'] || row['LastName'] || row['Last Name'] || row['last_name'] || row['FamilyName'] || row['Family Name'];
+  const memberFirstName = row['MemberFirstName'] || row['Member First Name'] || row['first_name'] || row['FirstName'] || row['First Name'] || row['GivenName'] || row['Given Name'] || row['given_name'];
+  const mobile = row['Mobile'] || row['mobile'] || row['mobile_phone'] || row['Mobile Phone'] || row['Phone'] || row['PhoneNumber'] || row['Phone Number'] || row['Contact Phone'];
   const memberNumber = row['MemberNumber'] || row['Member Number'] || row['member_number'];
   const comments = row['Comments'] || row['comments'];
+  const email = row['Email'] || row['email'];
   
-  // Skip rows with missing essential data
+  // Skip rows with missing essential data (company can be injected upstream when employer is pre-selected)
   if (!companyName || !memberSurname || !memberFirstName) {
     return null;
   }
   
-  // Determine union membership status from comments or member number
+  // Determine union membership status from explicit column first, then fallbacks
   let unionStatus: 'member' | 'non_member' | 'potential' | 'declined' = 'potential';
-  if (memberNumber && memberNumber.trim() !== '') {
+  const statusRaw = row['MembershipStatus'] || row['membership_status'] || row['UnionStatus'] || row['union_status'];
+  if (typeof statusRaw === 'string' && statusRaw.trim() !== '') {
+    const s = statusRaw.toLowerCase().replace('-', '_').trim();
+    if (s.includes('member') && !s.includes('non')) unionStatus = 'member';
+    else if (s.includes('non') && s.includes('member')) unionStatus = 'non_member';
+    else if (s.includes('declin')) unionStatus = 'declined';
+    else if (s.includes('potential') || s.includes('prospect')) unionStatus = 'potential';
+  } else if (memberNumber && memberNumber.trim() !== '') {
     unionStatus = 'member';
   } else if (comments && comments.toLowerCase().includes('non-member')) {
     unionStatus = 'non_member';
@@ -230,6 +238,7 @@ export function processWorkerRow(row: Record<string, string>): ProcessedWorkerDa
     first_name: memberFirstName.trim(),
     surname: memberSurname.trim(),
     mobile_phone: mobile ? cleanPhoneNumber(mobile) : undefined,
+    email: email?.trim(),
     union_membership_status: unionStatus,
     member_number: memberNumber?.trim(),
     company_name: companyName.trim(),

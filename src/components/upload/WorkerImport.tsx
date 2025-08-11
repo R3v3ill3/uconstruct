@@ -83,7 +83,34 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
   const processData = async () => {
     setIsProcessing(true);
     try {
-      const processed = processWorkerData(csvData);
+      const preparedData = csvData.map((row: any) => {
+        const r: Record<string, any> = { ...row };
+        // Inject company when employer is pre-selected
+        if (selectedEmployer && !r['CompanyName'] && !r['Company Name'] && !r['company_name']) {
+          r['company_name'] = selectedEmployer.name;
+        }
+        // Map common header aliases for names
+        if (!r['MemberFirstName'] && !r['Member First Name'] && !r['first_name']) {
+          r['first_name'] = r['FirstName'] || r['First Name'] || r['GivenName'] || r['Given Name'] || r['given_name'] || r['given'];
+        }
+        if (!r['MemberSurname'] && !r['Member Surname'] && !r['surname']) {
+          r['surname'] = r['LastName'] || r['Last Name'] || r['FamilyName'] || r['Family Name'] || r['last_name'];
+        }
+        // Phones
+        if (!r['Mobile'] && !r['mobile'] && !r['mobile_phone']) {
+          r['mobile_phone'] = r['Mobile Phone'] || r['Phone'] || r['PhoneNumber'] || r['Phone Number'] || r['Contact Phone'];
+        }
+        // Membership status alias
+        if (r['MembershipStatus'] && !r['membership_status']) {
+          r['membership_status'] = r['MembershipStatus'];
+        }
+        // Comments alias
+        if (r['Comments'] && !r['comments']) {
+          r['comments'] = r['Comments'];
+        }
+        return r;
+      });
+      const processed = processWorkerData(preparedData);
       
       // If employer is pre-selected, assign all workers to it
       if (selectedEmployer) {
