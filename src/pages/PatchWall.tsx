@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EmployerWorkerChart } from "@/components/patchwall/EmployerWorkerChart";
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -129,6 +130,14 @@ const PatchWall = () => {
   const builderEmployer = useMemo(() => (projectRoles as any[]).find((r) => r.role === 'builder')?.employers, [projectRoles]);
   const headContractorEmployer = useMemo(() => (projectRoles as any[]).find((r) => r.role === 'head_contractor')?.employers, [projectRoles]);
 
+  const [selectedEmployer, setSelectedEmployer] = useState<{ id: string; name: string } | null>(null);
+  const [contextSiteId, setContextSiteId] = useState<string | null>(null);
+  const openChart = (employer: any, siteId?: string) => {
+    if (!employer) return;
+    setSelectedEmployer({ id: employer.id, name: employer.name });
+    setContextSiteId(siteId || null);
+  };
+
   return (
     <main>
       <header className="mb-6">
@@ -172,7 +181,7 @@ const PatchWall = () => {
                       }
                     });
                   return rows.map((r) => (
-                    <TableRow key={r.key}>
+                    <TableRow key={r.key} className="cursor-pointer hover:bg-accent/40" onClick={() => openChart(r.employer, s.id)}>
                       <TableCell className="font-medium">{s.name}</TableCell>
                       <TableCell>{r.employer?.name}</TableCell>
                       <TableCell>
@@ -224,7 +233,11 @@ const PatchWall = () => {
                     <div className="mb-2 font-medium capitalize">{cat.replace('_', ' ')}</div>
                     <div className="flex flex-wrap gap-2">
                       {unique.map((e: any) => (
-                        <div key={e.id} className="flex items-center gap-2">
+                        <div
+                          key={e.id}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-accent/40 rounded px-2 py-1"
+                          onClick={() => openChart(e)}
+                        >
                           <Badge variant="outline">{e.name}</Badge>
                           {densityBadge(getDensity(e.id))}
                         </div>
@@ -240,6 +253,16 @@ const PatchWall = () => {
           </CardContent>
         </Card>
       </section>
+
+      <EmployerWorkerChart
+        isOpen={!!selectedEmployer}
+        onClose={() => { setSelectedEmployer(null); setContextSiteId(null); }}
+        employerId={selectedEmployer?.id || null}
+        employerName={selectedEmployer?.name}
+        projectIds={projectIds}
+        siteIds={siteIds}
+        contextSiteId={contextSiteId}
+      />
     </main>
   );
 };
