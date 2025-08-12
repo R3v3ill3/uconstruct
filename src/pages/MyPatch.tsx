@@ -44,26 +44,37 @@ const MyPatch = () => {
     queryKey: ["my-patch-projects", organiserId],
     enabled: !!organiserId,
     queryFn: async () => {
+      // Get accessible project IDs via RPC, then fetch details
+      const { data: projectIdsRows, error: rpcErr } = await supabase
+        .rpc("get_accessible_projects", { user_id: organiserId as string });
+      if (rpcErr) throw rpcErr;
+      const ids = (projectIdsRows || []).map((r: any) => r.project_id);
+      if (!ids.length) return [] as Array<{ id: string; name: string; builder_id: string | null; proposed_start_date: string | null; proposed_finish_date: string | null }>;
       const { data, error } = await supabase
-        .from("project_organisers")
-        .select("project_id, projects(id, name, builder_id, proposed_start_date, proposed_finish_date)")
-        .eq("organiser_id", organiserId as string);
+        .from("projects")
+        .select("id, name, builder_id, proposed_start_date, proposed_finish_date")
+        .in("id", ids);
       if (error) throw error;
-      const projects = (data || []).map((d: any) => d.projects).filter(Boolean);
-      return projects as Array<{ id: string; name: string; builder_id: string | null; proposed_start_date: string | null; proposed_finish_date: string | null }>;
+      return (data || []) as Array<{ id: string; name: string; builder_id: string | null; proposed_start_date: string | null; proposed_finish_date: string | null }>;
     },
   });
 
   const projectIds = useMemo(() => (projectsData || []).map((p) => p.id), [projectsData]);
 
   const { data: sitesData } = useQuery({
-    queryKey: ["my-patch-sites", projectIds],
-    enabled: projectIds.length > 0,
+    queryKey: ["my-patch-sites", organiserId],
+    enabled: !!organiserId,
     queryFn: async () => {
+      // Use RPC to get accessible job sites, then fetch details
+      const { data: siteIdRows, error: rpcErr } = await supabase
+        .rpc("get_accessible_job_sites", { user_id: organiserId as string });
+      if (rpcErr) throw rpcErr;
+      const ids = (siteIdRows || []).map((r: any) => r.job_site_id);
+      if (!ids.length) return [] as any[];
       const { data, error } = await supabase
         .from("job_sites")
         .select("id, name, project_id, location")
-        .in("project_id", projectIds);
+        .in("id", ids);
       if (error) throw error;
       return data || [];
     },
@@ -75,29 +86,33 @@ const MyPatch = () => {
     queryKey: ["my-patch-employers", organiserId],
     enabled: !!organiserId,
     queryFn: async () => {
+      const { data: employerIdRows, error: rpcErr } = await supabase
+        .rpc("get_accessible_employers", { user_id: organiserId as string });
+      if (rpcErr) throw rpcErr;
+      const ids = (employerIdRows || []).map((r: any) => r.employer_id);
+      if (!ids.length) return [] as any[];
       const { data, error } = await supabase
-        .from("employer_organisers")
-        .select("employer_id, employers(id, name, employer_type, enterprise_agreement_status)")
-        .eq("organiser_id", organiserId as string);
-      if (error) throw error;
-      return (data || []).map((d: any) => d.employers).filter(Boolean);
-    },
-  });
-
-  const { data: placements } = useQuery({
-    queryKey: ["my-patch-placements", siteIds],
-    enabled: siteIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("worker_placements")
-        .select("worker_id, job_site_id")
-        .in("job_site_id", siteIds);
+        .from("employers")
+        .select("id, name, employer_type, enterprise_agreement_status")
+        .in("id", ids);
       if (error) throw error;
       return data || [];
     },
   });
 
-  const workerIds = useMemo(() => Array.from(new Set((placements || []).map((p: any) => p.worker_id).filter(Boolean))), [placements]);
+  // Get accessible workers, then fetch their details
+  const { data: accessibleWorkerIds } = useQuery({
+    queryKey: ["my-patch-accessible-worker-ids", organiserId],
+    enabled: !!organiserId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc("get_accessible_workers", { user_id: organiserId as string });
+      if (error) throw error;
+      return (data || []).map((r: any) => r.worker_id) as string[];
+    },
+  });
+
+  const workerIds = useMemo(() => Array.from(new Set(accessibleWorkerIds || [])), [accessibleWorkerIds]);
 
   const { data: workers } = useQuery({
     queryKey: ["my-patch-workers", workerIds],
