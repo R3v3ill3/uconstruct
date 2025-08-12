@@ -9,6 +9,7 @@ import { getEbaStatusInfo } from "./ebaHelpers";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { EbaAssignmentModal } from "./EbaAssignmentModal";
+import { getProgressIndicatorClass } from "@/utils/densityColors";
 
 type EmployerWithEba = {
   id: string;
@@ -169,7 +170,7 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
                   <span>Member Density</span>
                   <span>{analytics.member_density_percent}%</span>
                 </div>
-                <Progress value={analytics.member_density_percent} className="h-2" />
+                <Progress value={analytics.member_density_percent} className="h-2" indicatorClassName={getProgressIndicatorClass(analytics.member_density_percent)} />
               </div>
             )}
 
@@ -179,7 +180,7 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
                   <span>Est. Density ({analytics.estimated_worker_count} total)</span>
                   <span>{analytics.estimated_density_percent}%</span>
                 </div>
-                <Progress value={analytics.estimated_density_percent} className="h-2" />
+                <Progress value={analytics.estimated_density_percent} className="h-2" indicatorClassName={getProgressIndicatorClass(analytics.estimated_density_percent)} />
               </div>
             )}
 

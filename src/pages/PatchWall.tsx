@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmployerWorkerChart } from "@/components/patchwall/EmployerWorkerChart";
+import { getDensityBadgeClass } from "@/utils/densityColors";
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -28,9 +29,7 @@ const setMeta = (title: string, description: string, canonical?: string) => {
 
 const densityBadge = (pct?: number | null) => {
   const v = typeof pct === 'number' ? pct : 0;
-  if (v >= 60) return <Badge variant="default">{v}%</Badge>;
-  if (v >= 30) return <Badge variant="secondary">{v}%</Badge>;
-  return <Badge variant="destructive">{v}%</Badge>;
+  return <Badge className={getDensityBadgeClass(v)}>{v}%</Badge>;
 };
 
 const PatchWall = () => {
