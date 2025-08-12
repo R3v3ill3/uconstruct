@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
-import { Loader2, MoreVertical, X } from "lucide-react";
+import { Loader2, MoreVertical, X, Info } from "lucide-react";
 import { toast } from "sonner";
 import { WorkerDetailModal } from "@/components/workers/WorkerDetailModal";
 import { UnionRoleAssignmentModal } from "@/components/workers/UnionRoleAssignmentModal";
 import { AssignWorkersModal } from "./AssignWorkersModal";
+import { getWorkerColorCoding, getWorkerColorLegend } from "@/utils/workerColorCoding";
+import { cn } from "@/lib/utils";
 
 interface EmployerWorkerChartProps {
   isOpen: boolean;
@@ -190,43 +192,68 @@ export const EmployerWorkerChart = ({
         {isLoading ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading workers…</div>
         ) : data && data.workers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {data.workers.map((w) => (
-              <Card key={w.id} className="p-3 flex items-start justify-between">
-                <div>
-                  <div className="font-medium">{formatName(w)}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    {membershipBadge(w.union_membership_status)}
-                    {(data.roles[w.id] || []).slice(0, 2).map((r) => (
-                      <Badge key={r} variant="secondary">{r.split("_").join(" ")}</Badge>
-                    ))}
+          <>
+            {/* Color Legend */}
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Color Coding</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                {getWorkerColorLegend().map((item) => (
+                  <div key={item.label} className="flex items-center gap-1">
+                    <div className={cn("w-3 h-3 rounded border", item.color)} />
+                    <span className="text-muted-foreground">{item.description}</span>
                   </div>
-                  {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {data.workers.map((w) => {
+                const workerRoles = data.roles[w.id] || [];
+                const colorInfo = getWorkerColorCoding(w.union_membership_status, workerRoles);
+                
+                return (
+                  <Card key={w.id} className={cn("p-3 flex items-start justify-between border-2 transition-colors", colorInfo.backgroundColor)}>
+                    <div className={colorInfo.textColor}>
+                      <div className="font-medium">{formatName(w)}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {membershipBadge(w.union_membership_status)}
+                        {workerRoles.slice(0, 2).map((r) => (
+                          <Badge key={r} variant="secondary">{r.split("_").join(" ")}</Badge>
+                        ))}
+                      </div>
+                      {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
+                        <div className="mt-2 text-xs opacity-75">
+                          Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        <Button variant="link" className="px-0 text-current hover:text-current/80" onClick={() => setDetailWorkerId(w.id)}>Open details</Button>
+                      </div>
                     </div>
-                  )}
-                  <div className="mt-2">
-                    <Button variant="link" className="px-0" onClick={() => setDetailWorkerId(w.id)}>Open details</Button>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label="Worker actions"><MoreVertical className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {contextSiteId && (
-                      <DropdownMenuItem onClick={() => removeFromSite(w.id)}>Remove from this site</DropdownMenuItem>
-                    )}
-                    {siteIds && siteIds.length > 0 && (
-                      <DropdownMenuItem onClick={() => removeFromProject(w.id)}>Remove from project</DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => removeFromEmployer(w.id)}>Remove from employer</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </Card>
-            ))}
-          </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Worker actions" className={cn("hover:bg-black/10 dark:hover:bg-white/10", colorInfo.textColor)}>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {contextSiteId && (
+                          <DropdownMenuItem onClick={() => removeFromSite(w.id)}>Remove from this site</DropdownMenuItem>
+                        )}
+                        {siteIds && siteIds.length > 0 && (
+                          <DropdownMenuItem onClick={() => removeFromProject(w.id)}>Remove from project</DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => removeFromEmployer(w.id)}>Remove from employer</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
         ) : (
           <div className="text-sm text-muted-foreground">No workers found for this employer in the selected context. Workers are only counted when they have active placements on project sites.</div>
         )}
