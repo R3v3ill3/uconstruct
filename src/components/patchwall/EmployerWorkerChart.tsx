@@ -215,40 +215,55 @@ export const EmployerWorkerChart = ({
                 const colorInfo = getWorkerColorCoding(w.union_membership_status, workerRoles);
                 
                 return (
-                  <Card key={w.id} className={cn("p-3 flex items-start justify-between border-2 transition-colors", colorInfo.backgroundColor)}>
-                    <div className={colorInfo.textColor}>
-                      <div className="font-medium">{formatName(w)}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        {membershipBadge(w.union_membership_status)}
-                        {workerRoles.slice(0, 2).map((r) => (
-                          <Badge key={r} variant="secondary">{r.split("_").join(" ")}</Badge>
-                        ))}
-                      </div>
-                      {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
-                        <div className="mt-2 text-xs opacity-75">
-                          Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
+                  <Card 
+                    key={w.id} 
+                    className={cn("p-3 border-2 transition-colors cursor-pointer hover:scale-[1.02] relative", colorInfo.backgroundColor)}
+                    onClick={() => setDetailWorkerId(w.id)}
+                  >
+                    <div className={cn("flex items-start justify-between", colorInfo.textColor)}>
+                      <div className="flex-1 pr-3">
+                        <div className="font-medium">{formatName(w)}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          {membershipBadge(w.union_membership_status)}
+                          {workerRoles.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {workerRoles.map((r) => (
+                                <Badge key={r} variant="outline" className="text-xs">
+                                  {r.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div className="mt-2">
-                        <Button variant="link" className="px-0 text-current hover:text-current/80" onClick={() => setDetailWorkerId(w.id)}>Open details</Button>
+                        {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
+                          <div className="mt-2 text-xs opacity-75">
+                            Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
+                          </div>
+                        )}
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            aria-label="Worker actions" 
+                            className={cn("hover:bg-black/10 dark:hover:bg-white/10 shrink-0", colorInfo.textColor)}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {contextSiteId && (
+                            <DropdownMenuItem onClick={() => removeFromSite(w.id)}>Remove from this site</DropdownMenuItem>
+                          )}
+                          {siteIds && siteIds.length > 0 && (
+                            <DropdownMenuItem onClick={() => removeFromProject(w.id)}>Remove from project</DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => removeFromEmployer(w.id)}>Remove from employer</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Worker actions" className={cn("hover:bg-black/10 dark:hover:bg-white/10", colorInfo.textColor)}>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {contextSiteId && (
-                          <DropdownMenuItem onClick={() => removeFromSite(w.id)}>Remove from this site</DropdownMenuItem>
-                        )}
-                        {siteIds && siteIds.length > 0 && (
-                          <DropdownMenuItem onClick={() => removeFromProject(w.id)}>Remove from project</DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => removeFromEmployer(w.id)}>Remove from employer</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </Card>
                 );
               })}
