@@ -181,8 +181,8 @@ const Dashboard = () => {
                       dataKey="value"
                       label={({ name, value }) => `${name}: ${value}`}
                     >
-                      {ebaStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {ebaStatusData.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip />
