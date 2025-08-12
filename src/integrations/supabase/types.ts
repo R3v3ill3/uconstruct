@@ -778,6 +778,51 @@ export type Database = {
           },
         ]
       }
+      patch_regions: {
+        Row: {
+          area_estimate: number | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          geojson: Json
+          id: string
+          name: string | null
+          notes: string | null
+          overlay_image_id: string | null
+          source_file_path: string | null
+          updated_at: string
+          vertices_count: number | null
+        }
+        Insert: {
+          area_estimate?: number | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          geojson: Json
+          id?: string
+          name?: string | null
+          notes?: string | null
+          overlay_image_id?: string | null
+          source_file_path?: string | null
+          updated_at?: string
+          vertices_count?: number | null
+        }
+        Update: {
+          area_estimate?: number | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          geojson?: Json
+          id?: string
+          name?: string | null
+          notes?: string | null
+          overlay_image_id?: string | null
+          source_file_path?: string | null
+          updated_at?: string
+          vertices_count?: number | null
+        }
+        Relationships: []
+      }
       patches: {
         Row: {
           code: string
