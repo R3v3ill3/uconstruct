@@ -182,159 +182,79 @@ const desiredTrades = useMemo(() => new Set(selectedTrades), [selectedTrades]);
   };
 
 const onSubmit = async (values: z.infer<typeof FormSchema>) => {
-const toNull = (v: any) => (v === "" ? null : v);
-// Update employer core fields and contact/address data
-const updatePayload = {
-  name: values.name.trim(),
-  employer_type: values.employer_type,
-  abn: toNull(values.abn),
-  primary_contact_name: toNull(values.primary_contact_name),
-  phone: toNull(values.phone),
-  email: toNull(values.email),
-  website: toNull(values.website),
-  address_line_1: toNull(values.address_line_1),
-  address_line_2: toNull(values.address_line_2),
-  suburb: toNull(values.suburb),
-  state: toNull(values.state),
-  postcode: toNull(values.postcode),
-  contact_notes: toNull(values.contact_notes),
-  estimated_worker_count: values.estimated_worker_count ?? null,
-  enterprise_agreement_status: values.enterprise_agreement_status ?? null,
-};
-
-// Debug current user/session
-const { data: userInfo } = await supabase.auth.getUser();
-console.debug("[EmployerEditForm] submitting update", { employerId: employer.id, userId: userInfo?.user?.id });
-
-// Preflight: ensure record exists and is visible under current RLS
-const preflight = await supabase
-  .from("employers")
-  .select("id")
-  .eq("id", employer.id)
-  .single();
-if (preflight.error) {
-  console.error("[EmployerEditForm] preflight error", preflight.error);
-  toast({ title: "Employer not accessible", description: "Record not found or not visible to you.", variant: "destructive" });
-  return;
-}
-
-// Attempt the update
-const { data, error } = await supabase
-  .from("employers")
-  .update(updatePayload)
-  .eq("id", employer.id)
-  .select("*")
-  .single();
-
-    if (error) {
-      const code = (error as any).code;
-      if (code === "PGRST116") {
-        // Post-check to differentiate not found vs permission issue
-        const post = await supabase
-          .from("employers")
-          .select("id")
-          .eq("id", employer.id)
-          .single();
-        console.debug("[EmployerEditForm] post-check", { postOk: !post.error, postErr: post.error });
-        const msg = post.data ? "You don't have permission to edit this employer." : "Employer not found.";
-        toast({ title: "Update failed", description: msg, variant: "destructive" });
-      } else {
-        console.error("[EmployerEditForm] update error", error);
-        toast({ title: "Update failed", description: error.message, variant: "destructive" });
-      }
-      return;
-    }
-
-    if (!data) {
-      toast({ title: "No changes saved", description: "Server returned no updated record.", variant: "destructive" });
-      return;
-    }
-
-    // Sync durable role tags
-    const toAddTags = Array.from(desiredTags).filter((t) => !currentTags.has(t));
-    const toRemoveTags = Array.from(currentTags).filter((t) => !desiredTags.has(t));
-
-    if (toAddTags.length > 0) {
-      const { error: tagAddErr } = await (supabase as any)
-        .from("employer_role_tags")
-        .insert(toAddTags.map((tag) => ({ employer_id: employer.id, tag })));
-      if (tagAddErr) {
-        toast({ title: "Tag update failed", description: tagAddErr.message, variant: "destructive" });
-        return;
-      }
-    }
-
-    if (toRemoveTags.length > 0) {
-      const { error: tagDelErr } = await (supabase as any)
-        .from("employer_role_tags")
-        .delete()
-        .eq("employer_id", employer.id)
-        .in("tag", toRemoveTags);
-      if (tagDelErr) {
-        toast({ title: "Tag update failed", description: tagDelErr.message, variant: "destructive" });
-        return;
-      }
-    }
-
-    // Sync trade capabilities
-    const toAddTrades = Array.from(desiredTrades).filter((t) => !currentTrades.has(t));
-    const toRemoveTrades = Array.from(currentTrades).filter((t) => !desiredTrades.has(t));
-
-    if (toAddTrades.length > 0) {
-      const { error: capAddErr } = await (supabase as any)
-        .from("contractor_trade_capabilities")
-        .insert(toAddTrades.map((trade_type, idx) => ({ employer_id: employer.id, trade_type, is_primary: idx === 0 })));
-      if (capAddErr) {
-        toast({ title: "Trade capability update failed", description: capAddErr.message, variant: "destructive" });
-        return;
-      }
-    }
-
-    if (toRemoveTrades.length > 0) {
-      const { error: capDelErr } = await (supabase as any)
-        .from("contractor_trade_capabilities")
-        .delete()
-        .eq("employer_id", employer.id)
-        .in("trade_type", toRemoveTrades);
-      if (capDelErr) {
-        toast({ title: "Trade capability update failed", description: capDelErr.message, variant: "destructive" });
-        return;
-      }
-    }
-
-    // Optimistically update caches to reflect changes immediately
-    const updatedRow = (data ?? { id: employer.id, ...updatePayload }) as any;
-
-    // Detail cache
-    queryClient.setQueryData(["employer-detail", employer.id], (prev: any) => {
-      if (!prev) return updatedRow;
-      return { ...prev, ...updatedRow };
-    });
-
-    // Employers list caches (may have different shapes in different views)
-    queryClient.setQueryData(["employers"], (prev: any) => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.map((e: any) =>
-        e?.id === employer.id
-          ? { ...e, name: updatedRow.name, employer_type: updatedRow.employer_type, estimated_worker_count: updatedRow.estimated_worker_count }
-          : e
-      );
-    });
-
-    // Invalidate and refetch critical detail
-    await queryClient.refetchQueries({ queryKey: ["employer-detail", employer.id] });
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["employers"] }),
-      queryClient.invalidateQueries({ queryKey: ["employer_role_tags"] }),
-      queryClient.invalidateQueries({ queryKey: ["employer_role_tags", employer.id] }),
-      queryClient.invalidateQueries({ queryKey: ["contractor_trade_capabilities"] }),
-      queryClient.invalidateQueries({ queryKey: ["contractor_trade_capabilities", employer.id] }),
-    ]);
-
-    toast({ title: "Employer updated", description: "Changes saved successfully." });
-    const updatedEmployer = { id: employer.id, name: updatedRow.name, employer_type: updatedRow.employer_type };
-    onSaved(updatedEmployer as { id: string; name: string; employer_type: string });
+  const toNull = (v: any) => (v === "" ? null : v);
+  // Prepare payload for RPC
+  const updatePayload = {
+    name: values.name.trim(),
+    employer_type: values.employer_type,
+    abn: toNull(values.abn),
+    primary_contact_name: toNull(values.primary_contact_name),
+    phone: toNull(values.phone),
+    email: toNull(values.email),
+    website: toNull(values.website),
+    address_line_1: toNull(values.address_line_1),
+    address_line_2: toNull(values.address_line_2),
+    suburb: toNull(values.suburb),
+    state: toNull(values.state),
+    postcode: toNull(values.postcode),
+    contact_notes: toNull(values.contact_notes),
+    estimated_worker_count: values.estimated_worker_count ?? null,
+    enterprise_agreement_status: values.enterprise_agreement_status ?? null,
   };
+
+  const desiredTagsArray = Array.from(desiredTags);
+  const desiredTradesArray = Array.from(desiredTrades);
+
+  const { data, error } = await (supabase as any).rpc('admin_update_employer_full', {
+    p_employer_id: employer.id,
+    p_update: updatePayload,
+    p_role_tags: desiredTagsArray,
+    p_trade_caps: desiredTradesArray,
+  });
+
+  if (error) {
+    console.error('[EmployerEditForm] RPC update error', error);
+    const code = (error as any).code;
+    const msg = code === 'PGRST116' ? "Employer not found or you don't have permission to edit it." : error.message;
+    toast({ title: 'Update failed', description: msg, variant: 'destructive' });
+    return;
+  }
+
+  if (!data) {
+    toast({ title: 'No changes saved', description: 'Server returned no updated record.', variant: 'destructive' });
+    return;
+  }
+
+  const updatedRow = data as any;
+
+  // Optimistically update caches to reflect changes immediately
+  queryClient.setQueryData(["employer-detail", employer.id], (prev: any) => {
+    if (!prev) return updatedRow;
+    return { ...prev, ...updatedRow };
+  });
+
+  queryClient.setQueryData(["employers"], (prev: any) => {
+    if (!Array.isArray(prev)) return prev;
+    return prev.map((e: any) =>
+      e?.id === employer.id
+        ? { ...e, name: updatedRow.name, employer_type: updatedRow.employer_type, estimated_worker_count: updatedRow.estimated_worker_count }
+        : e
+    );
+  });
+
+  await queryClient.refetchQueries({ queryKey: ["employer-detail", employer.id] });
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["employers"] }),
+    queryClient.invalidateQueries({ queryKey: ["employer_role_tags"] }),
+    queryClient.invalidateQueries({ queryKey: ["employer_role_tags", employer.id] }),
+    queryClient.invalidateQueries({ queryKey: ["contractor_trade_capabilities"] }),
+    queryClient.invalidateQueries({ queryKey: ["contractor_trade_capabilities", employer.id] }),
+  ]);
+
+  toast({ title: 'Employer updated', description: 'Changes saved successfully.' });
+  const updatedEmployer = { id: employer.id, name: updatedRow.name, employer_type: updatedRow.employer_type };
+  onSaved(updatedEmployer as { id: string; name: string; employer_type: string });
+};
 
   return (
     <div className="space-y-6">

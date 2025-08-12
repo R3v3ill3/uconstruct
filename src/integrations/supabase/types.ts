@@ -2452,6 +2452,35 @@ export type Database = {
             }
         Returns: string
       }
+      admin_update_employer_full: {
+        Args: {
+          p_employer_id: string
+          p_update: Json
+          p_role_tags?: Database["public"]["Enums"]["employer_role_tag"][]
+          p_trade_caps?: string[]
+        }
+        Returns: {
+          abn: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          contact_notes: string | null
+          created_at: string | null
+          email: string | null
+          employer_type: Database["public"]["Enums"]["employer_type"]
+          enterprise_agreement_status: boolean | null
+          estimated_worker_count: number | null
+          id: string
+          name: string
+          parent_employer_id: string | null
+          phone: string | null
+          postcode: string | null
+          primary_contact_name: string | null
+          state: string | null
+          suburb: string | null
+          updated_at: string | null
+          website: string | null
+        }
+      }
       admin_update_user_scoping: {
         Args: {
           _user_id: string
