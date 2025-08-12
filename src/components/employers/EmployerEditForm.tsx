@@ -202,15 +202,24 @@ const updatePayload = {
   enterprise_agreement_status: values.enterprise_agreement_status ?? null,
 };
 
-const { error, data } = await supabase
+const { data, error } = await supabase
   .from("employers")
   .update(updatePayload)
   .eq("id", employer.id)
   .select("*")
-  .maybeSingle();
+  .single();
 
     if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      const code = (error as any).code;
+      const msg = code === "PGRST116"
+        ? "Employer not found or you don't have permission to edit it."
+        : error.message;
+      toast({ title: "Update failed", description: msg, variant: "destructive" });
+      return;
+    }
+
+    if (!data) {
+      toast({ title: "No changes saved", description: "The server returned no updated record. You may not have permission or the record no longer exists.", variant: "destructive" });
       return;
     }
 
