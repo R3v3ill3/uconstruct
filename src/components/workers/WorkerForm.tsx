@@ -59,7 +59,8 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
       home_address_suburb: worker?.home_address_suburb || "",
       home_address_postcode: worker?.home_address_postcode || "",
       home_address_state: worker?.home_address_state || "",
-      union_membership_status: worker?.union_membership_status || "non_member",
+             // union_membership_status moved to Union Roles tab
+       union_membership_status: worker?.union_membership_status || "non_member",
       gender: worker?.gender || "",
       date_of_birth: worker?.date_of_birth || "",
     },
@@ -236,29 +237,7 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="union_membership_status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Union Membership Status *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="non_member">Non-member</SelectItem>
-                        <SelectItem value="potential">Potential</SelectItem>
-                        <SelectItem value="declined">Declined</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                             {/* Union Membership Status moved to Union Roles tab */}
             </TabsContent>
 
             <TabsContent value="contact" className="space-y-4">
