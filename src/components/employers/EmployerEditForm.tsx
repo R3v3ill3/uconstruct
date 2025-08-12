@@ -209,7 +209,7 @@ const onSubmit = async (values: z.infer<typeof FormSchema>) => {
     p_employer_id: employer.id,
     p_update: updatePayload,
     p_role_tags: desiredTagsArray,
-    p_trade_caps: desiredTradesArray,
+    p_trade_types: desiredTradesArray,
   });
 
   if (error) {
