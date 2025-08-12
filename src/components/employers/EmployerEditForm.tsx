@@ -206,7 +206,7 @@ const { error, data } = await supabase
   .from("employers")
   .update(updatePayload)
   .eq("id", employer.id)
-  .select("id, name, employer_type")
+  .select("*")
   .maybeSingle();
 
     if (error) {
@@ -266,10 +266,29 @@ const { error, data } = await supabase
       }
     }
 
-    // Invalidate caches
+    // Optimistically update caches to reflect changes immediately
+    const updatedRow = (data ?? { id: employer.id, ...updatePayload }) as any;
+
+    // Detail cache
+    queryClient.setQueryData(["employer-detail", employer.id], (prev: any) => {
+      if (!prev) return updatedRow;
+      return { ...prev, ...updatedRow };
+    });
+
+    // Employers list caches (may have different shapes in different views)
+    queryClient.setQueryData(["employers"], (prev: any) => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((e: any) =>
+        e?.id === employer.id
+          ? { ...e, name: updatedRow.name, employer_type: updatedRow.employer_type, estimated_worker_count: updatedRow.estimated_worker_count }
+          : e
+      );
+    });
+
+    // Invalidate and refetch critical detail
+    await queryClient.refetchQueries({ queryKey: ["employer-detail", employer.id] });
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employers"] }),
-      queryClient.invalidateQueries({ queryKey: ["employer-detail", employer.id] }),
       queryClient.invalidateQueries({ queryKey: ["employer_role_tags"] }),
       queryClient.invalidateQueries({ queryKey: ["employer_role_tags", employer.id] }),
       queryClient.invalidateQueries({ queryKey: ["contractor_trade_capabilities"] }),
@@ -277,8 +296,8 @@ const { error, data } = await supabase
     ]);
 
     toast({ title: "Employer updated", description: "Changes saved successfully." });
-    const updatedEmployer = (data ?? { id: employer.id, name: updatePayload.name, employer_type: updatePayload.employer_type }) as { id: string; name: string; employer_type: string };
-    onSaved(updatedEmployer);
+    const updatedEmployer = { id: employer.id, name: updatedRow.name, employer_type: updatedRow.employer_type };
+    onSaved(updatedEmployer as { id: string; name: string; employer_type: string });
   };
 
   return (

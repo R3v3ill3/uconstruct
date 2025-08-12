@@ -136,6 +136,7 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = 
                 onSaved={() => {
                   setIsEditing(false);
                   queryClient.invalidateQueries({ queryKey: ["employers"] });
+                  queryClient.invalidateQueries({ queryKey: ["employer-detail", employer.id] });
                 }}
               />
             </div>
