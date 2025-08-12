@@ -32,6 +32,12 @@ interface WorkerLite {
   union_membership_status: string | null;
 }
 
+interface WorkerRoleLite {
+  name: string;
+  is_senior: boolean | null;
+  gets_paid_time: boolean | null;
+}
+
 export const EmployerWorkerChart = ({
   isOpen,
   onClose,
@@ -54,7 +60,7 @@ export const EmployerWorkerChart = ({
     queryKey: ["employer-worker-chart", filters],
     enabled: isOpen && !!employerId,
     queryFn: async () => {
-      if (!employerId) return { workers: [] as WorkerLite[], roles: {} as Record<string, string[]>, ratings: {} as Record<string, any[]> };
+      if (!employerId) return { workers: [] as WorkerLite[], roles: {} as Record<string, WorkerRoleLite[]>, ratings: {} as Record<string, any[]> };
 
       // 1) Which workers are on these projects/sites for this employer?
       let vpw = supabase
@@ -83,18 +89,18 @@ export const EmployerWorkerChart = ({
         .in("id", workerIds);
       if (wErr) throw wErr;
 
-      // 3) Current union roles
+      // 3) Current union roles (with details)
       const today = new Date().toISOString().slice(0, 10);
       const { data: roleRows, error: rErr } = await supabase
         .from("union_roles")
-        .select("worker_id, name, end_date")
+        .select("worker_id, name, end_date, is_senior, gets_paid_time")
         .in("worker_id", workerIds)
         .or(`end_date.is.null,end_date.gte.${today}`);
       if (rErr) throw rErr;
-      const roles: Record<string, string[]> = {};
+      const roles: Record<string, WorkerRoleLite[]> = {};
       (roleRows || []).forEach((r: any) => {
         if (!roles[r.worker_id]) roles[r.worker_id] = [];
-        roles[r.worker_id].push(r.name);
+        roles[r.worker_id].push({ name: r.name, is_senior: r.is_senior, gets_paid_time: r.gets_paid_time });
       });
 
       // 4) Recent ratings (limit overall to keep light)
@@ -170,10 +176,18 @@ export const EmployerWorkerChart = ({
 
   const formatName = (w: WorkerLite) => `${w.first_name ?? ""} ${w.surname ?? ""}`.trim() || "Unnamed";
   const membershipBadge = (status: string | null) => (
-    <Badge variant={status === "member" ? "default" : status === "potential_member" ? "secondary" : "outline"}>
-      {status ? status.split("_").join(" ") : "unknown"}
-    </Badge>
-  );
+  <Badge variant={status === "member" ? "default" : status === "potential_member" ? "secondary" : "outline"}>
+    {status ? status.split("_").join(" ") : "unknown"}
+  </Badge>
+);
+
+const roleBadge = (role: WorkerRoleLite) => (
+  <Badge key={role.name} variant="secondary">
+    {role.name.split("_").join(" ")}
+    {role.is_senior ? " (Senior)" : ""}
+    {role.gets_paid_time ? " • Paid time" : ""}
+  </Badge>
+);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -211,47 +225,48 @@ export const EmployerWorkerChart = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {data.workers.map((w) => {
-                const workerRoles = data.roles[w.id] || [];
-                const colorInfo = getWorkerColorCoding(w.union_membership_status, workerRoles);
-                
-                return (
-                  <Card key={w.id} className={cn("p-3 flex items-start justify-between border-2 transition-colors", colorInfo.backgroundColor)}>
-                    <div className={colorInfo.textColor}>
-                      <div className="font-medium">{formatName(w)}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        {membershipBadge(w.union_membership_status)}
-                        {workerRoles.slice(0, 2).map((r) => (
-                          <Badge key={r} variant="secondary">{r.split("_").join(" ")}</Badge>
-                        ))}
-                      </div>
-                      {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
-                        <div className="mt-2 text-xs opacity-75">
-                          Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
-                        </div>
-                      )}
-                      <div className="mt-2">
-                        <Button variant="link" className="px-0 text-current hover:text-current/80" onClick={() => setDetailWorkerId(w.id)}>Open details</Button>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Worker actions" className={cn("hover:bg-black/10 dark:hover:bg-white/10", colorInfo.textColor)}>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {contextSiteId && (
-                          <DropdownMenuItem onClick={() => removeFromSite(w.id)}>Remove from this site</DropdownMenuItem>
-                        )}
-                        {siteIds && siteIds.length > 0 && (
-                          <DropdownMenuItem onClick={() => removeFromProject(w.id)}>Remove from project</DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => removeFromEmployer(w.id)}>Remove from employer</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </Card>
-                );
-              })}
+  const workerRoles = (data.roles[w.id] || []) as WorkerRoleLite[];
+  const colorInfo = getWorkerColorCoding(w.union_membership_status, workerRoles.map(r => r.name));
+  
+  return (
+    <Card
+      key={w.id}
+      className={cn("p-3 flex items-start justify-between border-2 transition-colors cursor-pointer", colorInfo.backgroundColor)}
+      onClick={() => setDetailWorkerId(w.id)}
+      role="button"
+      tabIndex={0}
+    >
+      <div className={colorInfo.textColor}>
+        <div className="font-medium">{formatName(w)}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {membershipBadge(w.union_membership_status)}
+          {workerRoles.slice(0, 3).map(roleBadge)}
+        </div>
+        {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
+          <div className="mt-2 text-xs opacity-75">
+            Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
+          </div>
+        )}
+      </div>
+      <DropdownMenu onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Worker actions" className={cn("hover:bg-black/10 dark:hover:bg-white/10", colorInfo.textColor)}>
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {contextSiteId && (
+            <DropdownMenuItem onClick={() => removeFromSite(w.id)}>Remove from this site</DropdownMenuItem>
+          )}
+          {siteIds && siteIds.length > 0 && (
+            <DropdownMenuItem onClick={() => removeFromProject(w.id)}>Remove from project</DropdownMenuItem>
+          )}
+          <DropdownMenuItem onClick={() => removeFromEmployer(w.id)}>Remove from employer</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </Card>
+  );
+})}
             </div>
           </>
         ) : (
@@ -259,10 +274,11 @@ export const EmployerWorkerChart = ({
         )}
 
         <WorkerDetailModal
-          workerId={detailWorkerId}
-          isOpen={!!detailWorkerId}
-          onClose={() => setDetailWorkerId(null)}
-        />
+  workerId={detailWorkerId}
+  isOpen={!!detailWorkerId}
+  onClose={() => setDetailWorkerId(null)}
+  onUpdate={() => qc.invalidateQueries({ queryKey: ["employer-worker-chart"] })}
+/>
 
         {employerId && (
           <AssignWorkersModal
