@@ -207,7 +207,7 @@ const { error, data } = await supabase
   .update(updatePayload)
   .eq("id", employer.id)
   .select("id, name, employer_type")
-  .single();
+  .maybeSingle();
 
     if (error) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
@@ -277,7 +277,8 @@ const { error, data } = await supabase
     ]);
 
     toast({ title: "Employer updated", description: "Changes saved successfully." });
-    onSaved(data as { id: string; name: string; employer_type: string });
+    const updatedEmployer = (data ?? { id: employer.id, name: updatePayload.name, employer_type: updatePayload.employer_type }) as { id: string; name: string; employer_type: string };
+    onSaved(updatedEmployer);
   };
 
   return (

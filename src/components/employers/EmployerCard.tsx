@@ -61,10 +61,10 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
         .from('employer_analytics')
         .select('*')
         .eq('employer_id', employer.id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      return data as EmployerAnalytics;
+      return data as EmployerAnalytics | null;
     },
   });
 
