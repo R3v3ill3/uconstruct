@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { getProgressIndicatorClass } from "@/utils/densityColors";
 
 const Dashboard = () => {
   const { data, isLoading } = useDashboardData();
@@ -234,7 +235,7 @@ const Dashboard = () => {
               <span>Overall Membership Rate</span>
               <span>{data?.membershipRate?.toFixed(1) || 0}%</span>
             </div>
-            <Progress value={data?.membershipRate || 0} className="h-2" />
+            <Progress value={data?.membershipRate || 0} className="h-2" indicatorClassName={getProgressIndicatorClass(data?.membershipRate || 0)} />
           </div>
           
           <div>
@@ -242,7 +243,7 @@ const Dashboard = () => {
               <span>Average Member Density (Mapped Employers)</span>
               <span>{data?.avgMemberDensity?.toFixed(1) || 0}%</span>
             </div>
-            <Progress value={data?.avgMemberDensity || 0} className="h-2" />
+            <Progress value={data?.avgMemberDensity || 0} className="h-2" indicatorClassName={getProgressIndicatorClass(data?.avgMemberDensity || 0)} />
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-4">
