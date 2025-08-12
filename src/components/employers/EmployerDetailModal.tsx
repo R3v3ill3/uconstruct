@@ -78,7 +78,7 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = 
     enabled: !!user?.id,
   });
 
-  const canEdit = myRole === "admin" || myRole === "organiser";
+  const canEdit = ["admin", "organiser", "lead_organiser", "delegate"].includes(myRole || "");
 
   const { data: employer, isLoading } = useQuery({
     queryKey: ["employer-detail", employerId],

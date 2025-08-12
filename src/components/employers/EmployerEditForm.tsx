@@ -202,6 +202,23 @@ const updatePayload = {
   enterprise_agreement_status: values.enterprise_agreement_status ?? null,
 };
 
+// Debug current user/session
+const { data: userInfo } = await supabase.auth.getUser();
+console.debug("[EmployerEditForm] submitting update", { employerId: employer.id, userId: userInfo?.user?.id });
+
+// Preflight: ensure record exists and is visible under current RLS
+const preflight = await supabase
+  .from("employers")
+  .select("id")
+  .eq("id", employer.id)
+  .single();
+if (preflight.error) {
+  console.error("[EmployerEditForm] preflight error", preflight.error);
+  toast({ title: "Employer not accessible", description: "Record not found or not visible to you.", variant: "destructive" });
+  return;
+}
+
+// Attempt the update
 const { data, error } = await supabase
   .from("employers")
   .update(updatePayload)
@@ -211,15 +228,25 @@ const { data, error } = await supabase
 
     if (error) {
       const code = (error as any).code;
-      const msg = code === "PGRST116"
-        ? "Employer not found or you don't have permission to edit it."
-        : error.message;
-      toast({ title: "Update failed", description: msg, variant: "destructive" });
+      if (code === "PGRST116") {
+        // Post-check to differentiate not found vs permission issue
+        const post = await supabase
+          .from("employers")
+          .select("id")
+          .eq("id", employer.id)
+          .single();
+        console.debug("[EmployerEditForm] post-check", { postOk: !post.error, postErr: post.error });
+        const msg = post.data ? "You don't have permission to edit this employer." : "Employer not found.";
+        toast({ title: "Update failed", description: msg, variant: "destructive" });
+      } else {
+        console.error("[EmployerEditForm] update error", error);
+        toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      }
       return;
     }
 
     if (!data) {
-      toast({ title: "No changes saved", description: "The server returned no updated record. You may not have permission or the record no longer exists.", variant: "destructive" });
+      toast({ title: "No changes saved", description: "Server returned no updated record.", variant: "destructive" });
       return;
     }
 
