@@ -2453,12 +2453,19 @@ export type Database = {
         Returns: string
       }
       admin_update_employer_full: {
-        Args: {
-          p_employer_id: string
-          p_update: Json
-          p_role_tags?: Database["public"]["Enums"]["employer_role_tag"][]
-          p_trade_caps?: string[]
-        }
+        Args:
+          | {
+              p_employer_id: string
+              p_update: Json
+              p_role_tags: Database["public"]["Enums"]["employer_role_tag"][]
+              p_trade_types: Database["public"]["Enums"]["trade_type"][]
+            }
+          | {
+              p_employer_id: string
+              p_update: Json
+              p_role_tags?: Database["public"]["Enums"]["employer_role_tag"][]
+              p_trade_caps?: string[]
+            }
         Returns: {
           abn: string | null
           address_line_1: string | null
