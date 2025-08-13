@@ -53,7 +53,7 @@ const PatchWall = () => {
     enabled: !projectId && !!organiserId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("project_organisers")
+        .from("organiser_projects")
         .select("project_id")
         .eq("organiser_id", organiserId as string);
       if (error) throw error;

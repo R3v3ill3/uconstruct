@@ -109,7 +109,7 @@ const Projects = () => {
           project_builder_jv(label, status),
           project_eba_details(*),
           project_organisers(
-            organiser:organisers(first_name, last_name, email)
+            organiser:profiles(full_name, email)
           )
         `)
         .order("created_at", { ascending: false });
@@ -503,10 +503,10 @@ const Projects = () => {
                           <span className="font-semibold block mb-2">Organisers:</span>
                           {project.project_organisers.map((po, index) => (
                             <div key={index} className="text-sm">
-                              {po.organiser.first_name} {po.organiser.last_name}
-                              {po.organiser.email && (
-                                <span className="text-muted-foreground ml-2">({po.organiser.email})</span>
-                              )}
+                              {po.organiser.full_name}
+                              {po.organiser.email ? (
+                                <span className="text-muted-foreground"> — {po.organiser.email}</span>
+                              ) : null}
                             </div>
                           ))}
                         </div>
