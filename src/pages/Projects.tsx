@@ -109,7 +109,7 @@ const Projects = () => {
           project_builder_jv(label, status),
           project_eba_details(*),
           project_organisers(
-            organiser:profiles(full_name, email)
+            organiser:organisers(first_name, last_name, email)
           )
         `)
         .order("created_at", { ascending: false });
