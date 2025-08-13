@@ -20,10 +20,21 @@ const PasswordReset = () => {
   }, []);
 
   useEffect(() => {
-    // If user followed the recovery link, Supabase sets a session allowing password update
-    supabase.auth.getSession().then(({ data }) => {
-      setHasRecoverySession(!!data.session);
-    });
+    const maybeExchange = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const hasCode = url.searchParams.get("code") || url.hash.includes("access_token");
+        if (hasCode) {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        const { data } = await supabase.auth.getSession();
+        setHasRecoverySession(!!data.session);
+      }
+    };
+    maybeExchange();
   }, []);
 
   const handleRequestReset = async (e: React.FormEvent) => {

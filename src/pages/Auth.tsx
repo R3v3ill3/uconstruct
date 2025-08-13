@@ -27,6 +27,21 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Handle email links (confirm/magic) by exchanging code or hash for a session
+  useEffect(() => {
+    const maybeExchange = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const hasCode = url.searchParams.get("code") || url.hash.includes("access_token");
+        if (hasCode) {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+          navigate("/", { replace: true });
+        }
+      } catch {}
+    };
+    maybeExchange();
+  }, [navigate]);
+
   // SEO: set page title
   useEffect(() => {
     document.title = "uConstruct — Sign In / Sign Up";
@@ -41,7 +56,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: {
             full_name: fullName,
           },
@@ -113,7 +128,7 @@ const Auth = () => {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: `${window.location.origin}/` },
+        options: { emailRedirectTo: `${window.location.origin}/auth` },
       });
       if (error) {
         toast({
@@ -148,7 +163,7 @@ const Auth = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/` },
+        options: { emailRedirectTo: `${window.location.origin}/auth` },
       });
       if (error) {
         toast({ variant: "destructive", title: "Couldn’t send link", description: error.message });
