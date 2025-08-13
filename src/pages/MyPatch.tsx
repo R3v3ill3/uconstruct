@@ -71,10 +71,10 @@ const MyPatch = () => {
     enabled: !!targetUserId,
     queryFn: async () => {
       // Get accessible project IDs via RPC, then fetch details
-      const { data: projectIdsRows, error: rpcErr } = await supabase
+      const { data: projectIdsRows, error: rpcErr } = await (supabase as any)
         .rpc("get_accessible_projects", { user_id: targetUserId as string });
       if (rpcErr) throw rpcErr;
-      const ids = (projectIdsRows || []).map((r: any) => r.project_id);
+      const ids = (projectIdsRows || []).map((r: { project_id: string }) => r.project_id);
       if (!ids.length) return [] as Array<{ id: string; name: string; builder_id: string | null; proposed_start_date: string | null; proposed_finish_date: string | null }>;
       const { data, error } = await supabase
         .from("projects")
@@ -92,10 +92,10 @@ const MyPatch = () => {
     enabled: !!targetUserId,
     queryFn: async () => {
       // Use RPC to get accessible job sites, then fetch details
-      const { data: siteIdRows, error: rpcErr } = await supabase
+      const { data: siteIdRows, error: rpcErr } = await (supabase as any)
         .rpc("get_accessible_job_sites", { user_id: targetUserId as string });
       if (rpcErr) throw rpcErr;
-      const ids = (siteIdRows || []).map((r: any) => r.job_site_id);
+      const ids = (siteIdRows || []).map((r: { job_site_id: string }) => r.job_site_id);
       if (!ids.length) return [] as any[];
       const { data, error } = await supabase
         .from("job_sites")
@@ -112,10 +112,10 @@ const MyPatch = () => {
     queryKey: ["my-patch-employers", targetUserId],
     enabled: !!targetUserId,
     queryFn: async () => {
-      const { data: employerIdRows, error: rpcErr } = await supabase
+      const { data: employerIdRows, error: rpcErr } = await (supabase as any)
         .rpc("get_accessible_employers", { user_id: targetUserId as string });
       if (rpcErr) throw rpcErr;
-      const ids = (employerIdRows || []).map((r: any) => r.employer_id);
+      const ids = (employerIdRows || []).map((r: { employer_id: string }) => r.employer_id);
       if (!ids.length) return [] as any[];
       const { data, error } = await supabase
         .from("employers")
@@ -131,10 +131,10 @@ const MyPatch = () => {
     queryKey: ["my-patch-accessible-worker-ids", targetUserId],
     enabled: !!targetUserId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc("get_accessible_workers", { user_id: targetUserId as string });
       if (error) throw error;
-      return (data || []).map((r: any) => r.worker_id) as string[];
+      return (data || []).map((r: { worker_id: string }) => r.worker_id) as string[];
     },
   });
 
@@ -187,13 +187,13 @@ const MyPatch = () => {
 
   // Helper to compute stats for a given userId (used by lead/admin aggregations)
   async function fetchStatsForUser(userId: string) {
-    const [{ data: projRows }, { data: siteRows }, { data: empRows }, { data: workerRows }] = await Promise.all([
-      supabase.rpc("get_accessible_projects", { user_id: userId }),
-      supabase.rpc("get_accessible_job_sites", { user_id: userId }),
-      supabase.rpc("get_accessible_employers", { user_id: userId }),
-      supabase.rpc("get_accessible_workers", { user_id: userId }),
+    const [projResult, siteResult, empResult, workerResult] = await Promise.all([
+      (supabase as any).rpc("get_accessible_projects", { user_id: userId }),
+      (supabase as any).rpc("get_accessible_job_sites", { user_id: userId }),
+      (supabase as any).rpc("get_accessible_employers", { user_id: userId }),
+      (supabase as any).rpc("get_accessible_workers", { user_id: userId }),
     ]);
-    const workerIds: string[] = (workerRows || []).map((r: any) => r.worker_id);
+    const workerIds: string[] = (workerResult.data || []).map((r: { worker_id: string }) => r.worker_id);
     let members = 0;
     if (workerIds.length > 0) {
       const { count } = await supabase
@@ -204,10 +204,10 @@ const MyPatch = () => {
       members = count || 0;
     }
     return {
-      projects: (projRows || []).length,
-      sites: (siteRows || []).length,
-      employers: (empRows || []).length,
-      workers: (workerRows || []).length,
+      projects: (projResult.data || []).length,
+      sites: (siteResult.data || []).length,
+      employers: (empResult.data || []).length,
+      workers: (workerResult.data || []).length,
       members,
     };
   }
