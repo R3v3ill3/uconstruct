@@ -32,8 +32,8 @@ const MyPatch = () => {
 
   useEffect(() => {
     setMeta(
-      "Organiser Patch — My Patch",
-      "Overview of your assigned projects, sites, employers, members and delegates.",
+      "Patch — Overview",
+      "Role-based overview of assigned projects, sites, employers, workers, members and delegates.",
       window.location.origin + "/patch"
     );
   }, []);
@@ -162,57 +162,42 @@ const MyPatch = () => {
   return (
     <main>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">My Patch</h1>
-        <p className="text-sm text-muted-foreground">Your projects, sites, employers and members.</p>
+        <h1 className="text-2xl font-semibold">Patch</h1>
+        <p className="text-sm text-muted-foreground">Role-based summary of projects, sites, employers, workers and membership.</p>
       </header>
 
-      <section className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
+      <section className="mb-6">
         <Card>
           <CardHeader>
-            <CardTitle>Projects</CardTitle>
+            <CardTitle>Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{projectsData?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Job Sites</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{sitesData?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Employers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{employersData?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Workers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{totalWorkers}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Members</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{memberCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Delegates</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{delegates?.length || 0}</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div>
+                <div className="text-xs text-muted-foreground">Projects</div>
+                <div className="text-2xl font-bold">{projectsData?.length || 0}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Job Sites</div>
+                <div className="text-2xl font-bold">{sitesData?.length || 0}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Employers</div>
+                <div className="text-2xl font-bold">{employersData?.length || 0}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Workers</div>
+                <div className="text-2xl font-bold">{totalWorkers}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Members</div>
+                <div className="text-2xl font-bold">{memberCount}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Delegates</div>
+                <div className="text-2xl font-bold">{delegates?.length || 0}</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </section>
