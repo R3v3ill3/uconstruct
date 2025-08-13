@@ -85,7 +85,7 @@ const MyPatch = () => {
     },
   });
 
-  const projectIds = useMemo(() => (projectsData || []).map((p) => p.id), [projectsData]);
+  const projectIds = useMemo(() => (organiserProjects || []).map((p) => p.project_id), [organiserProjects]);
 
   const { data: sitesData } = useQuery({
     queryKey: ["my-patch-sites", targetUserId],
@@ -319,7 +319,25 @@ const MyPatch = () => {
         <p className="text-sm text-muted-foreground">Role-based summary of projects, sites, employers, workers and membership.</p>
       </header>
 
-      <section className="mb-6">
+
+      <section className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Projects</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{organiserProjects?.length || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Job Sites</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{sitesData?.length || 0}</div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Summary</CardTitle>
@@ -503,9 +521,10 @@ const MyPatch = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(projectsData || []).slice(0, 8).map((p: any) => {
-                  const siteCount = (sitesData || []).filter((s: any) => s.project_id === p.id).length;
+                {(organiserProjects || []).slice(0, 8).map((p: any) => {
+                  const siteCount = (sitesData || []).filter((s: any) => s.project_id === p.project_id).length;
                   return (
+
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">
                         <Link to={`/patch/walls?projectId=${p.id}`} className="underline decoration-dotted">{p.name}</Link>
@@ -513,15 +532,15 @@ const MyPatch = () => {
                       <TableCell>{siteCount}</TableCell>
                       <TableCell>
                         <div className="flex gap-2 text-xs text-muted-foreground">
-                          <span>{p.proposed_start_date || "TBC"}</span>
+                          <span>{p.projects.proposed_start_date || "TBC"}</span>
                           <span>→</span>
-                          <span>{p.proposed_finish_date || "TBC"}</span>
+                          <span>{p.projects.proposed_finish_date || "TBC"}</span>
                         </div>
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {(!projectsData || projectsData.length === 0) && (
+                {(!organiserProjects || organiserProjects.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
                       {isDelegate ? "No delegate projects found." : "No projects assigned yet."}

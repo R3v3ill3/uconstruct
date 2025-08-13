@@ -474,6 +474,7 @@ const [scopingUser, setScopingUser] = useState<UserProfile | null>(null);
       </Card>
 
       <PendingUsersTable />
+      <p className="text-xs text-muted-foreground mt-2">Self-signup access requests will appear here for approval.</p>
 
       <RoleHierarchyManager users={users} />
 

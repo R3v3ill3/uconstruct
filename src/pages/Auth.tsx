@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
 const Auth = () => {
@@ -14,6 +14,8 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
+  const [linkConfirmed, setLinkConfirmed] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,6 +26,22 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  // Handle email links (confirm/magic) by exchanging code or hash for a session
+  useEffect(() => {
+    const maybeExchange = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const hasCode = url.searchParams.get("code") || url.hash.includes("access_token");
+        if (hasCode) {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+          setLinkConfirmed("Your link was verified. You are now signed in.");
+          navigate("/", { replace: true });
+        }
+      } catch {}
+    };
+    maybeExchange();
   }, [navigate]);
 
   // SEO: set page title
@@ -40,7 +58,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: {
             full_name: fullName,
           },
@@ -112,7 +130,7 @@ const Auth = () => {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: `${window.location.origin}/` },
+        options: { emailRedirectTo: `${window.location.origin}/auth` },
       });
       if (error) {
         toast({
@@ -138,6 +156,27 @@ const Auth = () => {
     }
   };
 
+  const handleSendMagicLink = async () => {
+    if (!email) {
+      toast({ title: "Enter your email" });
+      return;
+    }
+    setSendingLink(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth` },
+      });
+      if (error) {
+        toast({ variant: "destructive", title: "Couldn’t send link", description: error.message });
+      } else {
+        toast({ title: "Check your email", description: "We’ve emailed you a sign-in link." });
+      }
+    } finally {
+      setSendingLink(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
       <Card className="w-full max-w-md">
@@ -148,6 +187,11 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {linkConfirmed && (
+            <div className="mb-3 text-sm rounded border border-green-300 bg-green-50 text-green-800 px-3 py-2">
+              {linkConfirmed}
+            </div>
+          )}
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -183,15 +227,17 @@ const Auth = () => {
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full justify-center"
-                  onClick={handleResendVerification}
-                  disabled={resending || !email}
-                >
-                  {resending ? "Resending..." : "Resend verification email"}
-                </Button>
+                <div className="flex items-center justify-between text-sm">
+                  <Button type="button" variant="link" className="px-0" onClick={handleResendVerification} disabled={resending || !email}>
+                    {resending ? "Resending..." : "Resend verification email"}
+                  </Button>
+                  <Link to="/auth/reset" className="underline hover:no-underline">Forgot password?</Link>
+                </div>
+                <div className="pt-2">
+                  <Button type="button" variant="outline" className="w-full" onClick={handleSendMagicLink} disabled={sendingLink || !email}>
+                    {sendingLink ? "Sending link..." : "Email me a sign-in link"}
+                  </Button>
+                </div>
               </form>
             </TabsContent>
             
@@ -234,15 +280,12 @@ const Auth = () => {
                 >
                   {loading ? "Creating account..." : "Sign Up"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full justify-center"
-                  onClick={handleResendVerification}
-                  disabled={resending || !email}
-                >
-                  {resending ? "Resending..." : "Resend verification email"}
-                </Button>
+                <div className="flex items-center justify-between text-sm">
+                  <Button type="button" variant="link" className="px-0" onClick={handleResendVerification} disabled={resending || !email}>
+                    {resending ? "Resending..." : "Resend verification email"}
+                  </Button>
+                  <Link to="/auth/reset" className="underline hover:no-underline">Forgot password?</Link>
+                </div>
               </form>
             </TabsContent>
           </Tabs>

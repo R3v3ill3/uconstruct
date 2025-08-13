@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { WorkerDetailModal } from "@/components/workers/WorkerDetailModal";
 import { UnionRoleAssignmentModal } from "@/components/workers/UnionRoleAssignmentModal";
 import { AssignWorkersModal } from "./AssignWorkersModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getWorkerColorCoding, getWorkerColorLegend } from "@/utils/workerColorCoding";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,9 @@ export const EmployerWorkerChart = ({
   const [showAssign, setShowAssign] = useState(false);
 
   const filters = useMemo(() => ({ employerId, projectIds, siteIds, contextSiteId }), [employerId, projectIds, siteIds, contextSiteId]);
+
+  const [membershipFilter, setMembershipFilter] = useState<"all" | "member" | "potential" | "non_member" | "declined">("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["employer-worker-chart", filters],
@@ -174,12 +178,19 @@ export const EmployerWorkerChart = ({
     }
   };
 
+  const roleOptions = useMemo(() => {
+    const present = new Set<string>();
+    const map = (data?.roles || {}) as Record<string, string[]>;
+    Object.values(map).forEach((names) => names.forEach((n) => present.add(n)));
+    return Array.from(present).sort();
+  }, [data]);
+
   const formatName = (w: WorkerLite) => `${w.first_name ?? ""} ${w.surname ?? ""}`.trim() || "Unnamed";
-  const membershipBadge = (status: string | null) => (
-  <Badge variant={status === "member" ? "default" : status === "potential_member" ? "secondary" : "outline"}>
-    {status ? status.split("_").join(" ") : "unknown"}
-  </Badge>
-);
+  const membershipBadge = (status: string | null) => (    
+    <Badge variant={status === "member" ? "default" : status === "potential" ? "secondary" : status === "declined" ? "destructive" : "outline"}>
+      {status ? status.split("_").join(" ") : "unknown"}
+    </Badge>
+  );
 
 const roleBadge = (role: WorkerRoleLite) => (
   <Badge key={role.name} variant="secondary">
@@ -188,6 +199,49 @@ const roleBadge = (role: WorkerRoleLite) => (
     {role.gets_paid_time ? " • Paid time" : ""}
   </Badge>
 );
+
+  const filteredSortedWorkers = useMemo(() => {
+    if (!data) return [] as WorkerLite[];
+    const rolesMap = (data.roles || {}) as Record<string, string[]>;
+
+    const matchesMembership = (w: WorkerLite) =>
+      membershipFilter === "all" || (w.union_membership_status as any) === membershipFilter;
+
+    const matchesRole = (w: WorkerLite) => {
+      if (roleFilter === "all") return true;
+      const r = rolesMap[w.id] || [];
+      return r.includes(roleFilter);
+    };
+
+    const hasAdditionalRole = (w: WorkerLite) => {
+      const r = rolesMap[w.id] || [];
+      return r.some((name) => name !== "member");
+    };
+
+    const membershipPriority: Record<string, number> = {
+      member: 0,
+      potential: 1,
+      non_member: 2,
+      declined: 3,
+    } as const as any;
+
+    const toPriorityTuple = (w: WorkerLite): [number, number, string] => {
+      const p0 = hasAdditionalRole(w) ? 0 : 1;
+      const p1 = membershipPriority[w.union_membership_status || "zzz"] ?? 4;
+      const p2 = formatName(w).toLowerCase();
+      return [p0, p1, p2];
+    };
+
+    return (data.workers as WorkerLite[])
+      .filter((w) => matchesMembership(w) && matchesRole(w))
+      .sort((a, b) => {
+        const ta = toPriorityTuple(a);
+        const tb = toPriorityTuple(b);
+        if (ta[0] !== tb[0]) return ta[0] - tb[0];
+        if (ta[1] !== tb[1]) return ta[1] - tb[1];
+        return ta[2] < tb[2] ? -1 : ta[2] > tb[2] ? 1 : 0;
+      });
+  }, [data, membershipFilter, roleFilter]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -203,9 +257,43 @@ const roleBadge = (role: WorkerRoleLite) => (
           </DialogTitle>
         </DialogHeader>
 
+        {/* Filters and sort controls */}
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Filter by union membership</div>
+            <Select value={membershipFilter} onValueChange={(v) => setMembershipFilter(v as any)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="potential">Potential</SelectItem>
+                <SelectItem value="non_member">Non-member</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Filter by union role</div>
+            <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {roleOptions.map((r) => (
+                  <SelectItem key={r} value={r}>{r.split("_").join(" ")}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading workers…</div>
         ) : data && data.workers.length > 0 ? (
+
           <>
             {/* Color Legend */}
             <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
@@ -217,7 +305,25 @@ const roleBadge = (role: WorkerRoleLite) => (
                 {getWorkerColorLegend().map((item) => (
                   <div key={item.label} className="flex items-center gap-1">
                     <div className={cn("w-3 h-3 rounded border", item.color)} />
-                    <span className="text-muted-foreground">{item.description}</span>
+                    <span className="text-muted-foreground">{item.description}</span>        
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {filteredSortedWorkers.map((w) => (
+              <Card key={w.id} className="p-3 flex items-start justify-between">
+                <div>
+                  <div className="font-medium">{formatName(w)}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {membershipBadge(w.union_membership_status)}
+                    {(data.roles[w.id] || []).slice(0, 2).map((r) => (
+                      <Badge key={r} variant="secondary">{r.split("_").join(" ")}</Badge>
+                    ))}
+                  </div>
+                  {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
+                    </div>
+                  )}
+                  <div className="mt-2">
+                    <Button variant="link" className="px-0" onClick={() => setDetailWorkerId(w.id)}>Open details</Button>
                   </div>
                 ))}
               </div>

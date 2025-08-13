@@ -57,11 +57,17 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
   const loadExistingOrganisers = async () => {
     try {
       const { data, error } = await supabase
-        .from('organisers')
-        .select('id, first_name, last_name');
+        .from('profiles')
+        .select('id, full_name');
       
       if (error) throw error;
-      setExistingOrganisers(data || []);
+      const mapped = (data || []).map((p: any) => {
+        const parts = String(p.full_name || '').trim().split(/\s+/);
+        const first_name = parts.slice(0, -1).join(' ') || parts[0] || '';
+        const last_name = parts.length > 1 ? parts[parts.length - 1] : '';
+        return { id: p.id, first_name, last_name };
+      });
+      setExistingOrganisers(mapped);
     } catch (error) {
       console.error('Error loading organisers:', error);
     }
