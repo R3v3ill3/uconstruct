@@ -2,20 +2,14 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  const missing = [!SUPABASE_URL && 'VITE_SUPABASE_URL', !SUPABASE_PUBLISHABLE_KEY && 'VITE_SUPABASE_ANON_KEY']
-    .filter(Boolean)
-    .join(', ');
-  // Fail fast to avoid silently pointing at the wrong Supabase project
-  throw new Error(`Missing Supabase env: ${missing}. Set these in your runtime environment (.env or deploy settings).`);
-}
+// Hybrid approach: Use env vars if available, fallback to hardcoded values for sandbox/development
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || "https://jzuoawqxqmrsftbtjkzv.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6dW9hd3F4cW1yc2Z0YnRqa3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjYwMDcsImV4cCI6MjA2OTk0MjAwN30.iOvn3b02CX_Dch4bWlJbzY6EYLbWrmwpM7sQgAqimd8";
 
 if ((import.meta as any).env?.DEV) {
-  // Helpful in dev to verify which Supabase project we are hitting
-  console.info(`[Supabase] Using ${SUPABASE_URL}`);
+  // Helpful logging to show which configuration is being used
+  const usingEnvVars = !!(import.meta as any).env?.VITE_SUPABASE_URL;
+  console.info(`[Supabase] Using ${SUPABASE_URL} ${usingEnvVars ? '(from env vars)' : '(fallback values)'}`);
 }
 
 // Import the supabase client like this:
