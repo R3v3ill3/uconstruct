@@ -219,46 +219,7 @@ const MyPatch = () => {
     queryFn: async () => fetchStatsForUser(organiserId as string),
   });
 
-  // Admin aggregated stats per lead and per organiser
-  const { data: adminAggregates } = useQuery({
-    queryKey: ["admin-aggregates", isAdmin, allLeads, hierarchyLinks, allOrganisers],
-    enabled: isAdmin && (allLeads as any[]).length >= 0 && (hierarchyLinks as any[]).length >= 0,
-    queryFn: async () => {
-      const result: Array<{ lead: any; leadStats: any; organisers: Array<{ organiser: any; stats: any }> }> = [];
-      for (const lead of (allLeads as any[])) {
-        const childrenLinks = (hierarchyLinks as any[]).filter((l) => l.parent_user_id === lead.id);
-        const organisers = childrenLinks
-          .map((l) => (allOrganisers as any[]).find((o) => o.id === l.child_user_id))
-          .filter(Boolean);
-        const leadStats = await fetchStatsForUser(lead.id);
-        const organisersStats: Array<{ organiser: any; stats: any }> = [];
-        for (const org of organisers) {
-          const stats = await fetchStatsForUser(org.id);
-          organisersStats.push({ organiser: org, stats });
-        }
-        result.push({ lead, leadStats, organisers: organisersStats });
-      }
-      return result;
-    },
-  });
-
-  // Lead organiser: list subordinate organisers
-  const { data: subOrganisers = [] } = useQuery({
-    queryKey: ["lead-subordinates", isLead, organiserId],
-    enabled: !!organiserId && isLead,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("role_hierarchy")
-        .select("child_user_id, profiles:child_user_id(id, full_name, email)")
-        .eq("parent_user_id", organiserId as string)
-        .eq("is_active", true)
-        .is("end_date", null);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Admin: list leads and their organisers; also list unassigned organisers
+  // Admin: list leads and their organisers; also list unassigned organisers (declare before aggregates)
   const { data: allLeads = [] } = useQuery({
     queryKey: ["admin-leads", isAdmin],
     enabled: isAdmin,
@@ -296,6 +257,45 @@ const MyPatch = () => {
         .select("id, full_name, email")
         .eq("role", "organiser")
         .order("full_name", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Admin aggregated stats per lead and per organiser
+  const { data: adminAggregates } = useQuery({
+    queryKey: ["admin-aggregates", isAdmin, allLeads, hierarchyLinks, allOrganisers],
+    enabled: isAdmin && (allLeads as any[]).length >= 0 && (hierarchyLinks as any[]).length >= 0,
+    queryFn: async () => {
+      const result: Array<{ lead: any; leadStats: any; organisers: Array<{ organiser: any; stats: any }> }> = [];
+      for (const lead of (allLeads as any[])) {
+        const childrenLinks = (hierarchyLinks as any[]).filter((l) => l.parent_user_id === lead.id);
+        const organisers = childrenLinks
+          .map((l) => (allOrganisers as any[]).find((o) => o.id === l.child_user_id))
+          .filter(Boolean);
+        const leadStats = await fetchStatsForUser(lead.id);
+        const organisersStats: Array<{ organiser: any; stats: any }> = [];
+        for (const org of organisers) {
+          const stats = await fetchStatsForUser(org.id);
+          organisersStats.push({ organiser: org, stats });
+        }
+        result.push({ lead, leadStats, organisers: organisersStats });
+      }
+      return result;
+    },
+  });
+
+  // Lead organiser: list subordinate organisers
+  const { data: subOrganisers = [] } = useQuery({
+    queryKey: ["lead-subordinates", isLead, organiserId],
+    enabled: !!organiserId && isLead,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("role_hierarchy")
+        .select("child_user_id, profiles:child_user_id(id, full_name, email)")
+        .eq("parent_user_id", organiserId as string)
+        .eq("is_active", true)
+        .is("end_date", null);
       if (error) throw error;
       return data || [];
     },
