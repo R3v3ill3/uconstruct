@@ -19,14 +19,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         if (session?.user) {
+          // Sync profile and apply any pending role
           setTimeout(() => {
             supabase.rpc('apply_pending_user_on_login');
           }, 0);
+          // If user remains viewer, raise a pending request automatically
+          try {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+            if (prof && (prof as any).role === 'viewer') {
+              await supabase.rpc('request_access', { _requested_role: 'organiser', _notes: 'Self-signup request' });
+            }
+          } catch {}
         }
       }
     );
