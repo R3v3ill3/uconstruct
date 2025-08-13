@@ -36,7 +36,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .eq('id', session.user.id)
               .single();
             if (prof && (prof as any).role === 'viewer') {
-              await supabase.rpc('request_access', { _requested_role: 'organiser', _notes: 'Self-signup request' });
+              // Request access via direct database call since RPC types are not available
+              await supabase.from('pending_users').insert({
+                email: session.user.email || '',
+                role: 'organiser',
+                notes: 'Self-signup request'
+              });
             }
           } catch {}
         }

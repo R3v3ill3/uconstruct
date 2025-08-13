@@ -503,7 +503,7 @@ const Projects = () => {
                           <span className="font-semibold block mb-2">Organisers:</span>
                           {project.project_organisers.map((po, index) => (
                             <div key={index} className="text-sm">
-                              {po.organiser.full_name}
+                              {po.organiser.first_name} {po.organiser.last_name}
                               {po.organiser.email ? (
                                 <span className="text-muted-foreground"> — {po.organiser.email}</span>
                               ) : null}
