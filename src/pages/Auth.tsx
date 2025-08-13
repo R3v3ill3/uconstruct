@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
 const Auth = () => {
@@ -14,6 +14,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -138,6 +139,27 @@ const Auth = () => {
     }
   };
 
+  const handleSendMagicLink = async () => {
+    if (!email) {
+      toast({ title: "Enter your email" });
+      return;
+    }
+    setSendingLink(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
+      if (error) {
+        toast({ variant: "destructive", title: "Couldn’t send link", description: error.message });
+      } else {
+        toast({ title: "Check your email", description: "We’ve emailed you a sign-in link." });
+      }
+    } finally {
+      setSendingLink(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
       <Card className="w-full max-w-md">
@@ -183,15 +205,17 @@ const Auth = () => {
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full justify-center"
-                  onClick={handleResendVerification}
-                  disabled={resending || !email}
-                >
-                  {resending ? "Resending..." : "Resend verification email"}
-                </Button>
+                <div className="flex items-center justify-between text-sm">
+                  <Button type="button" variant="link" className="px-0" onClick={handleResendVerification} disabled={resending || !email}>
+                    {resending ? "Resending..." : "Resend verification email"}
+                  </Button>
+                  <Link to="/auth/reset" className="underline hover:no-underline">Forgot password?</Link>
+                </div>
+                <div className="pt-2">
+                  <Button type="button" variant="outline" className="w-full" onClick={handleSendMagicLink} disabled={sendingLink || !email}>
+                    {sendingLink ? "Sending link..." : "Email me a sign-in link"}
+                  </Button>
+                </div>
               </form>
             </TabsContent>
             
@@ -234,15 +258,12 @@ const Auth = () => {
                 >
                   {loading ? "Creating account..." : "Sign Up"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full justify-center"
-                  onClick={handleResendVerification}
-                  disabled={resending || !email}
-                >
-                  {resending ? "Resending..." : "Resend verification email"}
-                </Button>
+                <div className="flex items-center justify-between text-sm">
+                  <Button type="button" variant="link" className="px-0" onClick={handleResendVerification} disabled={resending || !email}>
+                    {resending ? "Resending..." : "Resend verification email"}
+                  </Button>
+                  <Link to="/auth/reset" className="underline hover:no-underline">Forgot password?</Link>
+                </div>
               </form>
             </TabsContent>
           </Tabs>

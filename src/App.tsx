@@ -21,6 +21,7 @@ import MyPatch from "@/pages/MyPatch";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Delegations from "@/pages/Delegations";
 import PatchWall from "@/pages/PatchWall";
+import PasswordReset from "@/pages/PasswordReset";
  
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/reset" element={<PasswordReset />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Projects />
