@@ -92,12 +92,12 @@ export function WorkerAssignmentTabs({ selectedWorkers, onWorkersChange }: Worke
     queryKey: ["organisers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("organisers")
-        .select("id, first_name, last_name")
-        .order("first_name");
+        .from("profiles")
+        .select("id, full_name")
+        .order("full_name");
       
       if (error) throw error;
-      return data;
+      return (data || []).map((p: any) => ({ id: p.id, full_name: p.full_name }));
     }
   });
 
@@ -221,7 +221,7 @@ export function WorkerAssignmentTabs({ selectedWorkers, onWorkersChange }: Worke
 
     // Add assignments from organisers
     selectedOrganisers.forEach(organiserId => {
-      const organiser = organisers.find(o => o.id === organiserId);
+      const organiser = organisers.find((o: any) => o.id === organiserId);
       const organiserWorkers = workers.filter(w => w.organiser_id === organiserId);
       
       organiserWorkers.forEach(worker => {
@@ -230,7 +230,7 @@ export function WorkerAssignmentTabs({ selectedWorkers, onWorkersChange }: Worke
           workerName: `${worker.first_name} ${worker.surname}`,
           method: 'by_organiser',
           sourceId: organiserId,
-          sourceName: `${organiser?.first_name} ${organiser?.last_name}`
+          sourceName: organiser?.full_name
         });
       });
     });
@@ -429,7 +429,7 @@ export function WorkerAssignmentTabs({ selectedWorkers, onWorkersChange }: Worke
         <TabsContent value="organiser" className="space-y-4">
           <ScrollArea className="h-96">
             <div className="space-y-2">
-              {organisers.map((organiser) => {
+              {organisers.map((organiser: any) => {
                 const workerCount = workers.filter(w => w.organiser_id === organiser.id).length;
                 const isSelected = selectedOrganisers.includes(organiser.id);
                 
@@ -444,9 +444,7 @@ export function WorkerAssignmentTabs({ selectedWorkers, onWorkersChange }: Worke
                           }
                         />
                         <div>
-                          <span className="font-medium">
-                            {organiser.first_name} {organiser.last_name}
-                          </span>
+                          <span className="font-medium">{organiser.full_name}</span>
                           <p className="text-sm text-muted-foreground">
                             {workerCount} workers
                           </p>

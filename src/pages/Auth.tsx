@@ -15,6 +15,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
+  const [linkConfirmed, setLinkConfirmed] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,6 +36,7 @@ const Auth = () => {
         const hasCode = url.searchParams.get("code") || url.hash.includes("access_token");
         if (hasCode) {
           await supabase.auth.exchangeCodeForSession(window.location.href);
+          setLinkConfirmed("Your link was verified. You are now signed in.");
           navigate("/", { replace: true });
         }
       } catch {}
@@ -185,6 +187,11 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {linkConfirmed && (
+            <div className="mb-3 text-sm rounded border border-green-300 bg-green-50 text-green-800 px-3 py-2">
+              {linkConfirmed}
+            </div>
+          )}
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
