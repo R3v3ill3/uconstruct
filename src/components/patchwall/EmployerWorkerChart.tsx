@@ -180,8 +180,12 @@ export const EmployerWorkerChart = ({
 
   const roleOptions = useMemo(() => {
     const present = new Set<string>();
-    const map = (data?.roles || {}) as Record<string, string[]>;
-    Object.values(map).forEach((names) => names.forEach((n) => present.add(n)));
+    const rolesMap = (data?.roles || {}) as Record<string, WorkerRoleLite[]>;
+    Object.values(rolesMap).forEach((roleArr) => {
+      roleArr.forEach((r) => {
+        if (r && typeof r.name === "string") present.add(r.name);
+      });
+    });
     return Array.from(present).sort();
   }, [data]);
 
@@ -202,20 +206,20 @@ const roleBadge = (role: WorkerRoleLite) => (
 
   const filteredSortedWorkers = useMemo(() => {
     if (!data) return [] as WorkerLite[];
-    const rolesMap = (data.roles || {}) as Record<string, string[]>;
+    const rolesMap = (data.roles || {}) as Record<string, WorkerRoleLite[]>;
 
     const matchesMembership = (w: WorkerLite) =>
       membershipFilter === "all" || (w.union_membership_status as any) === membershipFilter;
 
     const matchesRole = (w: WorkerLite) => {
       if (roleFilter === "all") return true;
-      const r = rolesMap[w.id] || [];
-      return r.includes(roleFilter);
+      const workerRoles = rolesMap[w.id] || [];
+      return workerRoles.some((r) => r.name === roleFilter);
     };
 
     const hasAdditionalRole = (w: WorkerLite) => {
-      const r = rolesMap[w.id] || [];
-      return r.some((name) => name !== "member");
+      const workerRoles = rolesMap[w.id] || [];
+      return workerRoles.some((r) => r.name !== "member");
     };
 
     const membershipPriority: Record<string, number> = {
@@ -305,32 +309,14 @@ const roleBadge = (role: WorkerRoleLite) => (
                 {getWorkerColorLegend().map((item) => (
                   <div key={item.label} className="flex items-center gap-1">
                     <div className={cn("w-3 h-3 rounded border", item.color)} />
-                    <span className="text-muted-foreground">{item.description}</span>        
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filteredSortedWorkers.map((w) => (
-              <Card key={w.id} className="p-3 flex items-start justify-between">
-                <div>
-                  <div className="font-medium">{formatName(w)}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    {membershipBadge(w.union_membership_status)}
-                    {(data.roles[w.id] || []).slice(0, 2).map((r) => (
-                      <Badge key={r} variant="secondary">{r.split("_").join(" ")}</Badge>
-                    ))}
-                  </div>
-                  {data.ratings[w.id] && data.ratings[w.id].length > 0 && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Recent ratings: {data.ratings[w.id].map((r) => `${r.rating_type}:${r.rating_value}`).join(" • ")}
-                    </div>
-                  )}
-                  <div className="mt-2">
-                    <Button variant="link" className="px-0" onClick={() => setDetailWorkerId(w.id)}>Open details</Button>
+                    <span className="text-muted-foreground">{item.description}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {data.workers.map((w) => {
+              {filteredSortedWorkers.map((w) => {
                 const workerRoles = (data.roles[w.id] || []) as WorkerRoleLite[];
                 const colorInfo = getWorkerColorCoding(
                   w.union_membership_status,
