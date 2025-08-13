@@ -15,6 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Award, Calendar, MapPin } from "lucide-react";
+import { useForm as useSimpleForm } from "react-hook-form";
 import { format } from "date-fns";
 
 const unionRoleSchema = z.object({
@@ -73,6 +74,40 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
     },
     enabled: !!workerId,
   });
+
+  // Fetch worker membership status for display/edit here
+  const { data: worker } = useQuery({
+    queryKey: ["worker-basic", workerId],
+    queryFn: async () => {
+      if (!workerId) return null;
+      const { data, error } = await supabase
+        .from("workers")
+        .select("id, union_membership_status")
+        .eq("id", workerId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workerId,
+  });
+
+  const membershipForm = useSimpleForm<{ union_membership_status: "member" | "non_member" | "potential" | "declined" }>({
+    defaultValues: { union_membership_status: (worker?.union_membership_status as any) || "non_member" },
+    values: { union_membership_status: (worker?.union_membership_status as any) || "non_member" },
+  });
+
+  const saveMembership = async (value: "member" | "non_member" | "potential" | "declined") => {
+    if (!workerId) return;
+    const { error } = await supabase
+      .from("workers")
+      .update({ union_membership_status: value })
+      .eq("id", workerId);
+    if (error) throw error;
+    // Refresh queries
+    queryClient.invalidateQueries({ queryKey: ["worker-basic", workerId] });
+    queryClient.invalidateQueries({ queryKey: ["worker-detail", workerId] });
+    onUpdate();
+  };
 
   const { data: jobSites = [] } = useQuery({
     queryKey: ["job-sites-list"],
@@ -247,6 +282,23 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
           Add Role
         </Button>
       </div>
+
+      {/* Membership status moved here */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Union Membership Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...membershipForm as any}>
+            <div className="grid grid-cols-2 gap-3">
+              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "member" ? "default" : "outline"} onClick={() => saveMembership("member")}>Member</Button>
+              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "non_member" ? "default" : "outline"} onClick={() => saveMembership("non_member")}>Non-member</Button>
+              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "potential" ? "default" : "outline"} onClick={() => saveMembership("potential")}>Potential</Button>
+              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "declined" ? "default" : "outline"} onClick={() => saveMembership("declined")}>Declined</Button>
+            </div>
+          </Form>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="text-center text-muted-foreground">Loading union roles...</div>

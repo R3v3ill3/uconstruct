@@ -18,6 +18,8 @@ import ContractorsSummary from "@/components/projects/ContractorsSummary";
 import { EmployerDetailModal } from "@/components/employers/EmployerDetailModal";
 import { EbaAssignmentModal } from "@/components/employers/EbaAssignmentModal";
 import { EbaEditDatesModal } from "@/components/employers/EbaEditDatesModal";
+import { useAuth } from "@/hooks/useAuth";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
   const metaDesc = document.querySelector('meta[name="description"]');
@@ -39,6 +41,7 @@ const setMeta = (title: string, description: string, canonical?: string) => {
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
 
   useEffect(() => {
     setMeta(
@@ -64,6 +67,71 @@ const ProjectDetail = () => {
       return data as any;
     },
   });
+
+  // Fetch current organiser allocations for this project
+  const { data: organiserAllocations = [], refetch: refetchAllocations } = useQuery({
+    queryKey: ["project-organiser-allocations", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organiser_allocations")
+        .select("id, organiser_id, start_date, end_date, is_active, profiles:organiser_id(id, full_name, email)")
+        .eq("entity_type", "project")
+        .eq("entity_id", id as string)
+        .order("start_date", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch all organisers (to allocate)
+  const { data: organisers = [] } = useQuery({
+    queryKey: ["all-organisers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, role")
+        .in("role", ["organiser", "lead_organiser"]);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Quick role check for UI actions
+  const { data: canAllocate } = useQuery({
+    queryKey: ["can-allocate", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      // Lead organisers and admins can allocate
+      const { data } = await supabase.rpc("has_role", { _user_id: user!.id, _role: "lead_organiser" });
+      const { data: isAdmin } = await supabase.rpc("is_admin");
+      return Boolean(data) || Boolean(isAdmin);
+    },
+  });
+
+  const [allocOrganiserId, setAllocOrganiserId] = useState<string>("");
+  const [allocating, setAllocating] = useState(false);
+
+  const allocateOrganiser = async () => {
+    if (!id || !allocOrganiserId) return;
+    setAllocating(true);
+    try {
+      const { error } = await supabase.from("organiser_allocations").insert({
+        organiser_id: allocOrganiserId,
+        entity_type: "project",
+        entity_id: id,
+        allocated_by: user?.id || null,
+      });
+      if (error) throw error;
+      toast.success("Organiser allocated to project");
+      setAllocOrganiserId("");
+      await refetchAllocations();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to allocate organiser");
+    } finally {
+      setAllocating(false);
+    }
+  };
 
   const { data: jobSites } = useQuery({
     queryKey: ["project-sites", project?.id],
@@ -313,6 +381,7 @@ const ProjectDetail = () => {
         project_id: id,
         employer_id: a.employer_id,
         trade_type: a.trade_type,
+        estimated_project_workforce: a.estimated_project_workforce ?? null,
       }));
       const { error } = await (supabase as any)
         .from("project_contractor_trades")
@@ -399,6 +468,40 @@ const ProjectDetail = () => {
               <div>
                 <div className="text-xs text-muted-foreground">Project Value</div>
                 <div className="font-medium">{project?.value ? new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 }).format(Number(project.value)) : '-'}</div>
+              </div>
+            </div>
+            <div className="mt-6">
+              <div className="text-xs text-muted-foreground mb-2">Organiser Allocations</div>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-2">
+                  {(organiserAllocations as any[]).map((oa) => (
+                    <Badge key={oa.id} variant={oa.is_active ? "default" : "secondary"}>
+                      {oa.profiles?.full_name || oa.profiles?.email || oa.organiser_id}
+                    </Badge>
+                  ))}
+                  {organiserAllocations.length === 0 && (
+                    <span className="text-sm text-muted-foreground">No organisers allocated yet.</span>
+                  )}
+                </div>
+                {canAllocate && (
+                  <div className="flex items-center gap-2">
+                    <Select value={allocOrganiserId} onValueChange={setAllocOrganiserId}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select organiser" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(organisers as any[]).map((o) => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.full_name || o.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={allocateOrganiser} disabled={allocating || !allocOrganiserId}>
+                      {allocating ? "Allocating..." : "Allocate"}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

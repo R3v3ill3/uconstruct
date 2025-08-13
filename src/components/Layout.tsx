@@ -5,6 +5,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck, Shield, AlertTriangle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import cfmeuLogoLight from "@/assets/cfmeu-logo-light.png";
+import cfmeuLogoDark from "@/assets/cfmeu-logo-dark.png";
 
 const navItems = [
   { path: "/projects", label: "Projects", icon: FolderOpen },
@@ -42,7 +44,7 @@ const Layout = ({ children }: LayoutProps) => {
     const items = [...navItems];
     // Insert organiser-focused workspace
     if (userRole === "organiser" || userRole === "lead_organiser" || userRole === "admin") {
-      items.splice(1, 0, { path: "/patch", label: "My Patch", icon: Users });
+      items.splice(1, 0, { path: "/patch", label: "Patch", icon: Users });
     }
     if (userRole === "admin") {
       items.push({ path: "/admin", label: "Administration", icon: Shield });
@@ -88,15 +90,37 @@ const Layout = ({ children }: LayoutProps) => {
             </SheetTrigger>
             <SheetContent side="left" className="w-64">
               <div className="flex flex-col gap-4">
-                <h2 className="text-lg font-semibold">Union Organiser</h2>
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={cfmeuLogoLight} 
+                    alt="CFMEU Construction Union Logo" 
+                    className="h-8 w-auto dark:hidden"
+                  />
+                  <img 
+                    src={cfmeuLogoDark} 
+                    alt="CFMEU Construction Union Logo" 
+                    className="h-8 w-auto hidden dark:block"
+                  />
+                  <h2 className="text-lg font-semibold">CFMEU Organiser</h2>
+                </div>
                 <NavItems mobile />
               </div>
             </SheetContent>
           </Sheet>
 
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Union Organiser</h1>
+          <div className="flex items-center gap-3">
+            <img 
+              src={cfmeuLogoLight} 
+              alt="CFMEU Construction Union Logo" 
+              className="h-8 w-auto dark:hidden"
+            />
+            <img 
+              src={cfmeuLogoDark} 
+              alt="CFMEU Construction Union Logo" 
+              className="h-8 w-auto hidden dark:block"
+            />
+            <h1 className="text-xl font-bold">CFMEU Organiser</h1>
           </div>
 
           {/* Desktop navigation */}

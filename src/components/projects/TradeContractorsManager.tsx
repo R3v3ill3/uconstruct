@@ -15,6 +15,7 @@ type Employer = { id: string; name: string };
 export type TradeAssignment = {
   employer_id: string;
   trade_type: string;
+  estimated_project_workforce?: number | null;
 };
 
 export function TradeContractorsManager({
@@ -30,6 +31,7 @@ export function TradeContractorsManager({
   const [chosenTrade, setChosenTrade] = useState("");
   const [search, setSearch] = useState("");
   const [tradeEmployers, setTradeEmployers] = useState<Record<string, Set<string>>>({});
+  const [estimate, setEstimate] = useState<string>("");
 
   useEffect(() => {
     const load = async () => {
@@ -80,9 +82,11 @@ export function TradeContractorsManager({
       (a) => a.employer_id === chosenEmployer && a.trade_type === chosenTrade
     );
     if (exists) return;
-    onChange([...assignments, { employer_id: chosenEmployer, trade_type: chosenTrade }]);
+    const est = estimate.trim() ? Number(estimate) : null;
+    onChange([...assignments, { employer_id: chosenEmployer, trade_type: chosenTrade, estimated_project_workforce: est }]);
     setChosenEmployer("");
     setChosenTrade("");
+    setEstimate("");
     setOpen(false);
   };
 
@@ -98,8 +102,11 @@ export function TradeContractorsManager({
 
       <div className="flex flex-wrap gap-2">
         {assignments.map((a, idx) => (
-          <Badge key={`${a.employer_id}-${a.trade_type}`} variant="secondary" className="flex items-center gap-1">
+          <Badge key={`${a.employer_id}-${a.trade_type}-${idx}`} variant="secondary" className="flex items-center gap-1">
             {employerName(a.employer_id)} — {TRADE_OPTIONS.find(t => t.value === a.trade_type)?.label ?? a.trade_type}
+            {typeof a.estimated_project_workforce === 'number' && (
+              <span className="ml-1 text-xs text-muted-foreground">(Est: {a.estimated_project_workforce})</span>
+            )}
             <button onClick={() => removeAt(idx)} className="ml-1 hover:text-destructive" aria-label="Remove">
               <Trash2 className="h-3 w-3" />
             </button>
@@ -167,6 +174,11 @@ export function TradeContractorsManager({
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="estimate">Estimated workforce on this project (optional)</Label>
+                <Input id="estimate" type="number" min={0} value={estimate} onChange={(e) => setEstimate(e.target.value)} placeholder="e.g. 25" />
               </div>
 
               <div className="pt-1">

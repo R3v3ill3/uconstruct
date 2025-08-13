@@ -12,7 +12,7 @@ export const useDashboardData = () => {
         { count: totalSites },
         { count: totalActivities },
         { count: totalEbas },
-        { data: membershipData },
+        { count: memberCount },
         { data: ebaData },
         { data: employerAnalytics }
       ] = await Promise.all([
@@ -21,14 +21,13 @@ export const useDashboardData = () => {
         supabase.from("job_sites").select("*", { count: "exact", head: true }),
         supabase.from("union_activities").select("*", { count: "exact", head: true }),
         supabase.from("company_eba_records").select("*", { count: "exact", head: true }),
-        supabase.from("workers").select("union_membership_status"),
+        supabase.from("workers").select("*", { count: "exact", head: true }).eq("union_membership_status", "member"),
         supabase.from("company_eba_records").select("nominal_expiry_date, fwc_certified_date, date_eba_signed, eba_lodged_fwc"),
         supabase.from("employer_analytics").select("*")
       ]);
 
       // Calculate membership stats
-      const memberCount = membershipData?.filter(w => w.union_membership_status === 'member').length || 0;
-      const membershipRate = totalWorkers ? (memberCount / totalWorkers) * 100 : 0;
+      const membershipRate = totalWorkers ? ((memberCount || 0) / totalWorkers) * 100 : 0;
 
       // Calculate EBA expiry taxonomy
       const now = new Date();
@@ -82,7 +81,7 @@ export const useDashboardData = () => {
         totalSites: totalSites || 0,
         totalActivities: totalActivities || 0,
         totalEbas: totalEbas || 0,
-        memberCount,
+        memberCount: memberCount || 0,
         membershipRate,
         ebaPercentage,
         avgMemberDensity,
