@@ -185,6 +185,63 @@ const MyPatch = () => {
   const totalWorkers = workers?.length || 0;
   const memberCount = (workers || []).filter((w: any) => w.union_membership_status && w.union_membership_status !== "non_member").length;
 
+  // Helper to compute stats for a given userId (used by lead/admin aggregations)
+  async function fetchStatsForUser(userId: string) {
+    const [{ data: projRows }, { data: siteRows }, { data: empRows }, { data: workerRows }] = await Promise.all([
+      supabase.rpc("get_accessible_projects", { user_id: userId }),
+      supabase.rpc("get_accessible_job_sites", { user_id: userId }),
+      supabase.rpc("get_accessible_employers", { user_id: userId }),
+      supabase.rpc("get_accessible_workers", { user_id: userId }),
+    ]);
+    const workerIds: string[] = (workerRows || []).map((r: any) => r.worker_id);
+    let members = 0;
+    if (workerIds.length > 0) {
+      const { count } = await supabase
+        .from("workers")
+        .select("id", { count: "exact", head: true })
+        .in("id", workerIds)
+        .eq("union_membership_status", "member");
+      members = count || 0;
+    }
+    return {
+      projects: (projRows || []).length,
+      sites: (siteRows || []).length,
+      employers: (empRows || []).length,
+      workers: (workerRows || []).length,
+      members,
+    };
+  }
+
+  // Lead aggregated stats (across subordinates)
+  const { data: leadAggregate } = useQuery({
+    queryKey: ["lead-aggregate", isLead, organiserId],
+    enabled: isLead && !!organiserId && !viewOrganiserIdParam,
+    queryFn: async () => fetchStatsForUser(organiserId as string),
+  });
+
+  // Admin aggregated stats per lead and per organiser
+  const { data: adminAggregates } = useQuery({
+    queryKey: ["admin-aggregates", isAdmin, allLeads, hierarchyLinks, allOrganisers],
+    enabled: isAdmin && (allLeads as any[]).length >= 0 && (hierarchyLinks as any[]).length >= 0,
+    queryFn: async () => {
+      const result: Array<{ lead: any; leadStats: any; organisers: Array<{ organiser: any; stats: any }> }> = [];
+      for (const lead of (allLeads as any[])) {
+        const childrenLinks = (hierarchyLinks as any[]).filter((l) => l.parent_user_id === lead.id);
+        const organisers = childrenLinks
+          .map((l) => (allOrganisers as any[]).find((o) => o.id === l.child_user_id))
+          .filter(Boolean);
+        const leadStats = await fetchStatsForUser(lead.id);
+        const organisersStats: Array<{ organiser: any; stats: any }> = [];
+        for (const org of organisers) {
+          const stats = await fetchStatsForUser(org.id);
+          organisersStats.push({ organiser: org, stats });
+        }
+        result.push({ lead, leadStats, organisers: organisersStats });
+      }
+      return result;
+    },
+  });
+
   // Lead organiser: list subordinate organisers
   const { data: subOrganisers = [] } = useQuery({
     queryKey: ["lead-subordinates", isLead, organiserId],
@@ -297,6 +354,66 @@ const MyPatch = () => {
           </CardContent>
         </Card>
       </section>
+
+      {/* Lead rollup numbers */}
+      {isLead && !viewOrganiserIdParam && leadAggregate && (
+        <section className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Rollup</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div><div className="text-xs text-muted-foreground">Projects</div><div className="text-2xl font-bold">{leadAggregate.projects}</div></div>
+                <div><div className="text-xs text-muted-foreground">Job Sites</div><div className="text-2xl font-bold">{leadAggregate.sites}</div></div>
+                <div><div className="text-xs text-muted-foreground">Employers</div><div className="text-2xl font-bold">{leadAggregate.employers}</div></div>
+                <div><div className="text-xs text-muted-foreground">Workers</div><div className="text-2xl font-bold">{leadAggregate.workers}</div></div>
+                <div><div className="text-xs text-muted-foreground">Members</div><div className="text-2xl font-bold">{leadAggregate.members}</div></div>
+                <div></div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* Admin grouped numbers by lead and organiser */}
+      {isAdmin && !viewOrganiserIdParam && adminAggregates && (
+        <section className="mb-8 space-y-6">
+          {(adminAggregates as any[]).map((row) => (
+            <Card key={row.lead.id}>
+              <CardHeader>
+                <CardTitle>{row.lead.full_name || row.lead.email}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div><div className="text-xs text-muted-foreground">Projects</div><div className="text-2xl font-bold">{row.leadStats.projects}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Job Sites</div><div className="text-2xl font-bold">{row.leadStats.sites}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Employers</div><div className="text-2xl font-bold">{row.leadStats.employers}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Workers</div><div className="text-2xl font-bold">{row.leadStats.workers}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Members</div><div className="text-2xl font-bold">{row.leadStats.members}</div></div>
+                  <div></div>
+                </div>
+                <div className="space-y-2">
+                  {(row.organisers as any[]).map((o: any) => (
+                    <div key={o.organiser.id} className="flex items-center justify-between border rounded p-2">
+                      <Link to={`/patch?organiserId=${o.organiser.id}`} className="font-medium underline decoration-dotted">
+                        {o.organiser.full_name || o.organiser.email}
+                      </Link>
+                      <div className="grid grid-cols-5 gap-3 text-right text-sm">
+                        <div><div className="text-xs text-muted-foreground">Projects</div><div>{o.stats.projects}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Sites</div><div>{o.stats.sites}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Employers</div><div>{o.stats.employers}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Workers</div><div>{o.stats.workers}</div></div>
+                        <div><div className="text-xs text-muted-foreground">Members</div><div>{o.stats.members}</div></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
 
       {/* Lead view: list subordinate organisers */}
       {isLead && !viewOrganiserIdParam && (
