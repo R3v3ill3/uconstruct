@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
@@ -40,13 +40,39 @@ const MyPatch = () => {
 
   const organiserId = user?.id;
 
-  const { data: projectsData } = useQuery({
-    queryKey: ["my-patch-projects", organiserId],
+  // Fetch current user's role
+  const { data: userProfile } = useQuery({
+    queryKey: ["patch-user-role", organiserId],
     enabled: !!organiserId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, role, full_name, email")
+        .eq("id", organiserId as string)
+        .single();
+      if (error) throw error;
+      return data as { id: string; role: string; full_name?: string | null; email?: string | null };
+    },
+  });
+
+  const role = userProfile?.role ?? "viewer";
+  const isLead = role === "lead_organiser";
+  const isAdmin = role === "admin";
+  const isDelegate = role === "delegate";
+
+  // Allow lead/admin to view a specific organiser via query param
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const viewOrganiserIdParam = searchParams.get("organiserId");
+  const targetUserId = (isLead || isAdmin) && viewOrganiserIdParam ? viewOrganiserIdParam : organiserId;
+
+  const { data: projectsData } = useQuery({
+    queryKey: ["my-patch-projects", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
       // Get accessible project IDs via RPC, then fetch details
       const { data: projectIdsRows, error: rpcErr } = await supabase
-        .rpc("get_accessible_projects", { user_id: organiserId as string });
+        .rpc("get_accessible_projects", { user_id: targetUserId as string });
       if (rpcErr) throw rpcErr;
       const ids = (projectIdsRows || []).map((r: any) => r.project_id);
       if (!ids.length) return [] as Array<{ id: string; name: string; builder_id: string | null; proposed_start_date: string | null; proposed_finish_date: string | null }>;
@@ -62,12 +88,12 @@ const MyPatch = () => {
   const projectIds = useMemo(() => (projectsData || []).map((p) => p.id), [projectsData]);
 
   const { data: sitesData } = useQuery({
-    queryKey: ["my-patch-sites", organiserId],
-    enabled: !!organiserId,
+    queryKey: ["my-patch-sites", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
       // Use RPC to get accessible job sites, then fetch details
       const { data: siteIdRows, error: rpcErr } = await supabase
-        .rpc("get_accessible_job_sites", { user_id: organiserId as string });
+        .rpc("get_accessible_job_sites", { user_id: targetUserId as string });
       if (rpcErr) throw rpcErr;
       const ids = (siteIdRows || []).map((r: any) => r.job_site_id);
       if (!ids.length) return [] as any[];
@@ -83,11 +109,11 @@ const MyPatch = () => {
   const siteIds = useMemo(() => (sitesData || []).map((s: any) => s.id), [sitesData]);
 
   const { data: employersData } = useQuery({
-    queryKey: ["my-patch-employers", organiserId],
-    enabled: !!organiserId,
+    queryKey: ["my-patch-employers", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
       const { data: employerIdRows, error: rpcErr } = await supabase
-        .rpc("get_accessible_employers", { user_id: organiserId as string });
+        .rpc("get_accessible_employers", { user_id: targetUserId as string });
       if (rpcErr) throw rpcErr;
       const ids = (employerIdRows || []).map((r: any) => r.employer_id);
       if (!ids.length) return [] as any[];
@@ -102,11 +128,11 @@ const MyPatch = () => {
 
   // Get accessible workers, then fetch their details
   const { data: accessibleWorkerIds } = useQuery({
-    queryKey: ["my-patch-accessible-worker-ids", organiserId],
-    enabled: !!organiserId,
+    queryKey: ["my-patch-accessible-worker-ids", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .rpc("get_accessible_workers", { user_id: organiserId as string });
+        .rpc("get_accessible_workers", { user_id: targetUserId as string });
       if (error) throw error;
       return (data || []).map((r: any) => r.worker_id) as string[];
     },
@@ -159,6 +185,76 @@ const MyPatch = () => {
   const totalWorkers = workers?.length || 0;
   const memberCount = (workers || []).filter((w: any) => w.union_membership_status && w.union_membership_status !== "non_member").length;
 
+  // Lead organiser: list subordinate organisers
+  const { data: subOrganisers = [] } = useQuery({
+    queryKey: ["lead-subordinates", isLead, organiserId],
+    enabled: !!organiserId && isLead,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("role_hierarchy")
+        .select("child_user_id, profiles:child_user_id(id, full_name, email)")
+        .eq("parent_user_id", organiserId as string)
+        .eq("is_active", true)
+        .is("end_date", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Admin: list leads and their organisers; also list unassigned organisers
+  const { data: allLeads = [] } = useQuery({
+    queryKey: ["admin-leads", isAdmin],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("role", "lead_organiser")
+        .order("full_name", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: hierarchyLinks = [] } = useQuery({
+    queryKey: ["admin-role-hierarchy", isAdmin],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("role_hierarchy")
+        .select("parent_user_id, child_user_id")
+        .eq("is_active", true)
+        .is("end_date", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: allOrganisers = [] } = useQuery({
+    queryKey: ["admin-organisers", isAdmin],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("role", "organiser")
+        .order("full_name", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const organiserIdToLeadId = useMemo(() => {
+    const map = new Map<string, string>();
+    (hierarchyLinks as any[]).forEach((l) => map.set(l.child_user_id, l.parent_user_id));
+    return map;
+  }, [hierarchyLinks]);
+
+  const unassignedOrganisers = useMemo(() => {
+    if (!isAdmin) return [] as any[];
+    return (allOrganisers as any[]).filter((o) => !organiserIdToLeadId.has(o.id));
+  }, [isAdmin, allOrganisers, organiserIdToLeadId]);
+
   return (
     <main>
       <header className="mb-6">
@@ -202,6 +298,76 @@ const MyPatch = () => {
         </Card>
       </section>
 
+      {/* Lead view: list subordinate organisers */}
+      {isLead && !viewOrganiserIdParam && (
+        <section className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Organisers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {(subOrganisers as any[]).map((row) => (
+                  <Link key={row.child_user_id} to={`/patch?organiserId=${row.child_user_id}`} className="px-3 py-1 rounded bg-accent text-accent-foreground text-sm">
+                    {row.profiles?.full_name || row.profiles?.email || row.child_user_id}
+                  </Link>
+                ))}
+                {subOrganisers.length === 0 && (
+                  <span className="text-sm text-muted-foreground">No linked organisers.</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* Admin view: list leads and their organisers */}
+      {isAdmin && !viewOrganiserIdParam && (
+        <section className="mb-8 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lead Organisers</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(allLeads as any[]).map((lead) => {
+                const children = (hierarchyLinks as any[])
+                  .filter((l) => l.parent_user_id === lead.id)
+                  .map((l) => (allOrganisers as any[]).find((o) => o.id === l.child_user_id))
+                  .filter(Boolean);
+                return (
+                  <div key={lead.id} className="border rounded p-3">
+                    <div className="font-medium mb-2">{lead.full_name || lead.email}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {children.length > 0 ? (
+                        children.map((o: any) => (
+                          <Link key={o.id} to={`/patch?organiserId=${o.id}`} className="px-3 py-1 rounded bg-accent text-accent-foreground text-sm">
+                            {o.full_name || o.email}
+                          </Link>
+                        ))
+                      ) : (
+                        <span className="text-sm text-muted-foreground">No organisers</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {unassignedOrganisers.length > 0 && (
+                <div className="border rounded p-3">
+                  <div className="font-medium mb-2">Unassigned lead</div>
+                  <div className="flex flex-wrap gap-2">
+                    {unassignedOrganisers.map((o: any) => (
+                      <Link key={o.id} to={`/patch?organiserId=${o.id}`} className="px-3 py-1 rounded bg-accent text-accent-foreground text-sm">
+                        {o.full_name || o.email}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Projects</h2>
@@ -224,7 +390,9 @@ const MyPatch = () => {
                   const siteCount = (sitesData || []).filter((s: any) => s.project_id === p.id).length;
                   return (
                     <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link to={`/patch/walls?projectId=${p.id}`} className="underline decoration-dotted">{p.name}</Link>
+                      </TableCell>
                       <TableCell>{siteCount}</TableCell>
                       <TableCell>
                         <div className="flex gap-2 text-xs text-muted-foreground">
@@ -239,7 +407,7 @@ const MyPatch = () => {
                 {(!projectsData || projectsData.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                      No projects assigned yet.
+                      {isDelegate ? "No delegate projects found." : "No projects assigned yet."}
                     </TableCell>
                   </TableRow>
                 )}
