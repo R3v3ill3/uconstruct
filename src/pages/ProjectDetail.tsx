@@ -381,6 +381,7 @@ const ProjectDetail = () => {
         project_id: id,
         employer_id: a.employer_id,
         trade_type: a.trade_type,
+        estimated_project_workforce: a.estimated_project_workforce ?? null,
       }));
       const { error } = await (supabase as any)
         .from("project_contractor_trades")
