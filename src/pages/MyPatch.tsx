@@ -85,7 +85,7 @@ const MyPatch = () => {
     },
   });
 
-  const projectIds = useMemo(() => (organiserProjects || []).map((p) => p.project_id), [organiserProjects]);
+  const projectIds = useMemo(() => (projectsData || []).map((p: any) => p.id), [projectsData]);
 
   const { data: sitesData } = useQuery({
     queryKey: ["my-patch-sites", targetUserId],
@@ -326,7 +326,7 @@ const MyPatch = () => {
             <CardTitle>Projects</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{organiserProjects?.length || 0}</div>
+            <div className="text-3xl font-bold">{projectsData?.length || 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -521,8 +521,8 @@ const MyPatch = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(organiserProjects || []).slice(0, 8).map((p: any) => {
-                  const siteCount = (sitesData || []).filter((s: any) => s.project_id === p.project_id).length;
+                {(projectsData || []).slice(0, 8).map((p: any) => {
+                  const siteCount = (sitesData || []).filter((s: any) => s.project_id === p.id).length;
                   return (
 
                     <TableRow key={p.id}>
@@ -532,15 +532,15 @@ const MyPatch = () => {
                       <TableCell>{siteCount}</TableCell>
                       <TableCell>
                         <div className="flex gap-2 text-xs text-muted-foreground">
-                          <span>{p.projects.proposed_start_date || "TBC"}</span>
+                          <span>{p.proposed_start_date || "TBC"}</span>
                           <span>→</span>
-                          <span>{p.projects.proposed_finish_date || "TBC"}</span>
+                          <span>{p.proposed_finish_date || "TBC"}</span>
                         </div>
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {(!organiserProjects || organiserProjects.length === 0) && (
+                {(!projectsData || projectsData.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
                       {isDelegate ? "No delegate projects found." : "No projects assigned yet."}
