@@ -360,8 +360,22 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
     return !role.end_date || new Date(role.end_date) > new Date();
   };
 
+  // Helper to style membership status select trigger
+  const getMembershipClass = (status: string) => {
+    switch (status) {
+      case "member":
+        return "bg-green-100 text-green-800 border border-green-200";
+      case "potential":
+        return "bg-blue-100 text-blue-800 border border-blue-200";
+      case "declined":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-200";
+      default:
+        return "bg-gray-100 text-gray-800 border border-gray-200";
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[60vh] overflow-auto pr-1">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Union Roles</h3>
         <Button onClick={() => setShowAddDialog(true)}>
@@ -370,28 +384,79 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
         </Button>
       </div>
 
-      {/* Membership status moved here */}
+      {/* Active roles summary */}
+      {unionRoles && unionRoles.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap text-sm">
+          <span className="text-muted-foreground">Active roles:</span>
+          {unionRoles.filter(isActiveRole).map((role) => (
+            <Badge key={role.id} variant="secondary">{getRoleLabel(role.name)}</Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Membership & Payment */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Union Membership Status</CardTitle>
+          <CardTitle className="text-base">Membership & Payment</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-3">
-            <Select
-              value={membershipForm.getValues("union_membership_status") as any}
-              onValueChange={(v) => membershipForm.setValue("union_membership_status", v as any)}
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <FormLabel className="text-xs text-muted-foreground">Union Membership Status</FormLabel>
+              <Select
+                value={membershipForm.getValues("union_membership_status") as any}
+                onValueChange={(v) => membershipForm.setValue("union_membership_status", v as any)}
+              >
+                <SelectTrigger className={`w-[220px] ${getMembershipClass(membershipForm.getValues("union_membership_status") as any)}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="non_member">Non-member</SelectItem>
+                  <SelectItem value="potential">Potential</SelectItem>
+                  <SelectItem value="declined">Declined</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {membershipForm.getValues("union_membership_status") === "member" && (
+              <div>
+                <FormLabel className="text-xs text-muted-foreground">Payment Method</FormLabel>
+                <Select
+                  value={duesForm.getValues("payment_method") as any}
+                  onValueChange={(v) => duesForm.setValue("payment_method", v as any)}
+                >
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="direct_debit">Direct Debit</SelectItem>
+                    <SelectItem value="payroll_deduction">Payroll Deduction</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <Button
+              type="button"
+              onClick={async () => {
+                const status = membershipForm.getValues("union_membership_status") as any;
+                await saveMembership(status);
+                const values = duesForm.getValues();
+                // Save only payment method/related fields
+                await saveDues.mutateAsync({
+                  payment_method: values.payment_method,
+                  dd_status: values.payment_method === "direct_debit" ? (values.dd_status as any) : (null as any),
+                  dd_mandate_id: null,
+                  arrears_amount: values.arrears_amount,
+                  last_payment_at: values.last_payment_at,
+                  notes: values.notes,
+                } as any);
+              }}
             >
-              <SelectTrigger className="w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="member">Member</SelectItem>
-                <SelectItem value="non_member">Non-member</SelectItem>
-                <SelectItem value="potential">Potential</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="button" onClick={() => saveMembership(membershipForm.getValues("union_membership_status") as any)}>
               Save
             </Button>
           </div>
@@ -406,72 +471,35 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
         <CardContent>
           <Form {...duesForm}>
             <form onSubmit={duesForm.handleSubmit((values) => saveDues.mutate(values))} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={duesForm.control}
-                  name="payment_method"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Method</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="direct_debit">Direct Debit</SelectItem>
-                          <SelectItem value="payroll_deduction">Payroll Deduction</SelectItem>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="card">Card</SelectItem>
-                          <SelectItem value="unknown">Unknown</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={duesForm.control}
-                  name="dd_status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Direct Debit Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="not_started">Not Started</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="failed">Failed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {duesForm.watch("payment_method") === "direct_debit" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={duesForm.control}
+                    name="dd_status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Direct Debit Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="not_started">Not Started</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={duesForm.control}
-                  name="dd_mandate_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>DD Mandate ID</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g., provider mandate reference" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={duesForm.control}
                   name="arrears_amount"
