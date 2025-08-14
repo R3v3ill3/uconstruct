@@ -2065,6 +2065,50 @@ export type Database = {
           },
         ]
       }
+      worker_memberships: {
+        Row: {
+          worker_id: string
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          dd_status: Database["public"]["Enums"]["dd_status_type"]
+          dd_mandate_id: string | null
+          arrears_amount: number | null
+          last_payment_at: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          worker_id: string
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          dd_status?: Database["public"]["Enums"]["dd_status_type"]
+          dd_mandate_id?: string | null
+          arrears_amount?: number | null
+          last_payment_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          worker_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          dd_status?: Database["public"]["Enums"]["dd_status_type"]
+          dd_mandate_id?: string | null
+          arrears_amount?: number | null
+          last_payment_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_memberships_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       employer_analytics: {
@@ -4157,6 +4201,8 @@ export type Database = {
       }
     }
     Enums: {
+      payment_method_type: "direct_debit" | "payroll_deduction" | "cash" | "card" | "unknown"
+      dd_status_type: "not_started" | "in_progress" | "active" | "failed"
       activity_type:
         | "strike"
         | "training"
@@ -4462,6 +4508,19 @@ export const Constants = {
         "tiling",
       ],
       training_status: ["completed", "in_progress", "cancelled", "no_show"],
+      payment_method_type: [
+        "direct_debit",
+        "payroll_deduction",
+        "cash",
+        "card",
+        "unknown",
+      ],
+      dd_status_type: [
+        "not_started",
+        "in_progress",
+        "active",
+        "failed",
+      ],
       union_membership_status: [
         "member",
         "non_member",
