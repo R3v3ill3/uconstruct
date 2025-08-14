@@ -4244,6 +4244,7 @@ export type Database = {
         | "site_delegate"
         | "shift_delegate"
         | "company_delegate"
+        | "contact"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -4473,6 +4474,7 @@ export const Constants = {
         "site_delegate",
         "shift_delegate",
         "company_delegate",
+        "contact",
       ],
     },
   },
