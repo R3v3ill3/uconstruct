@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Plus, Search, Filter, Download, Users, Upload } from "lucide-react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export interface WorkerFilters {
   search: string;
@@ -24,6 +25,7 @@ export interface WorkerFilters {
 const Workers = () => {
   const navigate = useNavigate();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isManualWorkerOpen, setIsManualWorkerOpen] = useState(false);
   const [filters, setFilters] = useState<WorkerFilters>({
     search: "",
     unionStatus: [],
@@ -174,14 +176,25 @@ const Workers = () => {
                 Export
               </Button>
 
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate('/upload?table=workers')}
-              >
-                <Upload className="h-4 w-4" />
-                Upload Worker List
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload Workers
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsManualWorkerOpen(true)}>
+                    Manually enter worker details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/upload?table=workers')}>
+                    Upload list
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
@@ -197,6 +210,19 @@ const Workers = () => {
                   <WorkerForm 
                     onSuccess={() => {
                       setIsAddDialogOpen(false);
+                      refetch();
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+              <Dialog open={isManualWorkerOpen} onOpenChange={setIsManualWorkerOpen}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Add New Worker</DialogTitle>
+                  </DialogHeader>
+                  <WorkerForm 
+                    onSuccess={() => {
+                      setIsManualWorkerOpen(false);
                       refetch();
                     }}
                   />

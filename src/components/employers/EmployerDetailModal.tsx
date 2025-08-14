@@ -12,6 +12,8 @@ import { EmployerWorkersList } from "../workers/EmployerWorkersList";
 import EmployerEditForm from "./EmployerEditForm";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { WorkerForm } from "@/components/workers/WorkerForm";
 type EmployerWithEba = {
   id: string;
   name: string;
@@ -54,6 +56,7 @@ interface EmployerDetailModalProps {
 export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = "overview" }: EmployerDetailModalProps) => {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditing, setIsEditing] = useState(false);
+  const [isManualWorkerOpen, setIsManualWorkerOpen] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -396,15 +399,39 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = 
 <TabsContent value="workers" className="space-y-4">
   {employer && canEdit && (
     <div className="flex justify-end">
-      <Button asChild size="sm">
-        <Link to={`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`}>
-          <UploadIcon className="h-4 w-4 mr-2" />
-          Upload workers
-        </Link>
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm">
+            <UploadIcon className="h-4 w-4 mr-2" />
+            Upload workers
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setIsManualWorkerOpen(true)}>
+            Manually enter worker details
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to={`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`}>
+              Upload list
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )}
   <EmployerWorkersList employerId={employerId!} />
+  <Dialog open={isManualWorkerOpen} onOpenChange={setIsManualWorkerOpen}>
+    <DialogContent className="max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>Add New Worker</DialogTitle>
+      </DialogHeader>
+      <WorkerForm 
+        onSuccess={() => {
+          setIsManualWorkerOpen(false);
+        }}
+      />
+    </DialogContent>
+  </Dialog>
 </TabsContent>
             </Tabs>
           )
