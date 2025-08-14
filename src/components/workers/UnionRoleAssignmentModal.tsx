@@ -31,6 +31,8 @@ const unionRoleTypes = [
   { value: "shift_delegate", label: "Shift Delegate" },
   { value: "company_delegate", label: "Company Delegate" },
   { value: "hsr", label: "Health & Safety Representative" },
+  { value: "member", label: "Member" },
+  { value: "contact", label: "Contact" },
 ];
 
 export const UnionRoleAssignmentModal = ({
@@ -78,7 +80,7 @@ export const UnionRoleAssignmentModal = ({
     try {
       const { error } = await supabase.from("union_roles").insert({
         worker_id: formData.workerId,
-        name: formData.roleType as "site_delegate" | "shift_delegate" | "company_delegate" | "hsr" | "member",
+        name: formData.roleType as "site_delegate" | "shift_delegate" | "company_delegate" | "hsr" | "member" | "contact",
         job_site_id: formData.jobSiteId || null,
         is_senior: formData.isSenior,
         gets_paid_time: formData.getPaidTime,

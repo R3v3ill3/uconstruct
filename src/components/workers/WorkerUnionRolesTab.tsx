@@ -19,7 +19,7 @@ import { useForm as useSimpleForm } from "react-hook-form";
 import { format } from "date-fns";
 
 const unionRoleSchema = z.object({
-  name: z.enum(["site_delegate", "hsr", "shift_delegate", "company_delegate", "member"]),
+  name: z.enum(["site_delegate", "hsr", "shift_delegate", "company_delegate", "member", "contact"]),
   job_site_id: z.string().optional(),
   start_date: z.string().min(1, "Start date is required"),
   end_date: z.string().optional(),
@@ -43,6 +43,7 @@ const unionRoleTypes = [
   { value: "shift_delegate", label: "Shift Delegate" },
   { value: "company_delegate", label: "Company Delegate" },
   { value: "member", label: "Member" },
+  { value: "contact", label: "Contact" },
 ];
 
 export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabProps) => {
