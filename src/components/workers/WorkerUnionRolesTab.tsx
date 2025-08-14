@@ -15,7 +15,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Award, Calendar, MapPin } from "lucide-react";
-import { useForm as useSimpleForm } from "react-hook-form";
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 
@@ -121,10 +120,11 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
     enabled: !!workerId,
   });
 
-  const membershipForm = useSimpleForm<{ union_membership_status: "member" | "non_member" | "potential" | "declined" }>({
-    defaultValues: { union_membership_status: (worker?.union_membership_status as any) || "non_member" },
-    values: { union_membership_status: (worker?.union_membership_status as any) || "non_member" },
-  });
+  const [selectedStatus, setSelectedStatus] = useState<"member" | "non_member" | "potential" | "declined">("non_member");
+  useEffect(() => {
+    const s = (worker?.union_membership_status as any) || "non_member";
+    setSelectedStatus(s);
+  }, [worker?.union_membership_status]);
 
   // Dues form
   const duesForm = useForm<DuesFormData>({
@@ -405,10 +405,10 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
             <div>
               <Label className="text-xs text-muted-foreground">Union Membership Status</Label>
               <Select
-                value={membershipForm.getValues("union_membership_status") as any}
-                onValueChange={(v) => membershipForm.setValue("union_membership_status", v as any)}
+                value={selectedStatus}
+                onValueChange={(v) => setSelectedStatus(v as any)}
               >
-                <SelectTrigger className={`w-[220px] ${getMembershipClass(membershipForm.getValues("union_membership_status") as any)}`}>
+                <SelectTrigger className={`w-[220px] ${getMembershipClass(selectedStatus)}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -420,7 +420,7 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
               </Select>
             </div>
 
-            {membershipForm.getValues("union_membership_status") === "member" && (
+            {selectedStatus === "member" && (
               <div>
                 <Label className="text-xs text-muted-foreground">Payment Method</Label>
                 <Select
@@ -444,8 +444,7 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
             <Button
               type="button"
               onClick={async () => {
-                const status = membershipForm.getValues("union_membership_status") as any;
-                await saveMembership(status);
+                await saveMembership(selectedStatus as any);
                 const values = duesForm.getValues();
                 // Save only payment method/related fields, avoid null dd_status
                 const payload: any = {
