@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,18 @@ const unionRoleSchema = z.object({
   experience_level: z.string().optional(),
   notes: z.string().optional(),
 });
+
+// Dues (worker_memberships) schema
+const duesSchema = z.object({
+  payment_method: z.enum(["direct_debit", "payroll_deduction", "cash", "card", "unknown"]),
+  dd_status: z.enum(["not_started", "in_progress", "active", "failed"]),
+  dd_mandate_id: z.string().optional(),
+  arrears_amount: z.string().optional(),
+  last_payment_at: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type DuesFormData = z.infer<typeof duesSchema>;
 
 type UnionRoleFormData = z.infer<typeof unionRoleSchema>;
 
@@ -92,10 +104,50 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
     enabled: !!workerId,
   });
 
+  // Fetch worker_memberships dues record
+  const { data: membership } = useQuery({
+    queryKey: ["worker-membership", workerId],
+    queryFn: async () => {
+      if (!workerId) return null;
+      const { data, error } = await supabase
+        .from("worker_memberships")
+        .select("payment_method, dd_status, dd_mandate_id, arrears_amount, last_payment_at, notes")
+        .eq("worker_id", workerId)
+        .maybeSingle();
+      if (error) return null;
+      return data as any;
+    },
+    enabled: !!workerId,
+  });
+
   const membershipForm = useSimpleForm<{ union_membership_status: "member" | "non_member" | "potential" | "declined" }>({
     defaultValues: { union_membership_status: (worker?.union_membership_status as any) || "non_member" },
     values: { union_membership_status: (worker?.union_membership_status as any) || "non_member" },
   });
+
+  // Dues form
+  const duesForm = useForm<DuesFormData>({
+    resolver: zodResolver(duesSchema),
+    defaultValues: {
+      payment_method: "unknown",
+      dd_status: "not_started",
+      dd_mandate_id: "",
+      arrears_amount: "",
+      last_payment_at: "",
+      notes: "",
+    },
+  });
+
+  useEffect(() => {
+    duesForm.reset({
+      payment_method: (membership?.payment_method as any) || "unknown",
+      dd_status: (membership?.dd_status as any) || "not_started",
+      dd_mandate_id: membership?.dd_mandate_id || "",
+      arrears_amount: membership?.arrears_amount != null ? String(membership.arrears_amount) : "",
+      last_payment_at: membership?.last_payment_at ? String(membership.last_payment_at).slice(0, 10) : "",
+      notes: membership?.notes || "",
+    });
+  }, [membership, duesForm]);
 
   const saveMembership = async (value: "member" | "non_member" | "potential" | "declined") => {
     if (!workerId) return;
@@ -109,6 +161,40 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
     queryClient.invalidateQueries({ queryKey: ["worker-detail", workerId] });
     onUpdate();
   };
+
+  // Save dues mutation
+  const saveDues = useMutation({
+    mutationFn: async (values: DuesFormData) => {
+      if (!workerId) return;
+      const payload: any = {
+        payment_method: values.payment_method,
+        dd_status: values.dd_status,
+        dd_mandate_id: values.dd_mandate_id?.trim() || null,
+        arrears_amount: values.arrears_amount ? Number(values.arrears_amount) : null,
+        last_payment_at: values.last_payment_at || null,
+        notes: values.notes?.trim() || null,
+      };
+      if (membership) {
+        const { error } = await supabase
+          .from("worker_memberships")
+          .update(payload)
+          .eq("worker_id", workerId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("worker_memberships")
+          .insert({ worker_id: workerId, ...payload });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Dues updated", description: "Membership dues have been saved." });
+      queryClient.invalidateQueries({ queryKey: ["worker-membership", workerId] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save dues information.", variant: "destructive" });
+    },
+  });
 
   const { data: jobSites = [] } = useQuery({
     queryKey: ["job-sites-list"],
@@ -297,6 +383,135 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
               <Button type="button" variant={membershipForm.getValues("union_membership_status") === "potential" ? "default" : "outline"} onClick={() => saveMembership("potential")}>Potential</Button>
               <Button type="button" variant={membershipForm.getValues("union_membership_status") === "declined" ? "default" : "outline"} onClick={() => saveMembership("declined")}>Declined</Button>
             </div>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {/* Dues & Payment */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Dues & Payment</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...duesForm}>
+            <form onSubmit={duesForm.handleSubmit((values) => saveDues.mutate(values))} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={duesForm.control}
+                  name="payment_method"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Method</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="direct_debit">Direct Debit</SelectItem>
+                          <SelectItem value="payroll_deduction">Payroll Deduction</SelectItem>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="card">Card</SelectItem>
+                          <SelectItem value="unknown">Unknown</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={duesForm.control}
+                  name="dd_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Direct Debit Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="not_started">Not Started</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="failed">Failed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={duesForm.control}
+                  name="dd_mandate_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>DD Mandate ID</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., provider mandate reference" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={duesForm.control}
+                  name="arrears_amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Arrears Amount</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} placeholder="0.00" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={duesForm.control}
+                  name="last_payment_at"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Payment Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={duesForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Internal notes about dues/payment" className="min-h-[80px]" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-2">
+                <Button type="submit" disabled={saveDues.isPending}>
+                  {saveDues.isPending ? "Saving..." : membership ? "Update Dues" : "Create Dues"}
+                </Button>
+              </div>
+            </form>
           </Form>
         </CardContent>
       </Card>
