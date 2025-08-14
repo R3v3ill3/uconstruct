@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activity_delegations: {
@@ -116,6 +141,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       company_eba_records: {
         Row: {
           approved_date: string | null
@@ -130,6 +173,7 @@ export type Database = {
           date_vote_occurred: string | null
           docs_prepared: string | null
           eba_data_form_received: string | null
+          eba_document_url: string | null
           eba_file_number: string | null
           eba_lodged_fwc: string | null
           employer_id: string | null
@@ -143,7 +187,9 @@ export type Database = {
           nominal_expiry_date: string | null
           out_of_office_received: string | null
           sector: string | null
+          summary_url: string | null
           updated_at: string
+          wage_rates_url: string | null
         }
         Insert: {
           approved_date?: string | null
@@ -158,6 +204,7 @@ export type Database = {
           date_vote_occurred?: string | null
           docs_prepared?: string | null
           eba_data_form_received?: string | null
+          eba_document_url?: string | null
           eba_file_number?: string | null
           eba_lodged_fwc?: string | null
           employer_id?: string | null
@@ -171,7 +218,9 @@ export type Database = {
           nominal_expiry_date?: string | null
           out_of_office_received?: string | null
           sector?: string | null
+          summary_url?: string | null
           updated_at?: string
+          wage_rates_url?: string | null
         }
         Update: {
           approved_date?: string | null
@@ -186,6 +235,7 @@ export type Database = {
           date_vote_occurred?: string | null
           docs_prepared?: string | null
           eba_data_form_received?: string | null
+          eba_document_url?: string | null
           eba_file_number?: string | null
           eba_lodged_fwc?: string | null
           employer_id?: string | null
@@ -199,7 +249,9 @@ export type Database = {
           nominal_expiry_date?: string | null
           out_of_office_received?: string | null
           sector?: string | null
+          summary_url?: string | null
           updated_at?: string
+          wage_rates_url?: string | null
         }
         Relationships: [
           {
@@ -632,6 +684,13 @@ export type Database = {
             referencedRelation: "patches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "job_sites_patch_id_fkey"
+            columns: ["patch_id"]
+            isOneToOne: false
+            referencedRelation: "patches_with_geojson"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organiser_allocations: {
@@ -831,6 +890,7 @@ export type Database = {
           geom: unknown | null
           id: string
           name: string | null
+          source_kml_path: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -841,6 +901,7 @@ export type Database = {
           geom?: unknown | null
           id?: string
           name?: string | null
+          source_kml_path?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -851,6 +912,7 @@ export type Database = {
           geom?: unknown | null
           id?: string
           name?: string | null
+          source_kml_path?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1883,6 +1945,57 @@ export type Database = {
           },
         ]
       }
+      worker_memberships: {
+        Row: {
+          arrears_amount: number | null
+          created_at: string
+          dd_mandate_id: string | null
+          dd_status: Database["public"]["Enums"]["dd_status_type"]
+          last_payment_at: string | null
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          arrears_amount?: number | null
+          created_at?: string
+          dd_mandate_id?: string | null
+          dd_status?: Database["public"]["Enums"]["dd_status_type"]
+          last_payment_at?: string | null
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          arrears_amount?: number | null
+          created_at?: string
+          dd_mandate_id?: string | null
+          dd_status?: Database["public"]["Enums"]["dd_status_type"]
+          last_payment_at?: string | null
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_memberships_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "unallocated_workers_analysis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_memberships_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_placements: {
         Row: {
           created_at: string | null
@@ -2122,6 +2235,60 @@ export type Database = {
           type?: string | null
         }
         Relationships: []
+      }
+      patches_with_geojson: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          created_by: string | null
+          geom: unknown | null
+          geom_geojson: Json | null
+          id: string | null
+          name: string | null
+          source_kml_path: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          geom?: unknown | null
+          geom_geojson?: never
+          id?: string | null
+          name?: string | null
+          source_kml_path?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          geom?: unknown | null
+          geom_geojson?: never
+          id?: string | null
+          name?: string | null
+          source_kml_path?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patches_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unallocated_workers_analysis: {
         Row: {
@@ -2807,6 +2974,16 @@ export type Database = {
         Args: { "": string }
         Returns: unknown
       }
+      get_accessible_workers: {
+        Args: { user_id: string }
+        Returns: {
+          worker_id: string
+        }[]
+      }
+      get_app_setting: {
+        Args: { _key: string }
+        Returns: string
+      }
       get_proj4_from_srid: {
         Args: { "": number }
         Returns: string
@@ -2851,6 +3028,16 @@ export type Database = {
         Args: { user_id: string; site_id: string }
         Returns: boolean
       }
+      insert_patch_from_geojson: {
+        Args: {
+          patch_code: string
+          patch_name: string
+          geojson_data: string
+          source_file: string
+          user_id: string
+        }
+        Returns: string
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -2870,6 +3057,13 @@ export type Database = {
       longtransactionsenabled: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      parse_kml_content: {
+        Args: { kml_content: string; source_file: string }
+        Returns: {
+          patch_id: string
+          patch_code: string
+        }[]
       }
       path: {
         Args: { "": unknown }
@@ -4163,6 +4357,7 @@ export type Database = {
         | "conversation"
         | "action"
         | "meeting"
+      dd_status_type: "not_started" | "in_progress" | "active" | "failed"
       eba_status: "yes" | "no" | "pending"
       eba_status_type: "yes" | "no" | "not_specified"
       employer_role_tag: "builder" | "head_contractor"
@@ -4179,6 +4374,12 @@ export type Database = {
         | "apprentice"
         | "trainee"
       jv_status: "yes" | "no" | "unsure"
+      payment_method_type:
+        | "direct_debit"
+        | "payroll_deduction"
+        | "cash"
+        | "card"
+        | "unknown"
       project_role:
         | "head_contractor"
         | "contractor"
@@ -4378,6 +4579,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       activity_type: [
@@ -4387,6 +4591,7 @@ export const Constants = {
         "action",
         "meeting",
       ],
+      dd_status_type: ["not_started", "in_progress", "active", "failed"],
       eba_status: ["yes", "no", "pending"],
       eba_status_type: ["yes", "no", "not_specified"],
       employer_role_tag: ["builder", "head_contractor"],
@@ -4405,6 +4610,13 @@ export const Constants = {
         "trainee",
       ],
       jv_status: ["yes", "no", "unsure"],
+      payment_method_type: [
+        "direct_debit",
+        "payroll_deduction",
+        "cash",
+        "card",
+        "unknown",
+      ],
       project_role: [
         "head_contractor",
         "contractor",
