@@ -376,14 +376,25 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
           <CardTitle className="text-base">Union Membership Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...membershipForm as any}>
-            <div className="grid grid-cols-2 gap-3">
-              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "member" ? "default" : "outline"} onClick={() => saveMembership("member")}>Member</Button>
-              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "non_member" ? "default" : "outline"} onClick={() => saveMembership("non_member")}>Non-member</Button>
-              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "potential" ? "default" : "outline"} onClick={() => saveMembership("potential")}>Potential</Button>
-              <Button type="button" variant={membershipForm.getValues("union_membership_status") === "declined" ? "default" : "outline"} onClick={() => saveMembership("declined")}>Declined</Button>
-            </div>
-          </Form>
+          <div className="flex items-center gap-3">
+            <Select
+              value={membershipForm.getValues("union_membership_status") as any}
+              onValueChange={(v) => membershipForm.setValue("union_membership_status", v as any)}
+            >
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="non_member">Non-member</SelectItem>
+                <SelectItem value="potential">Potential</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="button" onClick={() => saveMembership(membershipForm.getValues("union_membership_status") as any)}>
+              Save
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -509,6 +520,194 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
               <div className="flex justify-end gap-2">
                 <Button type="submit" disabled={saveDues.isPending}>
                   {saveDues.isPending ? "Saving..." : membership ? "Update Dues" : "Create Dues"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {/* Add New Union Role (inline) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Add New Union Role</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {unionRoleTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="job_site_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Site (Optional)</FormLabel>
+                    <Select onValueChange={(v) => field.onChange(v === "none" ? "" : v)} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select job site" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No specific site</SelectItem>
+                        {jobSites.map((site) => (
+                          <SelectItem key={site.id} value={site.id}>
+                            {site.name} - {site.location}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="start_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="end_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date (Optional)</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="is_senior"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Senior Role</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="gets_paid_time"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Gets Paid Time</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="experience_level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Experience Level</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="experienced">Experienced</SelectItem>
+                          <SelectItem value="expert">Expert</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="rating"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rating</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., Excellent, Good" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Additional notes about this role..." className="min-h-[80px]" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="submit" 
+                  disabled={createMutation.isPending}
+                >
+                  Add Role
                 </Button>
               </div>
             </form>
