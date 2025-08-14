@@ -202,7 +202,7 @@ export const WorkerDetailModal = ({ workerId, isOpen, onClose, onUpdate }: Worke
           <div className="mt-4 overflow-hidden flex-1">
             <TabsContent value="personal" className="h-full overflow-auto">
               {worker ? (
-                <WorkerForm worker={worker} onSuccess={handleWorkerUpdate} />
+                <WorkerForm worker={worker} onSuccess={handleWorkerUpdate} hideUnionSection={true} />
               ) : (
                 <div className="text-center text-muted-foreground">Loading worker details...</div>
               )}

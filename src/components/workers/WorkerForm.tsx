@@ -49,9 +49,10 @@ type WorkerFormData = z.infer<typeof workerSchema>;
 interface WorkerFormProps {
   worker?: any;
   onSuccess: () => void;
+  hideUnionSection?: boolean;
 }
 
-export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
+export const WorkerForm = ({ worker, onSuccess, hideUnionSection = false }: WorkerFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -211,11 +212,11 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${hideUnionSection ? "grid-cols-3" : "grid-cols-4"}`}>
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="contact">Contact</TabsTrigger>
             <TabsTrigger value="address">Address</TabsTrigger>
-            <TabsTrigger value="union">Union</TabsTrigger>
+            {!hideUnionSection && <TabsTrigger value="union">Union</TabsTrigger>}
           </TabsList>
 
           <ScrollArea className="h-96 mt-4">
@@ -467,218 +468,220 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
               />
             </TabsContent>
 
-            <TabsContent value="union" className="space-y-6">
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="union_membership_status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Union Membership Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="non_member">Non-member</SelectItem>
-                          <SelectItem value="potential">Potential</SelectItem>
-                          <SelectItem value="declined">Declined</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium">Add Union Role (optional)</h4>
-                <div className="grid grid-cols-2 gap-4">
+            {!hideUnionSection && (
+              <TabsContent value="union" className="space-y-6">
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="union_role_name"
+                    name="union_membership_status"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Role Type</FormLabel>
+                        <FormLabel>Union Membership Status</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select role" />
+                              <SelectValue />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="site_delegate">Site Delegate</SelectItem>
-                            <SelectItem value="hsr">Health & Safety Representative</SelectItem>
-                            <SelectItem value="shift_delegate">Shift Delegate</SelectItem>
-                            <SelectItem value="company_delegate">Company Delegate</SelectItem>
                             <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="contact">Contact</SelectItem>
+                            <SelectItem value="non_member">Non-member</SelectItem>
+                            <SelectItem value="potential">Potential</SelectItem>
+                            <SelectItem value="declined">Declined</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
 
-                  <FormField
-                    control={form.control}
-                    name="union_role_job_site_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Job Site (Optional)</FormLabel>
-                        <Select onValueChange={(v) => field.onChange(v === "none" ? "" : v)} value={field.value}>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Add Union Role (optional)</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="union_role_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Role Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="site_delegate">Site Delegate</SelectItem>
+                              <SelectItem value="hsr">Health & Safety Representative</SelectItem>
+                              <SelectItem value="shift_delegate">Shift Delegate</SelectItem>
+                              <SelectItem value="company_delegate">Company Delegate</SelectItem>
+                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="contact">Contact</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="union_role_job_site_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Job Site (Optional)</FormLabel>
+                          <Select onValueChange={(v) => field.onChange(v === "none" ? "" : v)} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select job site" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">No specific site</SelectItem>
+                              {jobSites.map((site: any) => (
+                                <SelectItem key={site.id} value={site.id}>
+                                  {site.name} - {site.location}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="union_role_start_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Date</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select job site" />
-                            </SelectTrigger>
+                            <Input 
+                              type="date" 
+                              {...field} 
+                              className={field.value === today && isUnionStartDefault ? "bg-amber-50 dark:bg-amber-900/30" : ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setIsUnionStartDefault(v === today);
+                                field.onChange(v);
+                              }}
+                            />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No specific site</SelectItem>
-                            {jobSites.map((site: any) => (
-                              <SelectItem key={site.id} value={site.id}>
-                                {site.name} - {site.location}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                          {field.value === today && isUnionStartDefault && (
+                            <p className="text-xs text-muted-foreground">Defaulted to today</p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="union_role_start_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Date</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date" 
-                            {...field} 
-                            className={field.value === today && isUnionStartDefault ? "bg-amber-50 dark:bg-amber-900/30" : ""}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setIsUnionStartDefault(v === today);
-                              field.onChange(v);
-                            }}
-                          />
-                        </FormControl>
-                        {field.value === today && isUnionStartDefault && (
-                          <p className="text-xs text-muted-foreground">Defaulted to today</p>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="union_role_end_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Date (Optional)</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="union_role_is_senior"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>Senior Role</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="union_role_gets_paid_time"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>Gets Paid Time</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="union_role_experience_level"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Experience Level</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                    <FormField
+                      control={form.control}
+                      name="union_role_end_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date (Optional)</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select level" />
-                            </SelectTrigger>
+                            <Input type="date" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="beginner">Beginner</SelectItem>
-                            <SelectItem value="intermediate">Intermediate</SelectItem>
-                            <SelectItem value="experienced">Experienced</SelectItem>
-                            <SelectItem value="expert">Expert</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="union_role_is_senior"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Senior Role</FormLabel>
+                          </div>
+                          <FormControl>
+                            <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="union_role_gets_paid_time"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Gets Paid Time</FormLabel>
+                          </div>
+                          <FormControl>
+                            <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="union_role_experience_level"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Experience Level</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="beginner">Beginner</SelectItem>
+                              <SelectItem value="intermediate">Intermediate</SelectItem>
+                              <SelectItem value="experienced">Experienced</SelectItem>
+                              <SelectItem value="expert">Expert</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="union_role_rating"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Rating</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., Excellent, Good" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
-                    name="union_role_rating"
+                    name="union_role_notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Rating</FormLabel>
+                        <FormLabel>Notes</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="e.g., Excellent, Good" />
+                          <Textarea {...field} className="min-h-[80px]" placeholder="Additional notes about this role..." />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="union_role_notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} className="min-h-[80px]" placeholder="Additional notes about this role..." />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </TabsContent>
+              </TabsContent>
+            )}
           </ScrollArea>
         </Tabs>
 
