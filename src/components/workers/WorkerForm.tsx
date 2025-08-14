@@ -33,7 +33,7 @@ const workerSchema = z.object({
   gender: z.string().optional(),
   date_of_birth: z.string().optional(),
   // Optional union role fields for creation
-  union_role_name: z.enum(["site_delegate", "hsr", "shift_delegate", "company_delegate", "member"]).optional(),
+  union_role_name: z.enum(["site_delegate", "hsr", "shift_delegate", "company_delegate", "member", "contact"]).optional(),
   union_role_job_site_id: z.string().optional(),
   union_role_start_date: z.string().optional(),
   union_role_end_date: z.string().optional(),
@@ -515,6 +515,7 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
                             <SelectItem value="shift_delegate">Shift Delegate</SelectItem>
                             <SelectItem value="company_delegate">Company Delegate</SelectItem>
                             <SelectItem value="member">Member</SelectItem>
+                            <SelectItem value="contact">Contact</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

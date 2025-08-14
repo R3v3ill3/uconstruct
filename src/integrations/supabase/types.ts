@@ -2178,6 +2178,7 @@ export type Database = {
           },
         ]
       }
+
     }
     Views: {
       employer_analytics: {
