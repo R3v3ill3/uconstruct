@@ -112,6 +112,23 @@ const ProjectDetail = () => {
   const [allocOrganiserId, setAllocOrganiserId] = useState<string>("");
   const [allocating, setAllocating] = useState(false);
 
+  const endAllocationMutation = useMutation({
+    mutationFn: async (allocationId: string) => {
+      const today = new Date();
+      const endDate = new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const { error } = await supabase
+        .from("organiser_allocations")
+        .update({ is_active: false, end_date: endDate })
+        .eq("id", allocationId);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("Allocation removed");
+      await refetchAllocations();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const allocateOrganiser = async () => {
     if (!id || !allocOrganiserId) return;
     setAllocating(true);
@@ -473,11 +490,23 @@ const ProjectDetail = () => {
             <div className="mt-6">
               <div className="text-xs text-muted-foreground mb-2">Organiser Allocations</div>
               <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2">
                   {(organiserAllocations as any[]).map((oa) => (
-                    <Badge key={oa.id} variant={oa.is_active ? "default" : "secondary"}>
-                      {oa.profiles?.full_name || oa.profiles?.email || oa.organiser_id}
-                    </Badge>
+                    <div key={oa.id} className="flex items-center gap-2">
+                      <Badge variant={oa.is_active ? "default" : "secondary"}>
+                        {oa.profiles?.full_name || oa.profiles?.email || oa.organiser_id}
+                      </Badge>
+                      {canAllocate && oa.is_active && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => endAllocationMutation.mutate(oa.id)}
+                          disabled={endAllocationMutation.isPending}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
                   ))}
                   {organiserAllocations.length === 0 && (
                     <span className="text-sm text-muted-foreground">No organisers allocated yet.</span>

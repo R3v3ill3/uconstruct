@@ -18,6 +18,7 @@ import { SingleEmployerDialogPicker } from "@/components/projects/SingleEmployer
 import { TradeContractorsManager, TradeAssignment } from "@/components/projects/TradeContractorsManager";
 import EditProjectDialog from "@/components/projects/EditProjectDialog";
 import DeleteProjectDialog from "@/components/projects/DeleteProjectDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 type Project = {
   id: string;
@@ -56,6 +57,7 @@ type Project = {
 
 const Projects = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -93,10 +95,39 @@ const Projects = () => {
     link.href = window.location.href;
   }, []);
 
-  const { data: projects = [], isLoading } = useQuery({
-    queryKey: ["projects"],
+  // Determine current user's role
+  const { data: myRole } = useQuery({
+    queryKey: ["projects-my-role", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user!.id)
+        .single();
+      if (error) throw error;
+      return (data?.role as string) || "viewer";
+    },
+  });
+
+  const restrictToAccessible = (myRole === "organiser" || myRole === "delegate");
+
+  // If restricted, fetch accessible project IDs first
+  const { data: accessibleProjectIds = [] } = useQuery({
+    queryKey: ["accessible-project-ids", user?.id, restrictToAccessible],
+    enabled: !!user?.id && restrictToAccessible,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .rpc("get_accessible_projects", { user_id: user!.id });
+      if (error) throw error;
+      return ((data || []) as Array<{ project_id: string }>).map((r) => r.project_id);
+    },
+  });
+
+  const { data: projects = [], isLoading } = useQuery({
+    queryKey: ["projects", restrictToAccessible, accessibleProjectIds],
+    queryFn: async () => {
+      let query = supabase
         .from("projects")
         .select(`
           *,
@@ -114,6 +145,12 @@ const Projects = () => {
         `)
         .order("created_at", { ascending: false });
 
+      if (restrictToAccessible) {
+        if (accessibleProjectIds.length === 0) return [] as unknown as Project[];
+        query = query.in("id", accessibleProjectIds as string[]);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as Project[];
     },

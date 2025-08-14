@@ -78,7 +78,23 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = 
     enabled: !!user?.id,
   });
 
-  const canEdit = ["admin", "organiser", "lead_organiser", "delegate"].includes(myRole || "");
+  const isAdmin = (myRole === "admin");
+  const isLead = (myRole === "lead_organiser");
+
+  const { data: canAccessEmployer } = useQuery({
+    queryKey: ["can-access-employer", user?.id, employerId],
+    enabled: !!user?.id && !!employerId && !isAdmin && !isLead,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .rpc("get_accessible_employers", { user_id: user!.id });
+      if (error) throw error;
+      const ids = ((data || []) as Array<{ employer_id: string }>).map((r) => r.employer_id);
+      return ids.includes(employerId!);
+    },
+  });
+
+  const canEdit = isAdmin || isLead || ((myRole === "organiser" || myRole === "delegate") && !!canAccessEmployer);
+  const canViewWorkers = canEdit;
 
   const { data: employer, isLoading } = useQuery({
     queryKey: ["employer-detail", employerId],
@@ -393,19 +409,29 @@ export const EmployerDetailModal = ({ employerId, isOpen, onClose, initialTab = 
                 </Card>
               </TabsContent>
 
-<TabsContent value="workers" className="space-y-4">
-  {employer && canEdit && (
-    <div className="flex justify-end">
-      <Button asChild size="sm">
-        <Link to={`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`}>
-          <UploadIcon className="h-4 w-4 mr-2" />
-          Upload workers
-        </Link>
-      </Button>
-    </div>
-  )}
-  <EmployerWorkersList employerId={employerId!} />
-</TabsContent>
+              <TabsContent value="workers" className="space-y-4">
+                {(!canViewWorkers) ? (
+                  <Card>
+                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                      Workers are visible only when this employer is within your allocated projects.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    {employer && canEdit && (
+                      <div className="flex justify-end">
+                        <Button asChild size="sm">
+                          <Link to={`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`}>
+                            <UploadIcon className="h-4 w-4 mr-2" />
+                            Upload workers
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                    <EmployerWorkersList employerId={employerId!} />
+                  </>
+                )}
+              </TabsContent>
             </Tabs>
           )
         ) : (

@@ -11,6 +11,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Plus, Search, Filter, Download, Users, Upload } from "lucide-react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect as useReactEffect } from "react";
 
 export interface WorkerFilters {
   search: string;
@@ -23,6 +25,7 @@ export interface WorkerFilters {
 
 const Workers = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [filters, setFilters] = useState<WorkerFilters>({
     search: "",
@@ -34,9 +37,40 @@ const Workers = () => {
   });
   const { toast } = useToast();
 
-  const { data: workers, isLoading, refetch } = useQuery({
-    queryKey: ["workers", filters],
+  const { data: myRole } = useQuery({
+    queryKey: ["workers-my-role", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user!.id)
+        .single();
+      if (error) throw error;
+      return (data?.role as string) || "viewer";
+    },
+  });
+
+  const restrictToAccessible = (myRole === "organiser" || myRole === "delegate");
+
+  const { data: accessibleWorkerIds = [] } = useQuery({
+    queryKey: ["accessible-worker-ids", user?.id, restrictToAccessible],
+    enabled: !!user?.id && restrictToAccessible,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .rpc("get_accessible_workers", { user_id: user!.id });
+      if (error) throw error;
+      return ((data || []) as Array<{ worker_id: string }>).map((r) => r.worker_id);
+    },
+  });
+
+  const { data: workers, isLoading, refetch } = useQuery({
+    queryKey: ["workers", filters, restrictToAccessible, accessibleWorkerIds],
+    queryFn: async () => {
+      if (restrictToAccessible && accessibleWorkerIds.length === 0) {
+        return [] as any[];
+      }
+
       let query = supabase
         .from("workers")
         .select(`
@@ -51,6 +85,10 @@ const Workers = () => {
             employers(name)
           )
         `);
+
+      if (restrictToAccessible) {
+        query = query.in("id", accessibleWorkerIds as string[]);
+      }
 
       // Apply search filter
       if (filters.search) {
@@ -77,7 +115,6 @@ const Workers = () => {
       }
 
       const { data, error } = await query.order("surname", { ascending: true });
-      
       if (error) throw error;
       return data;
     },
