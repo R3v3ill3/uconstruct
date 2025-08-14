@@ -141,6 +141,16 @@ AS $function$
 
   UNION
 
+  -- From accessible projects' legacy builder_id field (if populated)
+  SELECT DISTINCT p.builder_id AS employer_id
+  FROM public.projects p
+  WHERE p.builder_id IS NOT NULL
+    AND p.id IN (
+      SELECT project_id FROM public.get_accessible_projects(user_id)
+    )
+
+  UNION
+
   -- From site contractor trades (if present)
   SELECT DISTINCT sct.employer_id
   FROM public.site_contractor_trades sct
