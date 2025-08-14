@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Award, Calendar, MapPin } from "lucide-react";
 import { useForm as useSimpleForm } from "react-hook-form";
 import { format } from "date-fns";
+import { Label } from "@/components/ui/label";
 
 const unionRoleSchema = z.object({
   name: z.enum(["site_delegate", "hsr", "shift_delegate", "company_delegate", "member", "contact"]),
@@ -402,7 +403,7 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
         <CardContent>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <FormLabel className="text-xs text-muted-foreground">Union Membership Status</FormLabel>
+              <Label className="text-xs text-muted-foreground">Union Membership Status</Label>
               <Select
                 value={membershipForm.getValues("union_membership_status") as any}
                 onValueChange={(v) => membershipForm.setValue("union_membership_status", v as any)}
@@ -421,7 +422,7 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
 
             {membershipForm.getValues("union_membership_status") === "member" && (
               <div>
-                <FormLabel className="text-xs text-muted-foreground">Payment Method</FormLabel>
+                <Label className="text-xs text-muted-foreground">Payment Method</Label>
                 <Select
                   value={duesForm.getValues("payment_method") as any}
                   onValueChange={(v) => duesForm.setValue("payment_method", v as any)}
@@ -446,15 +447,17 @@ export const WorkerUnionRolesTab = ({ workerId, onUpdate }: WorkerUnionRolesTabP
                 const status = membershipForm.getValues("union_membership_status") as any;
                 await saveMembership(status);
                 const values = duesForm.getValues();
-                // Save only payment method/related fields
-                await saveDues.mutateAsync({
+                // Save only payment method/related fields, avoid null dd_status
+                const payload: any = {
                   payment_method: values.payment_method,
-                  dd_status: values.payment_method === "direct_debit" ? (values.dd_status as any) : (null as any),
-                  dd_mandate_id: null,
                   arrears_amount: values.arrears_amount,
                   last_payment_at: values.last_payment_at,
                   notes: values.notes,
-                } as any);
+                };
+                if (values.payment_method === "direct_debit") {
+                  payload.dd_status = values.dd_status as any;
+                }
+                await saveDues.mutateAsync(payload);
               }}
             >
               Save
