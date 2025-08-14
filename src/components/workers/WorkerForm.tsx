@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useQuery } from "@tanstack/react-query";
+import { Switch } from "@/components/ui/switch";
 
 const workerSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -30,6 +32,16 @@ const workerSchema = z.object({
   union_membership_status: z.enum(["member", "non_member", "potential", "declined"]),
   gender: z.string().optional(),
   date_of_birth: z.string().optional(),
+  // Optional union role fields for creation
+  union_role_name: z.enum(["site_delegate", "hsr", "shift_delegate", "company_delegate", "member"]).optional(),
+  union_role_job_site_id: z.string().optional(),
+  union_role_start_date: z.string().optional(),
+  union_role_end_date: z.string().optional(),
+  union_role_is_senior: z.boolean().optional(),
+  union_role_gets_paid_time: z.boolean().optional(),
+  union_role_rating: z.string().optional(),
+  union_role_experience_level: z.string().optional(),
+  union_role_notes: z.string().optional(),
 });
 
 type WorkerFormData = z.infer<typeof workerSchema>;
@@ -42,6 +54,21 @@ interface WorkerFormProps {
 export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  const today = new Date().toISOString().split("T")[0];
+  const [isUnionStartDefault, setIsUnionStartDefault] = useState(true);
+
+  const { data: jobSites = [] } = useQuery({
+    queryKey: ["job-sites-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("job_sites")
+        .select("id, name, location")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const form = useForm<WorkerFormData>({
     resolver: zodResolver(workerSchema),
@@ -59,10 +86,19 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
       home_address_suburb: worker?.home_address_suburb || "",
       home_address_postcode: worker?.home_address_postcode || "",
       home_address_state: worker?.home_address_state || "",
-             // union_membership_status moved to Union Roles tab
-       union_membership_status: worker?.union_membership_status || "non_member",
+      union_membership_status: worker?.union_membership_status || "non_member",
       gender: worker?.gender || "",
       date_of_birth: worker?.date_of_birth || "",
+      // Union role defaults
+      union_role_name: undefined,
+      union_role_job_site_id: "",
+      union_role_start_date: today,
+      union_role_end_date: "",
+      union_role_is_senior: false,
+      union_role_gets_paid_time: false,
+      union_role_rating: "",
+      union_role_experience_level: "",
+      union_role_notes: "",
     },
   });
 
@@ -87,7 +123,7 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
         home_address_state: data.home_address_state === "" ? null : data.home_address_state,
         gender: data.gender === "" ? null : data.gender,
         date_of_birth: data.date_of_birth === "" ? null : data.date_of_birth,
-      };
+      } as any;
 
       if (worker?.id) {
         // Update existing worker
@@ -98,17 +134,59 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
 
         if (error) throw error;
 
+        // Optionally create a union role if provided
+        if (data.union_role_name) {
+          const rolePayload = {
+            worker_id: worker.id,
+            name: data.union_role_name,
+            job_site_id: data.union_role_job_site_id || null,
+            start_date: (data.union_role_start_date || today),
+            end_date: data.union_role_end_date || null,
+            is_senior: !!data.union_role_is_senior,
+            gets_paid_time: !!data.union_role_gets_paid_time,
+            rating: data.union_role_rating || null,
+            experience_level: data.union_role_experience_level || null,
+            notes: data.union_role_notes || null,
+          } as any;
+          const { error: roleError } = await supabase
+            .from("union_roles")
+            .insert(rolePayload);
+          if (roleError) throw roleError;
+        }
+
         toast({
           title: "Worker updated",
           description: "The worker information has been successfully updated.",
         });
       } else {
-        // Create new worker
-        const { error } = await supabase
+        // Create new worker and optionally a union role
+        const { data: inserted, error } = await supabase
           .from("workers")
-          .insert(cleanedData);
+          .insert(cleanedData)
+          .select("id")
+          .single();
 
         if (error) throw error;
+
+        const newWorkerId = inserted?.id;
+        if (newWorkerId && data.union_role_name) {
+          const rolePayload = {
+            worker_id: newWorkerId,
+            name: data.union_role_name,
+            job_site_id: data.union_role_job_site_id || null,
+            start_date: (data.union_role_start_date || today),
+            end_date: data.union_role_end_date || null,
+            is_senior: !!data.union_role_is_senior,
+            gets_paid_time: !!data.union_role_gets_paid_time,
+            rating: data.union_role_rating || null,
+            experience_level: data.union_role_experience_level || null,
+            notes: data.union_role_notes || null,
+          } as any;
+          const { error: roleError } = await supabase
+            .from("union_roles")
+            .insert(rolePayload);
+          if (roleError) throw roleError;
+        }
 
         toast({
           title: "Worker added",
@@ -133,10 +211,11 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="contact">Contact</TabsTrigger>
             <TabsTrigger value="address">Address</TabsTrigger>
+            <TabsTrigger value="union">Union</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="h-96 mt-4">
@@ -237,7 +316,7 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
                 />
               </div>
 
-                             {/* Union Membership Status moved to Union Roles tab */}
+              {/* Union Membership Status moved to Union tab */}
             </TabsContent>
 
             <TabsContent value="contact" className="space-y-4">
@@ -386,6 +465,218 @@ export const WorkerForm = ({ worker, onSuccess }: WorkerFormProps) => {
                   </FormItem>
                 )}
               />
+            </TabsContent>
+
+            <TabsContent value="union" className="space-y-6">
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="union_membership_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Union Membership Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="non_member">Non-member</SelectItem>
+                          <SelectItem value="potential">Potential</SelectItem>
+                          <SelectItem value="declined">Declined</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Add Union Role (optional)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="union_role_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="site_delegate">Site Delegate</SelectItem>
+                            <SelectItem value="hsr">Health & Safety Representative</SelectItem>
+                            <SelectItem value="shift_delegate">Shift Delegate</SelectItem>
+                            <SelectItem value="company_delegate">Company Delegate</SelectItem>
+                            <SelectItem value="member">Member</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="union_role_job_site_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Job Site (Optional)</FormLabel>
+                        <Select onValueChange={(v) => field.onChange(v === "none" ? "" : v)} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select job site" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No specific site</SelectItem>
+                            {jobSites.map((site: any) => (
+                              <SelectItem key={site.id} value={site.id}>
+                                {site.name} - {site.location}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="union_role_start_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            className={field.value === today && isUnionStartDefault ? "bg-amber-50 dark:bg-amber-900/30" : ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setIsUnionStartDefault(v === today);
+                              field.onChange(v);
+                            }}
+                          />
+                        </FormControl>
+                        {field.value === today && isUnionStartDefault && (
+                          <p className="text-xs text-muted-foreground">Defaulted to today</p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="union_role_end_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="union_role_is_senior"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Senior Role</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="union_role_gets_paid_time"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Gets Paid Time</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="union_role_experience_level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Experience Level</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="beginner">Beginner</SelectItem>
+                            <SelectItem value="intermediate">Intermediate</SelectItem>
+                            <SelectItem value="experienced">Experienced</SelectItem>
+                            <SelectItem value="expert">Expert</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="union_role_rating"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rating</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., Excellent, Good" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="union_role_notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} className="min-h-[80px]" placeholder="Additional notes about this role..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </TabsContent>
           </ScrollArea>
         </Tabs>

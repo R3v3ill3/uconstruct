@@ -10,6 +10,9 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { EbaAssignmentModal } from "./EbaAssignmentModal";
 import { getProgressIndicatorClass } from "@/utils/densityColors";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { WorkerForm } from "@/components/workers/WorkerForm";
 
 type EmployerWithEba = {
   id: string;
@@ -53,6 +56,7 @@ interface EmployerCardProps {
 export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
   const navigate = useNavigate();
   const [showEbaModal, setShowEbaModal] = useState(false);
+  const [isManualWorkerOpen, setIsManualWorkerOpen] = useState(false);
 
   // Fetch employer analytics
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
@@ -242,18 +246,27 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
                   View Document
                 </Button>
               )}
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="flex-1 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`);
-                }}
-              >
-                <Upload className="h-3 w-3 mr-1" />
-                Upload Workers
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="flex-1 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    Upload Workers
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={() => setIsManualWorkerOpen(true)}>
+                    Manually enter worker details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`)}>
+                    Upload list
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         )}
@@ -272,18 +285,27 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
               <FileText className="h-3 w-3 mr-1" />
               Add EBA
             </Button>
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`);
-              }}
-            >
-              <Upload className="h-3 w-3 mr-1" />
-              Upload Workers
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Upload className="h-3 w-3 mr-1" />
+                  Upload Workers
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={() => setIsManualWorkerOpen(true)}>
+                  Manually enter worker details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/upload?employerId=${employer.id}&employerName=${encodeURIComponent(employer.name)}`)}>
+                  Upload list
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </CardContent>
@@ -293,6 +315,18 @@ export const EmployerCard = ({ employer, onClick }: EmployerCardProps) => {
         onClose={() => setShowEbaModal(false)}
         employer={{ id: employer.id, name: employer.name }}
       />
+      <Dialog open={isManualWorkerOpen} onOpenChange={setIsManualWorkerOpen}>
+        <DialogContent className="max-w-2xl" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Add New Worker</DialogTitle>
+          </DialogHeader>
+          <WorkerForm 
+            onSuccess={() => {
+              setIsManualWorkerOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
