@@ -10,42 +10,42 @@ export const useDashboardData = () => {
       const timeoutMs = 8000;
 
       const workersCountP = withTimeout(
-        supabase.from("workers").select("*", { count: "exact", head: true }),
+        Promise.resolve(supabase.from("workers").select("*", { count: "exact", head: true })),
         timeoutMs,
         'workers-count'
       );
       const employersCountP = withTimeout(
-        supabase.from("employers").select("*", { count: "exact", head: true }),
+        Promise.resolve(supabase.from("employers").select("*", { count: "exact", head: true })),
         timeoutMs,
         'employers-count'
       );
       const sitesCountP = withTimeout(
-        supabase.from("job_sites").select("*", { count: "exact", head: true }),
+        Promise.resolve(supabase.from("job_sites").select("*", { count: "exact", head: true })),
         timeoutMs,
         'sites-count'
       );
       const activitiesCountP = withTimeout(
-        supabase.from("union_activities").select("*", { count: "exact", head: true }),
+        Promise.resolve(supabase.from("union_activities").select("*", { count: "exact", head: true })),
         timeoutMs,
         'activities-count'
       );
       const ebasCountP = withTimeout(
-        supabase.from("company_eba_records").select("*", { count: "exact", head: true }),
+        Promise.resolve(supabase.from("company_eba_records").select("*", { count: "exact", head: true })),
         timeoutMs,
         'ebas-count'
       );
       const membersCountP = withTimeout(
-        supabase.from("workers").select("*", { count: "exact", head: true }).eq("union_membership_status", "member"),
+        Promise.resolve(supabase.from("workers").select("*", { count: "exact", head: true }).eq("union_membership_status", "member")),
         timeoutMs,
         'members-count'
       );
       const ebaDataP = withTimeout(
-        supabase.from("company_eba_records").select("nominal_expiry_date, fwc_certified_date, date_eba_signed, eba_lodged_fwc"),
+        Promise.resolve(supabase.from("company_eba_records").select("nominal_expiry_date, fwc_certified_date, date_eba_signed, eba_lodged_fwc")),
         timeoutMs,
         'eba-data'
       );
       const employerAnalyticsP = withTimeout(
-        supabase.from("employer_analytics").select("*"),
+        Promise.resolve(supabase.from("employer_analytics").select("*")),
         timeoutMs,
         'employer-analytics'
       );
