@@ -52,6 +52,9 @@ const Dashboard = () => {
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Union organising platform overview</p>
+        {data?.errors?.length ? (
+          <p className="text-sm text-warning mt-1">Some data failed to load; showing partial results.</p>
+        ) : null}
       </div>
 
       {/* Key Metrics */}

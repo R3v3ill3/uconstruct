@@ -1,35 +1,97 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/withTimeout";
 
 export const useDashboardData = () => {
   return useQuery({
     queryKey: ["dashboard-data"],
     queryFn: async () => {
-      // Get basic counts
-      const [
-        { count: totalWorkers },
-        { count: totalEmployers },
-        { count: totalSites },
-        { count: totalActivities },
-        { count: totalEbas },
-        { count: memberCount },
-        { data: ebaData },
-        { data: employerAnalytics }
-      ] = await Promise.all([
+      const errors: string[] = [];
+      const timeoutMs = 8000;
+
+      const workersCountP = withTimeout(
         supabase.from("workers").select("*", { count: "exact", head: true }),
+        timeoutMs,
+        'workers-count'
+      );
+      const employersCountP = withTimeout(
         supabase.from("employers").select("*", { count: "exact", head: true }),
+        timeoutMs,
+        'employers-count'
+      );
+      const sitesCountP = withTimeout(
         supabase.from("job_sites").select("*", { count: "exact", head: true }),
+        timeoutMs,
+        'sites-count'
+      );
+      const activitiesCountP = withTimeout(
         supabase.from("union_activities").select("*", { count: "exact", head: true }),
+        timeoutMs,
+        'activities-count'
+      );
+      const ebasCountP = withTimeout(
         supabase.from("company_eba_records").select("*", { count: "exact", head: true }),
+        timeoutMs,
+        'ebas-count'
+      );
+      const membersCountP = withTimeout(
         supabase.from("workers").select("*", { count: "exact", head: true }).eq("union_membership_status", "member"),
+        timeoutMs,
+        'members-count'
+      );
+      const ebaDataP = withTimeout(
         supabase.from("company_eba_records").select("nominal_expiry_date, fwc_certified_date, date_eba_signed, eba_lodged_fwc"),
-        supabase.from("employer_analytics").select("*")
+        timeoutMs,
+        'eba-data'
+      );
+      const employerAnalyticsP = withTimeout(
+        supabase.from("employer_analytics").select("*"),
+        timeoutMs,
+        'employer-analytics'
+      );
+
+      const [
+        workersRes,
+        employersRes,
+        sitesRes,
+        activitiesRes,
+        ebasRes,
+        membersRes,
+        ebaDataRes,
+        employerAnalyticsRes,
+      ] = await Promise.allSettled([
+        workersCountP,
+        employersCountP,
+        sitesCountP,
+        activitiesCountP,
+        ebasCountP,
+        membersCountP,
+        ebaDataP,
+        employerAnalyticsP,
       ]);
 
-      // Calculate membership stats
-      const membershipRate = totalWorkers ? ((memberCount || 0) / totalWorkers) * 100 : 0;
+      const safeCount = (res: any, label: string) => {
+        if (res.status === 'fulfilled') return res.value.count || 0;
+        errors.push(`${label}: ${res.reason?.message || 'failed'}`);
+        return 0;
+      };
+      const safeData = (res: any, label: string) => {
+        if (res.status === 'fulfilled') return res.value.data || [];
+        errors.push(`${label}: ${res.reason?.message || 'failed'}`);
+        return [];
+      };
 
-      // Calculate EBA expiry taxonomy
+      const totalWorkers = safeCount(workersRes, 'workers');
+      const totalEmployers = safeCount(employersRes, 'employers');
+      const totalSites = safeCount(sitesRes, 'sites');
+      const totalActivities = safeCount(activitiesRes, 'activities');
+      const totalEbas = safeCount(ebasRes, 'ebas');
+      const memberCount = safeCount(membersRes, 'members');
+      const ebaData = safeData(ebaDataRes, 'ebaData');
+      const employerAnalytics = safeData(employerAnalyticsRes, 'employerAnalytics');
+
+      const membershipRate = totalWorkers ? (memberCount / totalWorkers) * 100 : 0;
+
       const now = new Date();
       const sixWeeks = new Date(now.getTime() + (6 * 7 * 24 * 60 * 60 * 1000));
       const threeMonths = new Date(now.getTime() + (3 * 30 * 24 * 60 * 60 * 1000));
@@ -42,10 +104,13 @@ export const useDashboardData = () => {
         expiring6Months: 0,
         certified: 0,
         signed: 0,
-        lodged: 0
+        lodged: 0,
+      } as Record<string, number> & {
+        expired: number; expiring6Weeks: number; expiring3Months: number; expiring6Months: number;
+        certified: number; signed: number; lodged: number;
       };
 
-      ebaData?.forEach(eba => {
+      (ebaData as any[])?.forEach((eba: any) => {
         if (eba.fwc_certified_date) ebaExpiry.certified++;
         if (eba.date_eba_signed) ebaExpiry.signed++;
         if (eba.eba_lodged_fwc) ebaExpiry.lodged++;
@@ -64,29 +129,29 @@ export const useDashboardData = () => {
         }
       });
 
-      // Calculate member density for mapped employers
-      const mappedEmployers = employerAnalytics?.filter(e => 
+      const mappedEmployers = (employerAnalytics as any[])?.filter((e: any) => 
         e.estimated_worker_count && e.estimated_worker_count > 0 && e.current_worker_count && e.current_worker_count > 0
       ) || [];
-      
+
       const avgMemberDensity = mappedEmployers.length > 0 
-        ? mappedEmployers.reduce((sum, emp) => sum + (emp.member_density_percent || 0), 0) / mappedEmployers.length
+        ? mappedEmployers.reduce((sum: number, emp: any) => sum + (emp.member_density_percent || 0), 0) / mappedEmployers.length
         : 0;
 
       const ebaPercentage = totalEmployers ? (totalEbas / totalEmployers) * 100 : 0;
 
       return {
-        totalWorkers: totalWorkers || 0,
-        totalEmployers: totalEmployers || 0,
-        totalSites: totalSites || 0,
-        totalActivities: totalActivities || 0,
-        totalEbas: totalEbas || 0,
-        memberCount: memberCount || 0,
+        totalWorkers,
+        totalEmployers,
+        totalSites,
+        totalActivities,
+        totalEbas,
+        memberCount,
         membershipRate,
         ebaPercentage,
         avgMemberDensity,
         mappedEmployersCount: mappedEmployers.length,
-        ebaExpiry
+        ebaExpiry,
+        errors,
       };
     },
   });

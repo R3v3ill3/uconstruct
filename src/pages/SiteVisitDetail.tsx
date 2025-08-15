@@ -245,7 +245,7 @@ export default function SiteVisitDetail() {
 								{Object.entries(ent).map(([k, v]) => (
 									<label key={k} className="flex items-center gap-2">
 										<input type="checkbox" checked={v} onChange={(e) => setEnt((p)=> ({...p, [k]: e.target.checked}))} />
-										<span className="capitalize">{k.replaceAll("_"," ")}</span>
+										<span className="capitalize">{k.replace(/_/g, " ")}</span>
 									</label>
 								))}
 								<div className="p-3 rounded border bg-muted/20 text-sm">
