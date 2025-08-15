@@ -51,10 +51,8 @@ const PatchWall = () => {
     queryKey: ["wall-projects", organiserId],
     enabled: !projectId && !!organiserId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("project_organisers")
-        .select("project_id")
-        .eq("organiser_id", organiserId as string);
+      const { data, error } = await (supabase as any)
+        .rpc("get_accessible_projects", { user_id: organiserId as string });
       if (error) throw error;
       return (data || []).map((d: any) => d.project_id);
     },
