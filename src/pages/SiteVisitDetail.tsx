@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -152,6 +152,15 @@ export default function SiteVisitDetail() {
 			.from("dd_conversion_attempt")
 			.insert(payload);
 		if (error) return toast.error(error.message);
+		// If converted, offer to update membership immediately
+		if (ddOutcome === "converted") {
+			const shouldUpdate = confirm("Mark worker membership as Direct Debit active now?");
+			if (shouldUpdate) {
+				await (supabase as any)
+					.from("worker_memberships")
+					.upsert({ worker_id: ddWorkerId, payment_method: "direct_debit", dd_status: "active" as any });
+			}
+		}
 		toast.success("DD attempt saved");
 		setDdWorkerId(null);
 	};
@@ -201,6 +210,7 @@ export default function SiteVisitDetail() {
 							</div>
 							<div className="flex gap-3">
 								<Button onClick={savePrep} disabled={!!visit.outcomes_locked}>Save</Button>
+								<Link to={`/eba`} className="text-sm underline">View EBA tracking</Link>
 							</div>
 						</CardContent>
 					</Card>
@@ -238,6 +248,9 @@ export default function SiteVisitDetail() {
 										<span className="capitalize">{k.replaceAll("_"," ")}</span>
 									</label>
 								))}
+								<div className="p-3 rounded border bg-muted/20 text-sm">
+									<strong>CBUS checks</strong> (placeholder): confirm super is paid, correct, and to CBUS. Attach evidence via Attachments.
+								</div>
 								<Button onClick={saveEntitlements} disabled={!!visit.outcomes_locked}>Save Entitlements</Button>
 							</CardContent>
 						</Card>
