@@ -22,6 +22,10 @@ import ProjectDetail from "@/pages/ProjectDetail";
 import Delegations from "@/pages/Delegations";
 import PatchWall from "@/pages/PatchWall";
 import PasswordReset from "@/pages/PasswordReset";
+import SiteVisitNew from "@/pages/SiteVisitNew";
+import SiteVisitDetail from "@/pages/SiteVisitDetail";
+import SiteVisitMobile from "@/pages/SiteVisitMobile";
+import SiteVisitReports from "@/pages/SiteVisitReports";
  
 const queryClient = new QueryClient();
 
@@ -117,6 +121,26 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute>
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/site-visits/new" element={
+              <ProtectedRoute>
+                <SiteVisitNew />
+              </ProtectedRoute>
+            } />
+            <Route path="/site-visits/:svCode" element={
+              <ProtectedRoute>
+                <SiteVisitDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/m/visit/:svCode" element={
+              <ProtectedRoute>
+                <SiteVisitMobile />
+              </ProtectedRoute>
+            } />
+            <Route path="/site-visits/reports" element={
+              <ProtectedRoute>
+                <SiteVisitReports />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
