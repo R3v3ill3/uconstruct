@@ -7,6 +7,7 @@ Status: DRAFT – DO NOT APPLY CODE
 - Prefer code columns as FKs to reference tables for stability (e.g., `rating_code`, `status_code`).
 - Support offline idempotency via `client_generated_id` where provided.
 - Optimistic concurrency on `site_visit.version` for conflicting updates.
+- Evidence storage defaults: bucket `site-visit-evidence`, signed URL TTL 14 days, watermark enabled with site/date/`sv_code` overlay.
 
 ## Table payloads
 
@@ -28,7 +29,10 @@ Status: DRAFT – DO NOT APPLY CODE
   "objective": "string?",
   "estimated_workers_count": 60,
   "status_code": "in_progress",
-  "version": 2
+  "version": 2,
+  "approved_at": "2025-08-25T15:30:00+10:00?",
+  "approved_by_profile_id": "uuid?",
+  "outcomes_locked": true
 }
 ```
 
@@ -56,7 +60,7 @@ Status: DRAFT – DO NOT APPLY CODE
 {
   "whs_assessment_id": "uuid",
   "title": "Missing edge protection on level 2",
-  "rating_code": "2",
+  "rating_code": "3",
   "notes": "Observed along east elevation",
   "photo_evidence_path": ["path/in/storage.jpg"]
 }
@@ -81,7 +85,7 @@ Status: DRAFT – DO NOT APPLY CODE
 ```json
 {
   "entitlements_audit_id": "uuid",
-  "category_code_v2": "wages", // super|redundancy|wages|allowances
+  "category_code_v2": "wages",
   "title": "Incorrect Saturday loading",
   "rating_code": "2",
   "notes": "Paid 25% instead of 50%",
@@ -207,6 +211,7 @@ Status: DRAFT – DO NOT APPLY CODE
 ## RLS summary
 - Read/write allowed for admins, and for organisers/lead organisers when the `site_visit` is within their accessible sites/employers or created by them.
 - Reference tables are readable to all authenticated; only admins can modify.
+- Organisers can update `worker_memberships` at any time for workers in their scope (RLS policies already allow this via `get_accessible_workers`).
 
 ## Error patterns
 - 401/403 on RLS failures; ensure organiser allocations are configured.
@@ -214,3 +219,4 @@ Status: DRAFT – DO NOT APPLY CODE
 
 ## Idempotency
 - Use `client_generated_id` for mobile/offline POSTs (e.g., DD attempts). Upserts on unique columns (`site_visit_id`, etc.) where noted.
+- Evidence storage: generate watermarked copy on upload; signed links expire per `app_settings` TTL (default 14 days).
