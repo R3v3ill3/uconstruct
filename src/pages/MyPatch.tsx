@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link, useLocation } from "react-router-dom";
+import { FileCheck } from "lucide-react";
 
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
@@ -340,7 +341,14 @@ const MyPatch = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Summary</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              Summary
+              <Button asChild variant="outline" size="sm">
+                <Link to="/site-visits/new">
+                  <FileCheck className="h-4 w-4 mr-2" />Plan Site Visit
+                </Link>
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

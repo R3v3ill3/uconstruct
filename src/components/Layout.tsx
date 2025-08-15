@@ -12,6 +12,7 @@ const navItems = [
   { path: "/projects", label: "Projects", icon: FolderOpen },
   { path: "/employers", label: "Employers", icon: Building },
   { path: "/workers", label: "Workers", icon: Users },
+  { path: "/site-visits", label: "Site Visits", icon: FileCheck },
 ];
 
 interface LayoutProps {
@@ -45,6 +46,16 @@ const Layout = ({ children }: LayoutProps) => {
     // Insert organiser-focused workspace
     if (userRole === "organiser" || userRole === "lead_organiser" || userRole === "admin") {
       items.splice(1, 0, { path: "/patch", label: "Patch", icon: Users });
+    }
+    // Show site visits for organizers and above
+    if (userRole === "organiser" || userRole === "lead_organiser" || userRole === "admin") {
+      // Site visits already in navItems, just filter it for these roles
+    } else {
+      // Remove site visits for delegates and viewers
+      const siteVisitsIndex = items.findIndex(item => item.path === "/site-visits");
+      if (siteVisitsIndex > -1) {
+        items.splice(siteVisitsIndex, 1);
+      }
     }
     if (userRole === "admin") {
       items.push({ path: "/admin", label: "Administration", icon: Shield });
