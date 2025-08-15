@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link, useLocation } from "react-router-dom";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
@@ -183,7 +185,8 @@ const MyPatch = () => {
   });
 
   const totalWorkers = workers?.length || 0;
-  const memberCount = (workers || []).filter((w: any) => w.union_membership_status && w.union_membership_status !== "non_member").length;
+  const memberCount = (workers || []).filter((w: any) => w.union_membership_status === "member").length;
+  const potentialCount = (workers || []).filter((w: any) => w.union_membership_status === "potential").length;
 
   // Helper to compute stats for a given userId (used by lead/admin aggregations)
   async function fetchStatsForUser(userId: string) {
@@ -312,63 +315,159 @@ const MyPatch = () => {
     return (allOrganisers as any[]).filter((o) => !organiserIdToLeadId.has(o.id));
   }, [isAdmin, allOrganisers, organiserIdToLeadId]);
 
+  const { data: siteVisitsScheduled = [] } = useQuery({
+    queryKey: ["patch-site-visits-scheduled", targetUserId],
+    enabled: !!targetUserId,
+    queryFn: async () => {
+      const { data: srows, error: sErr } = await (supabase as any).rpc("get_accessible_job_sites", { user_id: targetUserId as string });
+      if (sErr) throw sErr;
+      const siteIds = (srows || []).map((r: any) => r.job_site_id);
+      if (siteIds.length === 0) return [] as any[];
+      const { data, error } = await (supabase as any)
+        .from("site_visit")
+        .select("id, sv_code, employer_id, job_site_id, scheduled_at, status_code, objective")
+        .in("job_site_id", siteIds)
+        .gte("scheduled_at", new Date().toISOString())
+        .order("scheduled_at", { ascending: true })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: siteVisitsInProgress = [] } = useQuery({
+    queryKey: ["patch-site-visits-in-progress", targetUserId],
+    enabled: !!targetUserId,
+    queryFn: async () => {
+      const { data: srows, error: sErr } = await (supabase as any).rpc("get_accessible_job_sites", { user_id: targetUserId as string });
+      if (sErr) throw sErr;
+      const siteIds = (srows || []).map((r: any) => r.job_site_id);
+      if (siteIds.length === 0) return [] as any[];
+      const { data, error } = await (supabase as any)
+        .from("site_visit")
+        .select("id, sv_code, employer_id, job_site_id, started_at, status_code, objective")
+        .eq("status_code", "in_progress")
+        .in("job_site_id", siteIds)
+        .order("started_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: siteVisitsCompleted = [] } = useQuery({
+    queryKey: ["patch-site-visits-completed", targetUserId],
+    enabled: !!targetUserId,
+    queryFn: async () => {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: srows, error: sErr } = await (supabase as any).rpc("get_accessible_job_sites", { user_id: targetUserId as string });
+      if (sErr) throw sErr;
+      const siteIds = (srows || []).map((r: any) => r.job_site_id);
+      if (siteIds.length === 0) return [] as any[];
+      const { data, error } = await (supabase as any)
+        .from("site_visit")
+        .select("id, sv_code, employer_id, job_site_id, completed_at, status_code, objective")
+        .eq("status_code", "completed")
+        .gte("completed_at", since)
+        .in("job_site_id", siteIds)
+        .order("completed_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   return (
     <main>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">Patch</h1>
         <p className="text-sm text-muted-foreground">Role-based summary of projects, sites, employers, workers and membership.</p>
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          <Badge variant="secondary">
+            Viewing as: {viewOrganiserIdParam ? "Organiser (delegated)" : isLead ? "Lead (rollup eligible)" : isAdmin ? "Admin" : "Self"}
+          </Badge>
+          {(isLead || isAdmin) && viewOrganiserIdParam && (
+            <Link to="/patch" className="underline decoration-dotted">Reset to my scope</Link>
+          )}
+        </div>
       </header>
 
-
-      <section className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Projects</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{projectsData?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Job Sites</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{sitesData?.length || 0}</div>
-          </CardContent>
-        </Card>
-
+      <section className="mb-6">
         <Card>
           <CardHeader>
             <CardTitle>Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div>
-                <div className="text-xs text-muted-foreground">Projects</div>
-                <div className="text-2xl font-bold">{projectsData?.length || 0}</div>
+            <TooltipProvider>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <Link to="#projects" className="block">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Projects</div>
+                        <div className="text-2xl font-bold">{projectsData?.length || 0}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Accessible projects in your patch</TooltipContent>
+                  </Tooltip>
+                </Link>
+                <Link to="/patch/walls" className="block">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Job Sites</div>
+                        <div className="text-2xl font-bold">{sitesData?.length || 0}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Accessible job sites linked to your projects</TooltipContent>
+                  </Tooltip>
+                </Link>
+                <Link to="#employers" className="block">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Employers</div>
+                        <div className="text-2xl font-bold">{employersData?.length || 0}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Employers present on your projects or sites</TooltipContent>
+                  </Tooltip>
+                </Link>
+                <Link to="/workers" className="block">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Workers</div>
+                        <div className="text-2xl font-bold">{totalWorkers}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Workers with placements on your accessible sites</TooltipContent>
+                  </Tooltip>
+                </Link>
+                <Link to="/workers?union=member" className="block">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Members</div>
+                        <div className="text-2xl font-bold">{memberCount}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Union members only (excludes potential/non-member)</TooltipContent>
+                  </Tooltip>
+                </Link>
+                <Link to="/workers?union=potential" className="block">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Potential</div>
+                        <div className="text-2xl font-bold">{potentialCount}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Potential members in your patch</TooltipContent>
+                  </Tooltip>
+                </Link>
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Job Sites</div>
-                <div className="text-2xl font-bold">{sitesData?.length || 0}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Employers</div>
-                <div className="text-2xl font-bold">{employersData?.length || 0}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Workers</div>
-                <div className="text-2xl font-bold">{totalWorkers}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Members</div>
-                <div className="text-2xl font-bold">{memberCount}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Delegates</div>
-                <div className="text-2xl font-bold">{delegates?.length || 0}</div>
-              </div>
-            </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
       </section>
@@ -503,7 +602,64 @@ const MyPatch = () => {
         </section>
       )}
 
-      <section className="mb-8">
+      {/* Site Visits widget */}
+      <section className="mb-8" id="site-visits">
+        <Card>
+          <CardHeader>
+            <CardTitle>Site Visits</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="scheduled" className="w-full">
+              <TabsList>
+                <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+                <TabsTrigger value="in_progress">In Progress</TabsTrigger>
+                <TabsTrigger value="completed">Completed (30d)</TabsTrigger>
+              </TabsList>
+              <TabsContent value="scheduled">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(siteVisitsScheduled as any[]).map((v) => (
+                    <Link key={v.id} to={`/site-visits/${v.sv_code}`} className="border rounded p-3 hover:bg-accent/40">
+                      <div className="text-sm font-medium">{v.objective || "Scheduled visit"}</div>
+                      <div className="text-xs text-muted-foreground">{new Date(v.scheduled_at).toLocaleString()}</div>
+                    </Link>
+                  ))}
+                  {siteVisitsScheduled.length === 0 && (
+                    <div className="text-sm text-muted-foreground">No upcoming visits. <Link to="/site-visits/new" className="underline">Plan one</Link>.</div>
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="in_progress">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(siteVisitsInProgress as any[]).map((v) => (
+                    <Link key={v.id} to={`/site-visits/${v.sv_code}`} className="border rounded p-3 hover:bg-accent/40">
+                      <div className="text-sm font-medium">{v.objective || "In progress"}</div>
+                      <div className="text-xs text-muted-foreground">Started {v.started_at ? new Date(v.started_at).toLocaleString() : ""}</div>
+                    </Link>
+                  ))}
+                  {siteVisitsInProgress.length === 0 && (
+                    <div className="text-sm text-muted-foreground">No visits in progress.</div>
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="completed">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(siteVisitsCompleted as any[]).map((v) => (
+                    <Link key={v.id} to={`/site-visits/${v.sv_code}`} className="border rounded p-3 hover:bg-accent/40">
+                      <div className="text-sm font-medium">{v.objective || "Completed visit"}</div>
+                      <div className="text-xs text-muted-foreground">Completed {v.completed_at ? new Date(v.completed_at).toLocaleString() : ""}</div>
+                    </Link>
+                  ))}
+                  {siteVisitsCompleted.length === 0 && (
+                    <div className="text-sm text-muted-foreground">No visits completed in the last 30 days.</div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mb-8" id="projects">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Projects</h2>
           <Button variant="outline" asChild>
@@ -553,7 +709,7 @@ const MyPatch = () => {
         </Card>
       </section>
 
-      <section className="mb-8">
+      <section className="mb-8" id="employers">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Employers</h2>
           <Button variant="outline" asChild>
