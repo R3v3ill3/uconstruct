@@ -290,6 +290,79 @@ export type Database = {
           },
         ]
       }
+      dd_conversion_attempt: {
+        Row: {
+          client_generated_id: string
+          created_at: string
+          id: string
+          method_code: string
+          outcome_code: string
+          site_visit_id: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          client_generated_id: string
+          created_at?: string
+          id?: string
+          method_code: string
+          outcome_code: string
+          site_visit_id: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          client_generated_id?: string
+          created_at?: string
+          id?: string
+          method_code?: string
+          outcome_code?: string
+          site_visit_id?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dd_conversion_attempt_site_visit_id_fkey"
+            columns: ["site_visit_id"]
+            isOneToOne: false
+            referencedRelation: "site_visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delegate_assessment: {
+        Row: {
+          created_at: string
+          id: string
+          present: boolean
+          site_visit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          present?: boolean
+          site_visit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          present?: boolean
+          site_visit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delegate_assessment_site_visit_id_fkey"
+            columns: ["site_visit_id"]
+            isOneToOne: false
+            referencedRelation: "site_visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delegate_field_permissions: {
         Row: {
           can_edit: boolean
@@ -328,6 +401,41 @@ export type Database = {
             columns: ["organiser_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delegate_role_rating: {
+        Row: {
+          created_at: string
+          delegate_assessment_id: string
+          id: string
+          rating_code: string
+          role_type_code: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delegate_assessment_id: string
+          id?: string
+          rating_code: string
+          role_type_code: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delegate_assessment_id?: string
+          id?: string
+          rating_code?: string
+          role_type_code?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delegate_role_rating_delegate_assessment_id_fkey"
+            columns: ["delegate_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "delegate_assessment"
             referencedColumns: ["id"]
           },
         ]
@@ -494,6 +602,50 @@ export type Database = {
             columns: ["parent_employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entitlements_audit: {
+        Row: {
+          created_at: string
+          eba_allowances_correct: boolean
+          id: string
+          redundancy_contributions_up_to_date: boolean
+          site_visit_id: string
+          super_paid: boolean
+          super_paid_to_fund: boolean
+          updated_at: string
+          wages_correct: boolean
+        }
+        Insert: {
+          created_at?: string
+          eba_allowances_correct?: boolean
+          id?: string
+          redundancy_contributions_up_to_date?: boolean
+          site_visit_id: string
+          super_paid?: boolean
+          super_paid_to_fund?: boolean
+          updated_at?: string
+          wages_correct?: boolean
+        }
+        Update: {
+          created_at?: string
+          eba_allowances_correct?: boolean
+          id?: string
+          redundancy_contributions_up_to_date?: boolean
+          site_visit_id?: string
+          super_paid?: boolean
+          super_paid_to_fund?: boolean
+          updated_at?: string
+          wages_correct?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entitlements_audit_site_visit_id_fkey"
+            columns: ["site_visit_id"]
+            isOneToOne: false
+            referencedRelation: "site_visit"
             referencedColumns: ["id"]
           },
         ]
@@ -1545,6 +1697,45 @@ export type Database = {
           },
         ]
       }
+      site_visit: {
+        Row: {
+          created_at: string
+          employer_id: string
+          estimated_workers_count: number | null
+          id: string
+          job_site_id: string
+          objective: string | null
+          outcomes_locked: boolean
+          scheduled_at: string | null
+          sv_code: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employer_id: string
+          estimated_workers_count?: number | null
+          id?: string
+          job_site_id: string
+          objective?: string | null
+          outcomes_locked?: boolean
+          scheduled_at?: string | null
+          sv_code: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employer_id?: string
+          estimated_workers_count?: number | null
+          id?: string
+          job_site_id?: string
+          objective?: string | null
+          outcomes_locked?: boolean
+          scheduled_at?: string | null
+          sv_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -1793,6 +1984,76 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whs_assessment: {
+        Row: {
+          created_at: string
+          id: string
+          rating_code: string
+          site_visit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rating_code: string
+          site_visit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rating_code?: string
+          site_visit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whs_assessment_site_visit_id_fkey"
+            columns: ["site_visit_id"]
+            isOneToOne: false
+            referencedRelation: "site_visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whs_breach: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          rating_code: string
+          title: string
+          updated_at: string
+          whs_assessment_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rating_code: string
+          title: string
+          updated_at?: string
+          whs_assessment_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rating_code?: string
+          title?: string
+          updated_at?: string
+          whs_assessment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whs_breach_whs_assessment_id_fkey"
+            columns: ["whs_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "whs_assessment"
             referencedColumns: ["id"]
           },
         ]
