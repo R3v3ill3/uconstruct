@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Link, useLocation } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileCheck } from "lucide-react";
 
 const setMeta = (title: string, description: string, canonical?: string) => {
   document.title = title;
@@ -395,7 +396,14 @@ const MyPatch = () => {
       <section className="mb-6">
         <Card>
           <CardHeader>
-            <CardTitle>Summary</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              Summary
+              <Button asChild variant="outline" size="sm">
+                <Link to="/site-visits/new">
+                  <FileCheck className="h-4 w-4 mr-2" />Plan Site Visit
+                </Link>
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <TooltipProvider>

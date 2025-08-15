@@ -26,8 +26,18 @@ import SiteVisitNew from "@/pages/SiteVisitNew";
 import SiteVisitDetail from "@/pages/SiteVisitDetail";
 import SiteVisitMobile from "@/pages/SiteVisitMobile";
 import SiteVisitReports from "@/pages/SiteVisitReports";
+import SiteVisits from "@/pages/SiteVisits";
  
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    }
+  }
+});
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -121,6 +131,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute>
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/site-visits" element={
+              <ProtectedRoute>
+                <SiteVisits />
               </ProtectedRoute>
             } />
             <Route path="/site-visits/new" element={

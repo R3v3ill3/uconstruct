@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Building2, MapPin, Calendar, DollarSign } from "lucide-react";
+import { Plus, Building2, MapPin, Calendar, DollarSign, FileCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
@@ -272,6 +272,13 @@ const Projects = () => {
           <p className="text-muted-foreground">Manage construction projects and their details</p>
         </div>
         
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link to="/site-visits/new">
+              <FileCheck className="h-4 w-4 mr-2" />Plan Site Visit
+            </Link>
+          </Button>
+        
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -390,6 +397,7 @@ const Projects = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
