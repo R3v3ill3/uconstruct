@@ -27,7 +27,16 @@ import SiteVisitDetail from "@/pages/SiteVisitDetail";
 import SiteVisitMobile from "@/pages/SiteVisitMobile";
 import SiteVisitReports from "@/pages/SiteVisitReports";
  
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    }
+  }
+});
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
