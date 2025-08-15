@@ -1709,6 +1709,12 @@ export type Database = {
           scheduled_at: string | null
           sv_code: string
           updated_at: string
+          status_code?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          form_version?: string | null
+          approved_at?: string | null
+          approved_by_profile_id?: string | null
         }
         Insert: {
           created_at?: string
@@ -1721,6 +1727,12 @@ export type Database = {
           scheduled_at?: string | null
           sv_code: string
           updated_at?: string
+          status_code?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          form_version?: string | null
+          approved_at?: string | null
+          approved_by_profile_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1733,6 +1745,12 @@ export type Database = {
           scheduled_at?: string | null
           sv_code?: string
           updated_at?: string
+          status_code?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          form_version?: string | null
+          approved_at?: string | null
+          approved_by_profile_id?: string | null
         }
         Relationships: []
       }
