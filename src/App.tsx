@@ -25,6 +25,7 @@ import PasswordReset from "@/pages/PasswordReset";
 import SiteVisitNew from "@/pages/SiteVisitNew";
 import SiteVisitDetail from "@/pages/SiteVisitDetail";
 import SiteVisitMobile from "@/pages/SiteVisitMobile";
+import SiteVisitReports from "@/pages/SiteVisitReports";
  
 const queryClient = new QueryClient();
 
@@ -135,6 +136,11 @@ const App = () => (
             <Route path="/m/visit/:svCode" element={
               <ProtectedRoute>
                 <SiteVisitMobile />
+              </ProtectedRoute>
+            } />
+            <Route path="/site-visits/reports" element={
+              <ProtectedRoute>
+                <SiteVisitReports />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
