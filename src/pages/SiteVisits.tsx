@@ -130,7 +130,7 @@ const SiteVisits = () => {
                 {siteVisits.map((visit) => (
                   <TableRow key={visit.id}>
                     <TableCell className="font-medium">
-                      <Link to={`/site-visits/${visit.id}`} className="underline decoration-dotted">
+                      <Link to={`/site-visits/${visit.sv_code}`} className="underline decoration-dotted">
                         {visit.sv_code}
                       </Link>
                     </TableCell>

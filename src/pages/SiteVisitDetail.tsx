@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/offlineQueue";
 import { WorkerQuickPicker } from "@/components/workers/WorkerQuickPicker";
+import { Checklist } from "@/components/Checklist";
+import { EbaQuickAttach } from "@/components/EbaQuickAttach";
 
 function DraftKey(svCode: string, section: string) {
 	return `sv:${svCode}:draft:${section}`;
@@ -20,13 +22,13 @@ export default function SiteVisitDetail() {
 	const { svCode = "" } = useParams();
 	const [activeTab, setActiveTab] = useState("prep");
 
-	const { data: visit } = useQuery({
+	const { data: visit, refetch } = useQuery({
 		queryKey: ["site-visit", svCode],
 		enabled: !!svCode,
 		queryFn: async () => {
 			const { data, error } = await (supabase as any)
 				.from("site_visit")
-				.select("id, employer_id, job_site_id, objective, estimated_workers_count, outcomes_locked")
+				.select("id, employer_id, job_site_id, objective, estimated_workers_count, outcomes_locked, status_code, scheduled_at, started_at, completed_at")
 				.eq("sv_code", svCode)
 				.maybeSingle();
 			if (error) throw error;
@@ -36,23 +38,67 @@ export default function SiteVisitDetail() {
 
 	const [objective, setObjective] = useState("");
 	const [estimatedWorkers, setEstimatedWorkers] = useState<number | "">("");
+	const [scheduledAt, setScheduledAt] = useState<string>("");
+	const [isStarting, setIsStarting] = useState(false);
+	const [isCompleting, setIsCompleting] = useState(false);
+	const [checklistMap, setChecklistMap] = useState<Record<string, string>>({});
 
 	useEffect(() => {
 		if (!visit) return;
 		setObjective(visit.objective || "");
 		setEstimatedWorkers(visit.estimated_workers_count ?? "");
+		setScheduledAt(visit.scheduled_at ? new Date(visit.scheduled_at).toISOString().slice(0,16) : "");
 	}, [visit]);
 
 	// Prep save
 	const savePrep = async () => {
 		if (!visit) return;
+		// scheduled_at validation (>= now)
+		if (scheduledAt) {
+			const sched = new Date(scheduledAt).getTime();
+			if (sched < Date.now()) {
+				toast.error("Scheduled time must be in the future");
+				return;
+			}
+		}
 		const { error } = await (supabase as any)
 			.from("site_visit")
-			.update({ objective, estimated_workers_count: estimatedWorkers === "" ? null : Number(estimatedWorkers) })
+			.update({
+				objective,
+				estimated_workers_count: estimatedWorkers === "" ? null : Number(estimatedWorkers),
+				scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+			})
 			.eq("id", visit.id);
 		if (error) return toast.error(error.message);
 		toast.success("Saved");
 		clearDraft(DraftKey(svCode, "prep"));
+	};
+
+	// Lifecycle actions
+	const startVisit = async () => {
+		if (!visit) return;
+		setIsStarting(true);
+		const { error } = await (supabase as any)
+			.from("site_visit")
+			.update({ status_code: "in_progress", started_at: new Date().toISOString() })
+			.eq("id", visit.id);
+		setIsStarting(false);
+		if (error) return toast.error(error.message);
+		toast.success("Visit started");
+		refetch();
+	};
+
+	const completeVisit = async () => {
+		if (!visit) return;
+		setIsCompleting(true);
+		const { error } = await (supabase as any)
+			.from("site_visit")
+			.update({ status_code: "completed", completed_at: new Date().toISOString(), outcomes_locked: true })
+			.eq("id", visit.id);
+		setIsCompleting(false);
+		if (error) return toast.error(error.message);
+		toast.success("Visit completed");
+		refetch();
 	};
 
 	// WHS
@@ -115,6 +161,22 @@ export default function SiteVisitDetail() {
 	// Delegate
 	const [delegatePresent, setDelegatePresent] = useState(false);
 	const [ratio, setRatio] = useState(8);
+	const { data: delegateRoleTypes = [] } = useQuery({
+		queryKey: ["delegate-role-types"],
+		queryFn: async () => {
+			const { data, error } = await (supabase as any)
+				.from("delegate_role_type")
+				.select("code,label");
+			if (error) throw error;
+			return data || [];
+		}
+	});
+	const [roleRatingsState, setRoleRatingsState] = useState<Record<string, string>>({});
+	useEffect(() => {
+		const initial: Record<string, string> = {};
+		(delegateRoleTypes as any[]).forEach((r) => { initial[r.code] = initial[r.code] || "3"; });
+		setRoleRatingsState((prev) => ({ ...initial, ...prev }));
+	}, [delegateRoleTypes]);
 	const saveDelegate = async () => {
 		if (!visit) return;
 		const { data: d, error } = await (supabase as any)
@@ -123,11 +185,8 @@ export default function SiteVisitDetail() {
 			.select("id")
 			.single();
 		if (error) return toast.error(error.message);
-		const roleRatings = [
-			{ role_type_code: "communication", rating_code: "3" },
-			{ role_type_code: "recruitment", rating_code: "3" },
-		];
-		for (const rr of roleRatings) {
+		for (const role_code of Object.keys(roleRatingsState)) {
+			const rr = { role_type_code: role_code, rating_code: roleRatingsState[role_code] };
 			await (supabase as any)
 				.from("delegate_role_rating")
 				.upsert({ delegate_assessment_id: d.id, ...rr });
@@ -138,6 +197,7 @@ export default function SiteVisitDetail() {
 	// DD attempts
 	const [ddWorkerId, setDdWorkerId] = useState<string | null>(null);
 	const [ddOutcome, setDdOutcome] = useState("follow_up");
+	const [ddFollowUpAt, setDdFollowUpAt] = useState<string>("");
 	const saveDD = async () => {
 		if (!visit || !ddWorkerId) return;
 		const clientId = crypto.randomUUID();
@@ -146,8 +206,13 @@ export default function SiteVisitDetail() {
 			worker_id: ddWorkerId,
 			method_code: "in_person",
 			outcome_code: ddOutcome,
+			follow_up_at: ddOutcome === "follow_up" && ddFollowUpAt ? new Date(ddFollowUpAt).toISOString() : null,
 			client_generated_id: clientId,
 		};
+		if (ddOutcome === "follow_up" && !ddFollowUpAt) {
+			toast.error("Follow-up date/time required for follow-up outcome");
+			return;
+		}
 		const { error } = await (supabase as any)
 			.from("dd_conversion_attempt")
 			.insert(payload);
@@ -184,8 +249,20 @@ export default function SiteVisitDetail() {
 
 	if (!visit) return <div className="p-6">Loading...</div>;
 
+	const requiredChecklistOk = useMemo(() => {
+		const v = checklistMap || {};
+		const isYes = (code: string) => v[code] === "yes" || v[code] === "na";
+		return isYes("roe_email_sent") && isYes("worker_list_updated");
+	}, [checklistMap]);
+
 	return (
 		<div className="p-6">
+			<div className="mb-4 text-sm text-muted-foreground">
+				<span className="mr-3">Status: <strong>{visit.status_code || "draft_prep"}</strong></span>
+				{visit.scheduled_at && <span className="mr-3">Scheduled: {new Date(visit.scheduled_at).toLocaleString()}</span>}
+				{visit.started_at && <span className="mr-3">Started: {new Date(visit.started_at).toLocaleString()}</span>}
+				{visit.completed_at && <span>Completed: {new Date(visit.completed_at).toLocaleString()}</span>}
+			</div>
 			<Tabs value={activeTab} onValueChange={setActiveTab}>
 				<TabsList>
 					<TabsTrigger value="prep">Prep</TabsTrigger>
@@ -207,10 +284,25 @@ export default function SiteVisitDetail() {
 									<Label>Estimated workers</Label>
 									<Input type="number" min={0} value={estimatedWorkers as any} onChange={(e) => setEstimatedWorkers(e.target.value === "" ? "" : Number(e.target.value))} />
 								</div>
+								<div>
+									<Label>Scheduled Date/Time</Label>
+									<Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+								</div>
 							</div>
-							<div className="flex gap-3">
-								<Button onClick={savePrep} disabled={!!visit.outcomes_locked}>Save</Button>
-								<Link to={`/eba`} className="text-sm underline">View EBA tracking</Link>
+							<Checklist svId={visit.id} onChanged={(map) => { setChecklistMap(map); }} />
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<EbaQuickAttach siteVisitId={visit.id} />
+							</div>
+							<div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+								<div className="flex gap-3">
+									<Button onClick={savePrep} disabled={!!visit.outcomes_locked}>Save</Button>
+									<Button variant="outline" onClick={startVisit} disabled={!!visit.outcomes_locked || visit?.status_code === "in_progress" || visit?.status_code === "completed" || isStarting || !requiredChecklistOk}>Start visit</Button>
+									<Button variant="outline" onClick={completeVisit} disabled={!!visit.outcomes_locked || visit?.status_code !== "in_progress" || isCompleting}>Complete visit</Button>
+									<Link to={`/eba`} className="text-sm underline">View EBA tracking</Link>
+								</div>
+								{!requiredChecklistOk && (
+									<div className="text-xs text-muted-foreground">Complete ROE email and worker list refresh before starting.</div>
+								)}
 							</div>
 						</CardContent>
 					</Card>
@@ -263,6 +355,21 @@ export default function SiteVisitDetail() {
 								</label>
 								<Label>Ratio score (10→1)</Label>
 								<Input type="number" min={1} max={10} value={ratio} onChange={(e)=> setRatio(Number(e.target.value))} />
+								<div className="space-y-2">
+									<div className="text-sm text-muted-foreground">Role capabilities</div>
+									{(delegateRoleTypes as any[]).map((r) => (
+										<div key={r.code} className="grid grid-cols-2 gap-2 items-center">
+											<div className="text-sm">{r.label}</div>
+											<select
+												className="border rounded h-10 w-full px-2"
+												value={roleRatingsState[r.code] || "3"}
+												onChange={(e)=> setRoleRatingsState((prev)=> ({ ...prev, [r.code]: e.target.value }))}
+											>
+												{["1","2","3","4","5"].map((v)=>(<option key={v} value={v}>{v}</option>))}
+											</select>
+										</div>
+									))}
+								</div>
 								<Button onClick={saveDelegate} disabled={!!visit.outcomes_locked}>Save Delegate</Button>
 							</CardContent>
 						</Card>
@@ -274,10 +381,17 @@ export default function SiteVisitDetail() {
 									<Label>Outcome</Label>
 									<select className="border rounded h-10 w-full px-2" value={ddOutcome} onChange={(e) => setDdOutcome(e.target.value)}>
 										<option value="converted">Converted</option>
+										<option value="already_on_dd">Already on DD</option>
 										<option value="follow_up">Follow up</option>
 										<option value="declined">Declined</option>
 									</select>
 								</div>
+								{ddOutcome === "follow_up" && (
+									<div>
+										<Label>Follow up at</Label>
+										<Input type="datetime-local" value={ddFollowUpAt} onChange={(e) => setDdFollowUpAt(e.target.value)} />
+									</div>
+								)}
 								<Button onClick={saveDD} disabled={!ddWorkerId || !!visit.outcomes_locked}>Save Attempt</Button>
 							</CardContent>
 						</Card>

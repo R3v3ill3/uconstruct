@@ -41,7 +41,14 @@ export default function SiteVisitNew() {
 			sv_code: svCode,
 			estimated_workers_count: typeof estimatedWorkers === "number" ? estimatedWorkers : null,
 		};
-		if (scheduledAt) payload.scheduled_at = new Date(scheduledAt).toISOString();
+		if (scheduledAt) {
+			const sched = new Date(scheduledAt).getTime();
+			if (sched < Date.now()) {
+				alert("Scheduled time must be in the future");
+				return;
+			}
+			payload.scheduled_at = new Date(scheduledAt).toISOString();
+		}
 		const { data, error } = await (supabase as any)
 			.from("site_visit")
 			.insert(payload)
