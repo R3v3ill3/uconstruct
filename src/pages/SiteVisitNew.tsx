@@ -6,16 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SingleEmployerPicker } from "@/components/projects/SingleEmployerPicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { JobSiteEmployerManager } from "@/components/employers/JobSiteEmployerManager";
 
 export default function SiteVisitNew() {
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const { toast } = useToast();
-	const [employerId, setEmployerId] = useState("");
 	const [jobSiteId, setJobSiteId] = useState("");
+	const [selectedEmployerIds, setSelectedEmployerIds] = useState<string[]>([]);
 	const [scheduledAt, setScheduledAt] = useState<string>("");
 	const [objective, setObjective] = useState("");
 	const [estimatedWorkers, setEstimatedWorkers] = useState<number | "">("");
@@ -51,62 +52,95 @@ export default function SiteVisitNew() {
 		}
 	}, [userProfile, canAccessFeature, navigate, toast]);
 
-	const { data: sites = [] } = useQuery({
-		queryKey: ["sites-by-employer", employerId],
-		enabled: !!employerId,
+	// Load all job sites
+	const { data: allJobSites = [] } = useQuery({
+		queryKey: ["all-job-sites"],
 		queryFn: async () => {
-			// Filter sites by the selected employer - check both direct employer assignments and project relationships
 			const { data, error } = await supabase
 				.from("job_sites")
-				.select(`
-					id, 
-					name, 
-					location,
-					project:projects(
-						id,
-						project_employer_roles(
-							employer_id
-						)
-					)
-				`)
+				.select("id, name, location, project:projects(name)")
 				.order("created_at", { ascending: false });
 			
 			if (error) throw error;
-			
-			// Filter sites that are either directly associated with the employer or through project relationships
-			const filteredSites = (data || []).filter(site => {
-				if (!site.project) return false;
-				return site.project.project_employer_roles.some(
-					(role: any) => role.employer_id === employerId
-				);
-			});
-			
-			return filteredSites;
+			return data || [];
 		},
 	});
 
+	// Auto-select employers when job site changes
+	useEffect(() => {
+		if (!jobSiteId) {
+			setSelectedEmployerIds([]);
+			return;
+		}
+
+		const loadEmployersForJobSite = async () => {
+			try {
+				// Get employers through site_contractor_trades
+				const { data: siteContractors, error: siteError } = await supabase
+					.from("site_contractor_trades")
+					.select("employer_id")
+					.eq("job_site_id", jobSiteId);
+
+				if (siteError) throw siteError;
+
+				// Get employers through project relationships
+				const { data: jobSite, error: jobSiteError } = await supabase
+					.from("job_sites")
+					.select(`
+						project_id,
+						project:projects(
+							project_employer_roles(employer_id)
+						)
+					`)
+					.eq("id", jobSiteId)
+					.single();
+
+				if (jobSiteError) throw jobSiteError;
+
+				// Combine employer IDs from both sources
+				const employerIds = new Set<string>();
+				
+				// Add direct site contractors
+				siteContractors?.forEach(sc => {
+					if (sc.employer_id) employerIds.add(sc.employer_id);
+				});
+
+				// Add project employers
+				jobSite?.project?.project_employer_roles?.forEach(per => {
+					if (per.employer_id) employerIds.add(per.employer_id);
+				});
+
+				setSelectedEmployerIds(Array.from(employerIds));
+			} catch (error) {
+				console.error("Error loading employers for job site:", error);
+			}
+		};
+
+		loadEmployersForJobSite();
+	}, [jobSiteId]);
+
 	const canCreate = useMemo(() => 
-		employerId && jobSiteId && canAccessFeature && !isCreating, 
-		[employerId, jobSiteId, canAccessFeature, isCreating]
+		jobSiteId && selectedEmployerIds.length > 0 && canAccessFeature && !isCreating, 
+		[jobSiteId, selectedEmployerIds.length, canAccessFeature, isCreating]
 	);
 
 	const createVisit = async () => {
 		if (!canCreate) return;
 		
 		// Validate required fields
-		if (!employerId) {
+		if (!jobSiteId) {
 			toast({
 				title: "Validation Error",
-				description: "Please select an employer.",
+				description: "Please select a job site.",
 				variant: "destructive",
 			});
 			return;
 		}
 		
-		if (!jobSiteId) {
+		if (selectedEmployerIds.length === 0) {
 			toast({
 				title: "Validation Error", 
-				description: "Please select a job site.",
+				description: "Please select at least one employer.",
 				variant: "destructive",
 			});
 			return;
@@ -129,40 +163,52 @@ export default function SiteVisitNew() {
 		
 		try {
 			const svCode = Math.random().toString(36).slice(2, 8).toUpperCase();
-			const payload: any = {
-				employer_id: employerId,
-				job_site_id: jobSiteId,
-				objective: objective || null,
-				sv_code: svCode,
-				estimated_workers_count: typeof estimatedWorkers === "number" ? estimatedWorkers : null,
-			};
 			
-			if (scheduledAt) {
-				payload.scheduled_at = new Date(scheduledAt).toISOString();
-			}
-
-			const { data, error } = await supabase
-				.from("site_visit")
-				.insert(payload)
-				.select("id, sv_code")
-				.single();
+			// Create site visit for each selected employer
+			const siteVisitPromises = selectedEmployerIds.map(async (employerId) => {
+				const payload: any = {
+					employer_id: employerId,
+					job_site_id: jobSiteId,
+					objective: objective || null,
+					sv_code: `${svCode}-${employerId.slice(0, 4)}`, // Unique code per employer
+					estimated_workers_count: typeof estimatedWorkers === "number" ? estimatedWorkers : null,
+				};
 				
-			if (error) {
-				console.error("Site visit creation error:", error);
+				if (scheduledAt) {
+					payload.scheduled_at = new Date(scheduledAt).toISOString();
+				}
+
+				return supabase
+					.from("site_visit")
+					.insert(payload)
+					.select("id, sv_code")
+					.single();
+			});
+
+			const results = await Promise.all(siteVisitPromises);
+			const failedInserts = results.filter(result => result.error);
+			
+			if (failedInserts.length > 0) {
+				console.error("Some site visits failed to create:", failedInserts);
 				toast({
-					title: "Error Creating Site Visit",
-					description: error.message || "Failed to create site visit. Please try again.",
+					title: "Partial Success",
+					description: `${results.length - failedInserts.length} of ${results.length} site visits created successfully.`,
 					variant: "destructive",
 				});
-				return;
+			} else {
+				toast({
+					title: "Site Visits Created",
+					description: `${results.length} site visit(s) created successfully.`,
+				});
 			}
-
-			toast({
-				title: "Site Visit Created",
-				description: `Site visit ${data.sv_code} has been created successfully.`,
-			});
 			
-			navigate(`/site-visits/${data.sv_code}`);
+			// Navigate to the first created site visit
+			const firstSuccess = results.find(result => !result.error);
+			if (firstSuccess?.data) {
+				navigate(`/site-visits/${firstSuccess.data.sv_code}`);
+			} else {
+				navigate("/site-visits");
+			}
 		} catch (error) {
 			console.error("Unexpected error:", error);
 			toast({
@@ -205,35 +251,36 @@ export default function SiteVisitNew() {
 				<CardContent className="space-y-6">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<div>
-							<SingleEmployerPicker 
-								label="Employer" 
-								selectedId={employerId} 
-								onChange={setEmployerId} 
-							/>
-						</div>
-						<div>
 							<Label>Job Site</Label>
-							<select 
-								className="border rounded h-10 w-full px-2" 
-								value={jobSiteId} 
-								onChange={(e) => setJobSiteId(e.target.value)}
-								disabled={!employerId}
-							>
-								<option value="">
-									{!employerId ? "Select an employer first" : "Select site"}
-								</option>
-								{sites.map((site: any) => (
-									<option key={site.id} value={site.id}>
-										{site.name || site.location || site.id}
-									</option>
-								))}
-							</select>
-							{employerId && sites.length === 0 && (
-								<p className="text-sm text-muted-foreground mt-1">
-									No job sites found for selected employer
-								</p>
-							)}
+							<Select value={jobSiteId} onValueChange={setJobSiteId}>
+								<SelectTrigger>
+									<SelectValue placeholder="Select a job site" />
+								</SelectTrigger>
+								<SelectContent>
+									{allJobSites.map((site: any) => (
+										<SelectItem key={site.id} value={site.id}>
+											{site.name || site.location || site.id}
+											{site.project?.name && (
+												<span className="text-sm text-muted-foreground ml-2">
+													({site.project.name})
+												</span>
+											)}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
+						
+						{jobSiteId && (
+							<div className="md:col-span-2">
+								<JobSiteEmployerManager
+									jobSiteId={jobSiteId}
+									selectedEmployerIds={selectedEmployerIds}
+									onEmployerSelectionChange={setSelectedEmployerIds}
+								/>
+							</div>
+						)}
+
 						<div>
 							<Label>Scheduled Date/Time</Label>
 							<Input 
