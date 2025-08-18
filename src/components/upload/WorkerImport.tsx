@@ -50,6 +50,9 @@ export default function WorkerImport({ csvData, selectedEmployer, onImportComple
       loadExistingEmployers();
     }
     loadExistingOrganisers();
+    // We intentionally skip adding the loader functions to the deps to avoid
+    // recreating them on every render; they do not change between renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEmployer]);
 
   const loadExistingOrganisers = async () => {

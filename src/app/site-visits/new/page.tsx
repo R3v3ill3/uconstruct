@@ -69,7 +69,7 @@ export default function SiteVisitNew() {
       }
     };
     loadEmployersForJobSite();
-  }, [jobSiteId]);
+  }, [jobSiteId, supabase]);
 
   const canCreate = useMemo(
     () => !!jobSiteId && selectedEmployerIds.length > 0 && !isCreating,
