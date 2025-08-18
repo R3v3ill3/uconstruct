@@ -15,17 +15,17 @@ export default function AdminPage() {
   const supabase = supabaseBrowser();
   const { toast } = useToast();
   const router = useRouter();
-  const { role, isLoading } = useProfileRole();
+  const { role, isLoading: isRoleLoading } = useProfileRole();
   const [inviteEmail, setInviteEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isRoleLoading) return;
     if (role !== "admin") {
       router.replace("/dashboard");
     }
-  }, [isLoading, role, router]);
+  }, [isRoleLoading, role, router]);
 
   const sendInvite = async () => {
     setSending(true);
