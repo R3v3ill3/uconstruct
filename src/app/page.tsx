@@ -8,7 +8,7 @@ export default function Page() {
         This is the Next.js migration branch. Your Vite app remains intact.
       </p>
       <div className="mt-4">
-        <Link href="/site-visits" className="underline text-blue-600">Go to Site Visits</Link>
+        <Link prefetch={false} href="/site-visits" className="underline text-blue-600">Go to Site Visits</Link>
       </div>
     </main>
   );
