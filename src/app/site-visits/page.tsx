@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, FileCheck, MapPin, Calendar, Users } from "lucide-react";
+import { useProfileRole } from "@/hooks/useProfileRole";
 
 export default function SiteVisits() {
   const supabase = getBrowserSupabase();
+  const { role } = useProfileRole();
  
   type SiteVisit = {
   id: string;
@@ -105,12 +107,14 @@ export default function SiteVisits() {
           <h1 className="text-3xl font-bold">Site Visits</h1>
           <p className="text-muted-foreground">Plan and manage visits to construction sites</p>
         </div>
+        {(role === "admin" || role === "organiser" || role === "lead_organiser") && (
         <Button asChild>
           <Link href="/site-visits/new">
             <Plus className="h-4 w-4 mr-2" />
             Plan Site Visit
           </Link>
         </Button>
+        )}
       </div>
 
       {siteVisits.length === 0 ? (

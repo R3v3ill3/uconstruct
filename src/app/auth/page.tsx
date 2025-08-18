@@ -24,8 +24,10 @@ function AuthInner() {
 
   useEffect(() => {
     // Handle OAuth/magic link and recovery
-    supabase.auth.exchangeCodeForSession(window.location.href).then(({ error }) => {
-      if (!error) router.replace("/dashboard");
+    supabase.auth.exchangeCodeForSession(window.location.href).then(async ({ error }) => {
+      if (!error) {
+        router.replace("/dashboard");
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
