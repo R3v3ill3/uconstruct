@@ -8,6 +8,7 @@ export default function ProjectDetailPage() {
   const supabase = supabaseBrowser();
   const { data: project } = useQuery({
     queryKey: ["project", id],
+    enabled: !!id && id !== "[id]",
     queryFn: async () => {
       const { data } = await supabase.from("projects").select("id, name, value").eq("id", id).single();
       return data as any;
