@@ -34,16 +34,59 @@ export default function SiteVisits() {
   const { data: siteVisits = [], isLoading } = useQuery({
     queryKey: ["site-visits"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Avoid PostgREST relationship resolution to prevent 400 errors if FKs are missing/ambiguous
+      const { data: visits, error } = await supabase
         .from("site_visit")
-        .select(`
-          *,
-          employer:employers(name),
-          job_site:job_sites(name, location)
-        `)
+        .select(
+          "id, sv_code, employer_id, job_site_id, scheduled_at, objective, estimated_workers_count, outcomes_locked, created_at, updated_at"
+        )
         .order("scheduled_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as SiteVisit[];
+
+      const visitRows = (visits ?? []) as any[];
+      const employerIds = Array.from(
+        new Set(visitRows.map((v) => v.employer_id).filter(Boolean))
+      );
+      const jobSiteIds = Array.from(
+        new Set(visitRows.map((v) => v.job_site_id).filter(Boolean))
+      );
+
+      const employersById: Record<string, { id: string; name: string }> = {};
+      const jobSitesById: Record<string, { id: string; name: string; location: string }> = {};
+
+      if (employerIds.length > 0) {
+        const { data: employers, error: empErr } = await supabase
+          .from("employers")
+          .select("id, name")
+          .in("id", employerIds);
+        if (empErr) throw empErr;
+        (employers ?? []).forEach((e: any) => {
+          employersById[e.id] = e;
+        });
+      }
+
+      if (jobSiteIds.length > 0) {
+        const { data: jobSites, error: siteErr } = await supabase
+          .from("job_sites")
+          .select("id, name, location")
+          .in("id", jobSiteIds);
+        if (siteErr) throw siteErr;
+        (jobSites ?? []).forEach((s: any) => {
+          jobSitesById[s.id] = s;
+        });
+      }
+
+      const merged = visitRows.map((v) => ({
+        ...v,
+        employer: v.employer_id && employersById[v.employer_id]
+          ? { name: employersById[v.employer_id].name }
+          : null,
+        job_site: v.job_site_id && jobSitesById[v.job_site_id]
+          ? { name: jobSitesById[v.job_site_id].name, location: jobSitesById[v.job_site_id].location }
+          : null,
+      }));
+
+      return merged as unknown as SiteVisit[];
     },
   });
 
