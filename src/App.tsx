@@ -21,6 +21,8 @@ import MyPatch from "@/pages/MyPatch";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Delegations from "@/pages/Delegations";
 import PatchWall from "@/pages/PatchWall";
+import { ThemeProvider } from "@/components/theme-provider";
+import UIPlayground from "@/pages/UIPlayground";
  
 const queryClient = new QueryClient();
 
@@ -41,11 +43,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+      <ThemeProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={
               <ProtectedRoute>
@@ -117,11 +120,17 @@ const App = () => (
                 <Admin />
               </ProtectedRoute>
             } />
+            <Route path="/ui-playground" element={
+              <ProtectedRoute>
+                <UIPlayground />
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

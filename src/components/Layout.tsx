@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck, Shield, AlertTriangle } from "lucide-react";
+import { Menu, LogOut, Users, Building, Shield, MoonStar, SunMedium } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -21,6 +22,7 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const { theme, setTheme, systemTheme } = useTheme();
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -77,7 +79,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b">
+      <header className="border-b backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="flex h-16 items-center px-4">
           {/* Mobile menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -96,7 +98,7 @@ const Layout = ({ children }: LayoutProps) => {
 
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Union Organiser</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Union Organiser</h1>
           </div>
 
           {/* Desktop navigation */}
@@ -105,7 +107,18 @@ const Layout = ({ children }: LayoutProps) => {
           </nav>
 
           {/* User menu */}
-          <div className="ml-auto flex items-center gap-4">
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              aria-label="Toggle theme"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => {
+                const effective = theme === "system" ? systemTheme : theme;
+                setTheme(effective === "dark" ? "light" : "dark");
+              }}
+            >
+              <SunMedium className="h-5 w-5 hidden dark:block" />
+              <MoonStar className="h-5 w-5 dark:hidden" />
+            </button>
             <span className="text-sm text-muted-foreground">
               {user?.email}
             </span>
