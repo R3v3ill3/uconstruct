@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0B2B5B"/>
+
+  <!-- White Cross with navy stroke -->
+  <rect x="0" y="196" width="512" height="120" fill="#FFFFFF" stroke="#0B2B5B" stroke-width="8"/>
+  <rect x="196" y="0" width="120" height="512" fill="#FFFFFF" stroke="#0B2B5B" stroke-width="8"/>
+
+  <!-- Define 8-point star (two overlapping squares) -->
+  <defs>
+    <g id="star">
+      <rect x="-38" y="-38" width="76" height="76" fill="#FFFFFF" stroke="#0B2B5B" stroke-width="8"/>
+      <rect x="-38" y="-38" width="76" height="76" fill="#FFFFFF" stroke="#0B2B5B" stroke-width="8" transform="rotate(45)"/>
+    </g>
+  </defs>
+
+  <!-- Place stars: center and four ends of the cross -->
+  <g transform="translate(256 256)">
+    <use href="#star"/>
+  </g>
+  <g transform="translate(128 256)">
+    <use href="#star"/>
+  </g>
+  <g transform="translate(384 256)">
+    <use href="#star"/>
+  </g>
+  <g transform="translate(256 128)">
+    <use href="#star"/>
+  </g>
+  <g transform="translate(256 384)">
+    <use href="#star"/>
+  </g>
+</svg>
