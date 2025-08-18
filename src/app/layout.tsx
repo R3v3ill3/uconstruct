@@ -9,6 +9,10 @@ import { Toaster as SonnerToaster } from "sonner";
 export const metadata: Metadata = {
   title: "uconstruct (Next)",
   description: "Next.js migration sandbox",
+  icons: {
+    icon: [{ url: "/icon.svg" }, { url: "/favicon.ico", rel: "icon", type: "image/x-icon" }],
+    shortcut: ["/favicon.ico"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
