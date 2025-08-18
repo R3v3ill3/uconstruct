@@ -1,6 +1,6 @@
-
+"use client";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getBrowserSupabase } from "@/lib/supabase-browser";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -8,21 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import type { Database } from "@/integrations/supabase/types";
 
+const supabase = getBrowserSupabase();
+
 type Employer = { id: string; name: string };
 type RoleTag = "builder" | "head_contractor";
- type EmployerType = Database["public"]["Enums"]["employer_type"];
+type EmployerType = Database["public"]["Enums"]["employer_type"];
 
-export function SingleEmployerPicker({
-  label,
-  selectedId,
-  onChange,
-  prioritizedTag,
-}: {
-  label: string;
-  selectedId: string;
-  onChange: (id: string) => void;
-  prioritizedTag?: RoleTag;
-}) {
+export function SingleEmployerPicker({ label, selectedId, onChange, prioritizedTag }: { label: string; selectedId: string; onChange: (id: string) => void; prioritizedTag?: RoleTag; }) {
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [tags, setTags] = useState<Record<string, RoleTag[]>>({});
   const [openAdd, setOpenAdd] = useState(false);
@@ -33,10 +25,7 @@ export function SingleEmployerPicker({
     const load = async () => {
       const { data: emps } = await supabase.from("employers").select("id, name").order("name");
       setEmployers((emps ?? []) as Employer[]);
-
-      const { data: tagRows } = await (supabase as any)
-        .from("employer_role_tags")
-        .select("employer_id, tag");
+      const { data: tagRows } = await supabase.from("employer_role_tags" as any).select("employer_id, tag");
       const map: Record<string, RoleTag[]> = {};
       (tagRows ?? []).forEach((r: any) => {
         const arr = map[r.employer_id] ?? [];
@@ -70,10 +59,7 @@ export function SingleEmployerPicker({
     if (!newEmployer.name || !newEmployer.employer_type) return;
     const { data, error } = await supabase
       .from("employers")
-      .insert({
-        name: newEmployer.name,
-        employer_type: newEmployer.employer_type,
-      })
+      .insert({ name: newEmployer.name, employer_type: newEmployer.employer_type })
       .select("id, name")
       .single();
     if (!error && data) {
@@ -88,11 +74,7 @@ export function SingleEmployerPicker({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <Input
-        placeholder="Search employers..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <Input placeholder="Search employers..." value={search} onChange={(e) => setSearch(e.target.value)} />
       <div className="flex gap-2">
         <Select value={selectedId} onValueChange={onChange}>
           <SelectTrigger className="w-full">
@@ -106,9 +88,7 @@ export function SingleEmployerPicker({
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" onClick={() => setOpenAdd(true)}>
-          Add
-        </Button>
+        <Button variant="outline" onClick={() => setOpenAdd(true)}>Add</Button>
       </div>
 
       <Dialog open={openAdd} onOpenChange={setOpenAdd}>
@@ -119,18 +99,11 @@ export function SingleEmployerPicker({
           <div className="space-y-3">
             <div>
               <Label htmlFor="ne_name">Employer name</Label>
-              <Input
-                id="ne_name"
-                value={newEmployer.name}
-                onChange={(e) => setNewEmployer((p) => ({ ...p, name: e.target.value }))}
-              />
+              <Input id="ne_name" value={newEmployer.name} onChange={(e) => setNewEmployer((p) => ({ ...p, name: e.target.value }))} />
             </div>
             <div>
               <Label htmlFor="ne_type">Employer type</Label>
-              <Select
-                value={newEmployer.employer_type}
-                onValueChange={(v) => setNewEmployer((p) => ({ ...p, employer_type: v as EmployerType }))}
-              >
+              <Select value={newEmployer.employer_type} onValueChange={(v) => setNewEmployer((p) => ({ ...p, employer_type: v as EmployerType }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select employer type" />
                 </SelectTrigger>
@@ -150,3 +123,4 @@ export function SingleEmployerPicker({
     </div>
   );
 }
+
