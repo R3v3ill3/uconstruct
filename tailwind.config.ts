@@ -18,12 +18,28 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ["var(--font-sans)"]
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				bg: 'hsl(var(--bg))',
+				bgElev: 'hsl(var(--bg-elev))',
+				surface: 'hsl(var(--surface))',
+				text: 'hsl(var(--text))',
+				textMuted: 'hsl(var(--text-muted))',
+				sep: 'hsl(var(--sep))',
+				accent: {
+					DEFAULT: 'hsl(var(--accent))',
+					foreground: 'hsl(var(--accent-foreground))'
+				},
+				success: 'hsl(var(--success))',
+				warn: 'hsl(var(--warn))',
+				danger: 'hsl(var(--danger))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
@@ -39,10 +55,6 @@ export default {
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
 					foreground: 'hsl(var(--muted-foreground))'
-				},
-				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
@@ -64,9 +76,9 @@ export default {
 				}
 			},
 			borderRadius: {
-				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				lg: 'var(--radius-lg, 16px)',
+				md: 'var(--radius-md, 12px)',
+				sm: 'var(--radius-sm, 8px)'
 			},
 			keyframes: {
 				'accordion-down': {

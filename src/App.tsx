@@ -21,6 +21,7 @@ import MyPatch from "@/pages/MyPatch";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Delegations from "@/pages/Delegations";
 import PatchWall from "@/pages/PatchWall";
+import UIPlayground from "@/app/ui-playground";
  
 const queryClient = new QueryClient();
 
@@ -115,6 +116,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute>
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/ui-playground" element={
+              <ProtectedRoute>
+                <UIPlayground />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
