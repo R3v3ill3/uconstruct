@@ -26,23 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (s?.user) {
         // Apply pending role changes as soon as the user logs in
         setTimeout(() => { supabase.rpc("apply_pending_user_on_login"); }, 0);
-        // If the user remains a viewer, automatically create a pending access request
-        (async () => {
-          try {
-            const { data: prof } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', s.user!.id)
-              .maybeSingle();
-            if ((prof as any)?.role === 'viewer') {
-              await supabase.from('pending_users').insert({
-                email: s.user!.email || '',
-                role: 'organiser',
-                notes: 'Self-signup request'
-              });
-            }
-          } catch {}
-        })();
       }
     });
     supabase.auth.getSession().then(({ data: { session: s } }) => {

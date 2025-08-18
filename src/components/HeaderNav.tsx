@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabaseBrowser } from "@/integrations/supabase/client";
+import { useProfileRole } from "@/hooks/useProfileRole";
 
 type NavItem = { path: string; label: string; roles?: string[] };
 
@@ -17,19 +17,8 @@ const baseItems: NavItem[] = [
 ];
 
 export default function HeaderNav() {
-  const supabase = supabaseBrowser();
   const { user, signOut } = useAuth();
-  const [role, setRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user) { if (!cancelled) setRole(null); return; }
-      const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-      if (!cancelled) setRole((data as any)?.role || null);
-    })();
-    return () => { cancelled = true; };
-  }, [supabase, user]);
+  const { role } = useProfileRole();
 
   const items = useMemo(() => {
     const visible: NavItem[] = [...baseItems];
