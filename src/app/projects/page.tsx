@@ -9,7 +9,10 @@ export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, name, value, main_job_site_id, job_sites!projects_main_job_site_id_fkey(name)");
+      // Use the correct FK name for the embedded relation to main_job_site
+      const { data } = await supabase
+        .from("projects")
+        .select("id, name, value, main_job_site_id, job_sites!fk_projects_main_job_site(name)");
       return (data || []) as any[];
     },
   });
