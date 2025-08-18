@@ -12,17 +12,59 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { JobSiteEmployerManager } from "@/components/employers/JobSiteEmployerManager";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SiteVisitNew() {
   const supabase = getBrowserSupabase();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [jobSiteId, setJobSiteId] = useState("");
   const [selectedEmployerIds, setSelectedEmployerIds] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState<string>("");
   const [objective, setObjective] = useState("");
   const [estimatedWorkers, setEstimatedWorkers] = useState<number | "">("");
   const [isCreating, setIsCreating] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [canAccessFeature, setCanAccessFeature] = useState(false);
+
+  // Check user role and permissions to create site visits
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!user) {
+          setCheckingAccess(false);
+          setCanAccessFeature(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (error) throw error;
+        const allowed = ['admin', 'organiser', 'lead_organiser'].includes((data as any)?.role);
+        if (!cancelled) {
+          setCanAccessFeature(!!allowed);
+          setCheckingAccess(false);
+          if (!allowed) {
+            toast({ title: 'Access Denied', description: "You don't have permission to create site visits.", variant: 'destructive' });
+            router.replace('/');
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setCheckingAccess(false);
+          setCanAccessFeature(false);
+          toast({ title: 'Access Check Failed', description: 'Could not verify your permissions.', variant: 'destructive' });
+          router.replace('/');
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const { data: allJobSites = [] } = useQuery({
     queryKey: ["all-job-sites"],
@@ -72,8 +114,8 @@ export default function SiteVisitNew() {
   }, [jobSiteId, supabase]);
 
   const canCreate = useMemo(
-    () => !!jobSiteId && selectedEmployerIds.length > 0 && !isCreating,
-    [jobSiteId, selectedEmployerIds.length, isCreating]
+    () => !!jobSiteId && selectedEmployerIds.length > 0 && !isCreating && canAccessFeature,
+    [jobSiteId, selectedEmployerIds.length, isCreating, canAccessFeature]
   );
 
   const createVisit = async () => {
@@ -124,6 +166,23 @@ export default function SiteVisitNew() {
       setIsCreating(false);
     }
   };
+
+  if (checkingAccess) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!canAccessFeature) return null;
 
   return (
     <div className="p-6">
