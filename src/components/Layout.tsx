@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, LogOut, Users, Building, MapPin, Activity, Upload, BarChart3, FolderOpen, FileCheck, Shield, AlertTriangle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ModeToggle } from "@/components/ModeToggle";
 
 const navItems = [
   { path: "/projects", label: "Projects", icon: FolderOpen },
@@ -109,6 +110,7 @@ const Layout = ({ children }: LayoutProps) => {
             <span className="text-sm text-muted-foreground">
               {user?.email}
             </span>
+            <ModeToggle />
             <Button variant="outline" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
