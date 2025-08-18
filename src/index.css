@@ -35,6 +35,12 @@ All colors MUST be HSL.
   }
 }
 
+@layer utilities {
+  .elev-sm { box-shadow: var(--shadow-sm); }
+  .elev-md { box-shadow: var(--shadow-md); }
+  .elev-lg { box-shadow: var(--shadow-lg); }
+}
+
 @layer base {
   * {
     @apply border-border;
