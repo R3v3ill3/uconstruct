@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfileRole } from "@/hooks/useProfileRole";
 
@@ -19,6 +20,7 @@ const baseItems: NavItem[] = [
 export default function HeaderNav() {
   const { user, signOut } = useAuth();
   const { role } = useProfileRole();
+  const router = useRouter();
 
   const items = useMemo(() => {
     const visible: NavItem[] = [...baseItems];
@@ -41,11 +43,22 @@ export default function HeaderNav() {
   return (
     <nav className="container mx-auto flex items-center gap-4 p-4 text-sm">
       {items.map(it => (
-        <Link key={it.path} href={it.path as any}>{it.label}</Link>
+        <Link prefetch={false} key={it.path} href={it.path as any}>{it.label}</Link>
       ))}
       <div className="ml-auto flex items-center gap-3">
-        <span className="text-xs text-muted-foreground">{user?.email}</span>
-        <button onClick={signOut} className="text-xs underline">Sign Out</button>
+        {user ? (
+          <>
+            <span className="text-xs text-muted-foreground">{user.email}</span>
+            <button
+              onClick={async () => { await signOut(); router.replace("/auth"); }}
+              className="text-xs underline"
+            >
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <Link prefetch={false} href="/auth" className="text-xs underline">Sign in</Link>
+        )}
       </div>
     </nav>
   );

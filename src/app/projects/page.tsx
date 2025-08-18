@@ -31,7 +31,7 @@ export default function ProjectsPage() {
             <div className="space-y-2">
               {projects.map((p: any) => (
                 <div key={p.id} className="flex items-center justify-between border-b py-2">
-                  <Link href={`/projects/${p.id}`} className="underline decoration-dotted">{p.name}</Link>
+                  <Link prefetch={false} href={`/projects/${p.id}`} className="underline decoration-dotted">{p.name}</Link>
                   <span className="text-sm text-muted-foreground">{p.job_sites?.name || "No site"}</span>
                 </div>
               ))}
