@@ -1,80 +1,110 @@
-# Welcome to your Lovable project
+## uConstruct Next.js app
 
-## Project info
+### Production URL
 
-**URL**: https://lovable.dev/projects/b1615d22-1769-4c00-8331-bce0d49f4c4f
+- **Production**: [next.uconstruct.app](https://next.uconstruct.app)
 
-## How can I edit this code?
+### Overview
 
-There are several ways of editing your application.
+This repository contains the Next.js migration of the uConstruct web app. It uses the Next.js App Router with React Server Components on top of Supabase for authentication and data. The UI is built with shadcn/ui and Tailwind CSS, and data fetching/caching is managed by TanStack Query.
 
-**Use Lovable**
+### Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b1615d22-1769-4c00-8331-bce0d49f4c4f) and start prompting.
+- **Authentication (Supabase Auth)**: Email/password, magic link, email verification, and password reset flows. The `dashboard` route is protected.
+- **Site Visits**: Browse planned/completed visits, and create new visits by selecting job sites and linked employers. Tracks schedule, objective, estimated worker counts, and status.
+- **Employers**: List employers (name and type).
+- **Workers**: List workers with contact details and membership status. Worker placements are created when importing.
+- **Projects**: Project list and minimal project detail view.
+- **Upload**: CSV import of workers with basic schema normalization, employer matching/creation, optional organiser matching, and automatic creation of worker placements.
+- **Admin**: Send magic-link invites and run a `sync_auth_users` RPC to reconcile users.
+- **Modern UI**: shadcn/ui components, Tailwind, lucide-react icons, and recharts (available for charts).
 
-Changes made via Lovable will be committed automatically to this repo.
+### Tech stack
 
-**Use your preferred IDE**
+- **Next.js 15** (App Router, TypeScript)
+- **React 18**
+- **Supabase** (`@supabase/supabase-js`)
+- **TanStack Query 5**
+- **Tailwind CSS** + **shadcn/ui**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Requirements
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Node.js >= 20** (see `package.json` engines)
+- **pnpm** (recommended) or npm/yarn
+- A **Supabase** project with the required tables (e.g., `employers`, `workers`, `projects`, `job_sites`, `site_visit`, `worker_placements`, `site_contractor_trades`, `organisers`, `project_employer_roles`) and the `sync_auth_users` RPC
 
-Follow these steps:
+## Environment variables
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Create a `.env.local` in the repository root with the following variables:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-**Edit a file directly in GitHub**
+- These are required for both client and server usage in this app. If they are missing, you will see: "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY".
+- For email flows to succeed locally, set the Supabase Auth Site URL and allowed redirect URLs to your local app (see below).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Optional (if using the included Supabase Edge Function `get-google-maps-key`):
 
-**Use GitHub Codespaces**
+```bash
+# Configure these as function env vars in Supabase, not in the Next.js app
+GOOGLE_MAPS_API_KEY_UCONSTRUCT=browser-restricted-key
+GOOGLE_MAPS_API_KEY=browser-restricted-key
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Local development
 
-## What technologies are used for this project?
+```bash
+pnpm install
+pnpm dev
+# App runs at http://localhost:3000
+```
 
-This project is built with:
+Notes:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Ensure your Supabase project's Auth settings allow local redirects:
+  - Auth > URL Configuration:
+    - Site URL: `http://localhost:3000`
+    - Redirect URLs: `http://localhost:3000/auth`, `http://localhost:3000/auth/reset`
+- The app uses magic links and password reset flows that redirect to `/auth` and `/auth/reset` respectively.
 
-## How can I deploy this project?
+## Build and production run
 
-Simply open [Lovable](https://lovable.dev/projects/b1615d22-1769-4c00-8331-bce0d49f4c4f) and click on Share -> Publish.
+```bash
+pnpm build
+pnpm start
+```
 
-## Can I connect a custom domain to my Lovable project?
+## Linting
 
-Yes, you can!
+```bash
+pnpm lint
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Project structure
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```
+src/
+  app/                # Next.js App Router routes
+  components/         # UI and feature components (shadcn/ui)
+  hooks/              # React hooks (e.g., auth, toasts)
+  integrations/
+    supabase/         # Supabase client (browser/server) and generated types
+  lib/                # Utilities (e.g., supabase-browser helper, offline queue)
+supabase/
+  functions/          # Edge Functions (e.g., get-google-maps-key)
+public/               # Static assets
+```
 
-## Email verification branding (uConstruct)
+## Supabase configuration tips
 
-1. Configure SMTP in Supabase: Auth > Email (SMTP) with your domain (e.g., no-reply@uconstruct.com). Ensure SPF/DKIM are set on your DNS.
-2. Customize the "Confirm signup" template in Auth > Templates. Keep the {{ .ConfirmationURL }} placeholder and brand the subject/body (e.g., "Confirm your email for uConstruct").
-3. Set Auth > URL Configuration: Site URL and Redirect URLs to your app URL so confirmations redirect to uConstruct.
-4. If a user didn’t receive it, use the "Resend verification email" link now available on the Auth page.
+- Configure SMTP in Supabase (Auth > Email) with your domain, and set SPF/DKIM in DNS for production.
+- Customize the "Confirm signup" template and include the `{{ .ConfirmationURL }}` placeholder.
+- If users are not receiving emails, verify SMTP credentials and the Auth URL configuration.
+
+## Troubleshooting
+
+- **Missing env error**: Ensure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set in `.env.local`.
+- **Auth redirects not working**: Confirm Supabase Auth > URL Configuration includes `http://localhost:3000` and the `/auth` and `/auth/reset` paths.
+- **401/permission errors**: Check row level security policies and service role usage in your Supabase project.
