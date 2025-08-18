@@ -9,7 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "a11y": "node ./scripts/a11y-check.js || echo 'Install axe/lighthouse locally if needed'"
+    "a11y": "node ./scripts/a11y-check.cjs || echo 'Install axe/lighthouse locally if needed'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
