@@ -3,13 +3,15 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Toolbar } from "@/components/Toolbar"
 import { Heading, Text } from "@/components/ui/text"
 
 export default function UIPlayground() {
   return (
     <div className="p-6 space-y-8">
-      <Heading role="largeTitle" as="h1">UI Playground</Heading>
-      <Text role="subheadline" className="text-muted-foreground">Tokens and core primitives</Text>
+      <Toolbar title="UI Playground" />
+      <Heading role="title2" as="h2">Tokens and core primitives</Heading>
 
       <Card>
         <CardHeader>
@@ -56,6 +58,19 @@ export default function UIPlayground() {
               <Text>Second tab</Text>
             </TabsContent>
           </Tabs>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Segmented Control</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ToggleGroup type="single" defaultValue="a">
+            <ToggleGroupItem value="a">One</ToggleGroupItem>
+            <ToggleGroupItem value="b">Two</ToggleGroupItem>
+            <ToggleGroupItem value="c">Three</ToggleGroupItem>
+          </ToggleGroup>
         </CardContent>
       </Card>
     </div>
